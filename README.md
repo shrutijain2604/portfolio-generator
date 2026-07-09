@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Dev Portfolio Builder
 
-## Getting Started
+Pick a template, fill in one form, watch your portfolio come alive — live, in your browser.
 
-First, run the development server:
+Nine visually distinct templates (git-log dark mode, a magazine-style editorial layout, a Windows-95 desktop, a Spotify-style artist profile, and more) all read from the same shared data, so switching templates never means retyping anything.
+
+## Features
+
+- **9 templates**, each with its own layout, tone, and interactivity — not five reskins of the same card.
+- **Live preview** — a resizable split-pane editor shows your real content rendered in the chosen template as you type.
+- **Resume import** — upload a PDF/DOCX and have the form auto-filled (deterministic regex for email/GitHub/LinkedIn, Gemini for everything else). Always reviewable/editable afterward — parsing isn't perfect.
+- **Autosave** — your draft persists to `localStorage`, so a refresh never loses your work.
+- **Honest data** — every stat, chip, and "achievement" shown in a template is derived from what you actually entered. Nothing is fabricated.
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Resume import (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Resume import calls the Gemini API and needs a free API key:
 
-## Learn More
+1. Grab one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+2. Copy `.env.example` to `.env.local` and paste it in:
+   ```
+   GEMINI_API_KEY=your-key-here
+   ```
+3. Restart `npm run dev`.
 
-To learn more about Next.js, take a look at the following resources:
+Everything else in the app works without this key — it's only needed for the resume-import feature.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Next.js 16](https://nextjs.org) (App Router, Turbopack)
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [Google Gemini](https://ai.google.dev) for resume parsing, via `@google/genai`
+- `pdf-parse` / `mammoth` for resume text extraction
 
-## Deploy on Vercel
+## Project structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/                    routes: landing page, editor, resume-parse API route
+components/             editor UI (form, live-preview shell, resume import)
+components/templates/   the template components themselves
+lib/portfolioData.js    shared data schema every template renders from
+```

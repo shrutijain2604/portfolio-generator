@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code — settings.json (shared tool permissions) is committed;
+# settings.local.json is per-machine and never should be
+.claude/settings.local.json
+
+# unregistered template, kept locally as a paused work-in-progress —
+# see components/templates/index.js and lib/portfolioData.js
+components/templates/NetflixTemplate.js

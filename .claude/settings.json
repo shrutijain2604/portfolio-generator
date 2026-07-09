@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next *)",
+      "Bash(grep -rn \"file\\\\.svg\\\\|globe\\\\.svg\\\\|next\\\\.svg\\\\|vercel\\\\.svg\\\\|window\\\\.svg\" app components lib)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git add *)"
+    ]
+  }
+}
