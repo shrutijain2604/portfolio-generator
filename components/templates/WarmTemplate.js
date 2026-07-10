@@ -121,9 +121,9 @@ function ContactPill({ href, icon, label, colors, filled }) {
   );
 }
 
-function ChipRow({ items, getKey, getLabel, getColor, href, colors }) {
+function ChipRow({ items, getKey, getLabel, getColor, href, colors, center }) {
   return (
-    <div className="flex flex-wrap gap-2.5">
+    <div className={`flex flex-wrap gap-2.5 ${center ? "justify-center" : ""}`}>
       {items.map((item) => {
         const label = getLabel(item);
         const color = getColor(item);
@@ -180,7 +180,7 @@ export default function WarmTemplate({ data }) {
   // render, and in what sequence.
   const sections = {
     skills: skills?.length > 0 && (
-      <ChipRow items={skills} getKey={(s) => s} getLabel={(s) => s} getColor={dotColor} colors={colors} />
+      <ChipRow items={skills} getKey={(s) => s} getLabel={(s) => s} getColor={dotColor} colors={colors} center />
     ),
 
     codingProfiles: codingProfiles?.length > 0 && (
@@ -226,12 +226,19 @@ export default function WarmTemplate({ data }) {
       </div>
     ),
 
+    // flex-wrap + justify-center rather than a grid — a grid would leave an
+    // odd item out pinned to the left column with a visibly empty slot next
+    // to it; this way a lone last item centers itself under the row above.
     achievements: achievements?.length > 0 && (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mx-auto flex max-w-2xl flex-wrap justify-center gap-3">
         {achievements.map((item, i) => {
           const accent = PALETTE[i % PALETTE.length];
           return (
-            <div key={i} className="flex min-w-0 items-start gap-3 rounded-2xl border p-4" style={{ backgroundColor: tint(INK, 4), borderColor: tint(ACCENT, 18) }}>
+            <div
+              key={i}
+              className="flex w-full min-w-0 items-start gap-3 rounded-2xl border p-4 sm:w-[calc(50%-0.375rem)]"
+              style={{ backgroundColor: tint(INK, 4), borderColor: tint(ACCENT, 18) }}
+            >
               <span
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
                 style={{ backgroundColor: tint(accent, 20) }}
@@ -247,27 +254,31 @@ export default function WarmTemplate({ data }) {
       </div>
     ),
 
+    // Full-width stacked cards, same as Experience, rather than a grid —
+    // the image/icon sits on the side so a full-width card still reads as
+    // one deliberate horizontal layout instead of a stretched-out vertical
+    // card with a short, oddly-proportioned header image.
     projects: projects?.length > 0 && (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-5">
         {projects.map((project, i) => {
           const accent = PALETTE[i % PALETTE.length];
           return (
             <div
               key={i}
-              className="flex min-w-0 flex-col overflow-hidden rounded-3xl border shadow-sm transition-transform hover:-translate-y-1"
+              className="flex min-w-0 flex-col overflow-hidden rounded-3xl border shadow-sm transition-transform hover:-translate-y-1 sm:flex-row"
               style={{ backgroundColor: tint(INK, 4), borderColor: tint(ACCENT, 18) }}
             >
               {project.image ? (
-                <img src={project.image} alt={project.name} className="h-40 w-full object-cover" />
+                <img src={project.image} alt={project.name} className="h-40 w-full shrink-0 object-cover sm:h-auto sm:w-56" />
               ) : (
                 <div
-                  className="flex h-28 w-full items-center justify-center text-4xl"
+                  className="flex h-28 w-full shrink-0 items-center justify-center text-4xl sm:h-auto sm:w-56"
                   style={{ background: `linear-gradient(135deg, ${accent}, ${shade(accent, 25)})` }}
                 >
                   🛠️
                 </div>
               )}
-              <div className="flex flex-1 flex-col p-5">
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
                 <h3 className={`${fredoka.className} break-words text-lg font-semibold`} style={{ color: INK }}>
                   {project.name || "Project name"}
                 </h3>
