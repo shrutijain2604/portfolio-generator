@@ -21,8 +21,8 @@ export default async function DeployedPage({ searchParams }) {
     : null;
 
   const result =
-    portfolioId && rawDeploymentUrl
-      ? await publishPortfolio(portfolioId, rawDeploymentUrl)
+    portfolioId && deploymentUrl
+      ? await publishPortfolio(portfolioId, deploymentUrl)
       : { ok: false, error: "Missing deployment info in the redirect from Vercel." };
 
   return (
