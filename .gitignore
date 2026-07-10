@@ -30,9 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — never committed, not even the placeholder template. Required
+# vars are documented in README.md instead.
 .env*
-!.env.example
 
 # vercel
 .vercel
@@ -41,9 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# claude code — settings.json (shared tool permissions) is committed;
-# settings.local.json is per-machine and never should be
-.claude/settings.local.json
+# claude code — local tooling config, not part of the project
+.claude/
 
 # unregistered template, kept locally as a paused work-in-progress —
 # see components/templates/index.js and lib/portfolioData.js

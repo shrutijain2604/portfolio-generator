@@ -18,6 +18,38 @@ export default function PortfolioEditor({ template }) {
   const containerRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [deployStatus, setDeployStatus] = useState("idle"); // idle | saving | ready | error
+  const [deployUrl, setDeployUrl] = useState("");
+  const [deployError, setDeployError] = useState("");
+
+  // Deliberately doesn't auto-navigate on success — surfacing the
+  // constructed link instead means the save-draft step can be verified on
+  // its own (the row actually landing in Supabase, the URL actually being
+  // built correctly) without also committing to leaving the app. Doubles as
+  // a sane confirmation step for real use later, not just a testing aid.
+  async function handleDeploy() {
+    setDeployStatus("saving");
+    setDeployError("");
+    try {
+      const res = await fetch("/api/portfolios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template: template.id,
+          data: sanitizePortfolioData(data),
+          origin: window.location.origin,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Couldn't start deployment.");
+      setDeployUrl(result.deployUrl);
+      setDeployStatus("ready");
+    } catch (err) {
+      setDeployStatus("error");
+      setDeployError(err.message);
+    }
+  }
+
   // Restore any autosaved draft after mount — reading localStorage during
   // the initial render would return different values on the server than on
   // the client and trigger a hydration mismatch, same reason templates never
@@ -93,9 +125,30 @@ export default function PortfolioEditor({ template }) {
             Editing: {template.name}
           </h1>
         </div>
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-          Autosaved to this browser
-        </span>
+        <div className="flex items-center gap-3">
+          {deployStatus === "error" && (
+            <span className="max-w-xs text-right text-xs text-red-600 dark:text-red-400">{deployError}</span>
+          )}
+          {deployStatus === "ready" && (
+            <a
+              href={deployUrl}
+              className="max-w-xs truncate text-xs font-medium text-emerald-600 underline underline-offset-2 hover:text-emerald-500 dark:text-emerald-400"
+            >
+              Draft saved — continue to Vercel →
+            </a>
+          )}
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            Autosaved to this browser
+          </span>
+          <button
+            type="button"
+            onClick={handleDeploy}
+            disabled={deployStatus === "saving"}
+            className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deployStatus === "saving" ? "Starting deployment…" : "Deploy my portfolio"}
+          </button>
+        </div>
       </header>
 
       <div

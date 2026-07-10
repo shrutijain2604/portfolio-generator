@@ -11,6 +11,7 @@ Nine visually distinct templates (git-log dark mode, a magazine-style editorial 
 - **Resume import** — upload a PDF/DOCX and have the form auto-filled (deterministic regex for email/GitHub/LinkedIn, Gemini for everything else). Always reviewable/editable afterward — parsing isn't perfect.
 - **Autosave** — your draft persists to `localStorage`, so a refresh never loses your work.
 - **Honest data** — every stat, chip, and "achievement" shown in a template is derived from what you actually entered. Nothing is fabricated.
+- **Deploy my portfolio** — saves your data to Supabase and hands off to Vercel's clone flow, which creates a real repo and deployment under *your own* GitHub/Vercel accounts — no login to this app required, no ongoing hosting dependency on it either. Currently wired up for the Terminal template; the rest follow the same pattern.
 
 ## Getting started
 
@@ -21,18 +22,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Resume import (optional)
+### Environment variables
 
-Resume import calls the Gemini API and needs a free API key:
+Create `.env.local` in the project root (never committed) with:
 
-1. Grab one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-2. Copy `.env.example` to `.env.local` and paste it in:
-   ```
-   GEMINI_API_KEY=your-key-here
-   ```
-3. Restart `npm run dev`.
+```
+# Optional — only needed for resume import. Free key at https://aistudio.google.com/apikey
+GEMINI_API_KEY=
 
-Everything else in the app works without this key — it's only needed for the resume-import feature.
+# Optional — only needed for the "Deploy my portfolio" flow. From your
+# Supabase project's Settings -> API.
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+```
+
+The editor, live preview, and every template work with none of these set — they're only needed for resume import and the deploy pipeline, respectively. If using Supabase, run `supabase/schema.sql` in your project's SQL editor first.
 
 ## Tech stack
 
@@ -40,12 +45,23 @@ Everything else in the app works without this key — it's only needed for the r
 - [Tailwind CSS v4](https://tailwindcss.com)
 - [Google Gemini](https://ai.google.dev) for resume parsing, via `@google/genai`
 - `pdf-parse` / `mammoth` for resume text extraction
+- [Supabase](https://supabase.com) for portfolio storage behind the deploy flow
 
 ## Project structure
 
 ```
-app/                    routes: landing page, editor, resume-parse API route
-components/             editor UI (form, live-preview shell, resume import)
-components/templates/   the template components themselves
-lib/portfolioData.js    shared data schema every template renders from
+app/                          routes: landing page, editor, resume-parse and
+                               portfolio-save API routes, the /deployed
+                               success page
+app/live/[id]/                dev-only harness proving the fetch-by-id
+                               pattern before a template gets its own repo
+components/                   editor UI (form, live-preview shell, resume import)
+components/templates/         the template components, rendered inside the editor
+lib/portfolioData.js          shared data schema every template renders from
+lib/supabase.js, portfolios.js  Supabase clients + the publish-on-deploy logic
+supabase/schema.sql            run this in your Supabase project's SQL editor
+templates/<name>/              standalone, self-contained Next.js apps — one
+                               per template, each deployable on its own via
+                               Vercel's clone flow. Not part of the main app's
+                               build; each has its own package.json.
 ```
