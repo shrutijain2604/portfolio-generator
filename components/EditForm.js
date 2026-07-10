@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const RESUME_ACCEPT = ".pdf,.docx";
 
@@ -127,6 +127,48 @@ function TextArea({ label, ...props }) {
   );
 }
 
+// A plain <input> whose value is `list.join(", ")`, re-parsed on every
+// keystroke, fights the user: type a trailing comma to start the next item
+// and the very next render reconstructs the value from the just-parsed
+// array — which drops the empty trailing segment — silently erasing the
+// comma you just typed. Keeps its own local text buffer while focused, and
+// only commits (parses + calls onChange) on blur, so typing "React, " never
+// gets fought mid-keystroke. Resyncs from `value` when it changes for a
+// reason other than this field's own commit (e.g. resume import replacing
+// the list), tracked via lastCommitted so an echo of our own update isn't
+// mistaken for an external change.
+function CommaListField({ label, hint, value, onChange }) {
+  const [text, setText] = useState(() => value.join(", "));
+  const lastCommitted = useRef(value.join(", "));
+
+  useEffect(() => {
+    const joined = value.join(", ");
+    if (joined !== lastCommitted.current) {
+      setText(joined);
+      lastCommitted.current = joined;
+    }
+  }, [value]);
+
+  function commit(raw) {
+    const next = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    lastCommitted.current = next.join(", ");
+    onChange(next);
+  }
+
+  return (
+    <Field
+      label={label}
+      hint={hint}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+    />
+  );
+}
+
 function RemovableRow({ onRemove, children }) {
   return (
     <div className="relative rounded-xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
@@ -155,8 +197,16 @@ function AddButton({ onClick, children }) {
   );
 }
 
-export default function EditForm({ data, onChange }) {
+// Templates that actually render a photo (person or project image) — every
+// other template ignores photoUrl/project.image entirely, so those fields
+// only appear in the form when the selected template is one of these.
+// Showing them unconditionally for every template is what made the field
+// look "broken" for anyone not on one of these three.
+const TEMPLATES_WITH_PHOTOS = new Set(["warm", "scrapbook", "spotify"]);
+
+export default function EditForm({ data, onChange, templateId }) {
   const set = (patch) => onChange({ ...data, ...patch });
+  const showPhotoFields = TEMPLATES_WITH_PHOTOS.has(templateId);
 
   const setLink = (key, value) =>
     set({ links: { ...data.links, [key]: value } });
@@ -190,14 +240,6 @@ export default function EditForm({ data, onChange }) {
       achievements: raw.split("\n").filter((line) => line.trim().length > 0),
     });
 
-  const setSkills = (raw) =>
-    set({
-      skills: raw
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    });
-
   const updateCodingProfile = (index, patch) => {
     const next = data.codingProfiles.map((p, i) => (i === index ? { ...p, ...patch } : p));
     set({ codingProfiles: next });
@@ -226,7 +268,7 @@ export default function EditForm({ data, onChange }) {
     set({
       experience: [
         ...data.experience,
-        { company: "", role: "", start: "", end: "", bullets: [] },
+        { company: "", role: "", start: "", end: "", image: "", bullets: [] },
       ],
     });
 
@@ -249,15 +291,6 @@ export default function EditForm({ data, onChange }) {
   const updateProject = (index, patch) => {
     const next = data.projects.map((p, i) => (i === index ? { ...p, ...patch } : p));
     set({ projects: next });
-  };
-
-  const updateProjectTags = (index, raw) => {
-    updateProject(index, {
-      tags: raw
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    });
   };
 
   const updateProjectHighlights = (index, raw) => {
@@ -312,12 +345,14 @@ export default function EditForm({ data, onChange }) {
           value={data.email}
           onChange={(e) => set({ email: e.target.value })}
         />
-        <Field
-          label="Photo URL (optional)"
-          hint="Used by the Warm & Personal template. A casual, decent-quality photo works best — a stiff corporate headshot undercuts the vibe."
-          value={data.photoUrl || ""}
-          onChange={(e) => set({ photoUrl: e.target.value })}
-        />
+        {showPhotoFields && (
+          <Field
+            label="Photo URL (optional)"
+            hint="A casual, decent-quality photo works best — a stiff corporate headshot undercuts the vibe."
+            value={data.photoUrl || ""}
+            onChange={(e) => set({ photoUrl: e.target.value })}
+          />
+        )}
       </FormSection>
 
       <FormSection title="Links">
@@ -341,11 +376,7 @@ export default function EditForm({ data, onChange }) {
       </FormSection>
 
       <FormSection title="Skills" hint="Comma-separated.">
-        <Field
-          label="Skills"
-          value={data.skills.join(", ")}
-          onChange={(e) => setSkills(e.target.value)}
-        />
+        <CommaListField label="Skills" value={data.skills} onChange={(skills) => set({ skills })} />
       </FormSection>
 
       <FormSection title="Coding profiles" hint="Optional — LeetCode, Codeforces, HackerRank, Kaggle, whatever you use.">
@@ -393,6 +424,14 @@ export default function EditForm({ data, onChange }) {
                 onChange={(e) => updateExperience(i, { end: e.target.value })}
               />
             </div>
+            {showPhotoFields && (
+              <Field
+                label="Image URL (optional)"
+                hint="A photo or screenshot worth sharing from this role — a shipped feature, a team moment, an award. Leave blank to skip."
+                value={job.image || ""}
+                onChange={(e) => updateExperience(i, { image: e.target.value })}
+              />
+            )}
             <TextArea
               label="Highlights (one per line)"
               value={job.bullets.join("\n")}
@@ -461,12 +500,14 @@ export default function EditForm({ data, onChange }) {
                 onChange={(e) => updateProject(i, { status: e.target.value })}
               />
             </div>
-            <Field
-              label="Image URL (optional)"
-              hint="Used by cards in the Warm & Personal template. Leave blank to show a soft placeholder instead."
-              value={project.image || ""}
-              onChange={(e) => updateProject(i, { image: e.target.value })}
-            />
+            {showPhotoFields && (
+              <Field
+                label="Image URL (optional)"
+                hint="Leave blank to show a soft placeholder instead."
+                value={project.image || ""}
+                onChange={(e) => updateProject(i, { image: e.target.value })}
+              />
+            )}
             <TextArea
               label="Description"
               value={project.description}
@@ -477,10 +518,10 @@ export default function EditForm({ data, onChange }) {
               value={(project.highlights || []).join("\n")}
               onChange={(e) => updateProjectHighlights(i, e.target.value)}
             />
-            <Field
+            <CommaListField
               label="Tags (comma-separated)"
-              value={project.tags.join(", ")}
-              onChange={(e) => updateProjectTags(i, e.target.value)}
+              value={project.tags}
+              onChange={(tags) => updateProject(i, { tags })}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field

@@ -157,7 +157,7 @@ export default function PortfolioEditor({ template }) {
         style={{ "--left-width": "50%" }}
       >
         <div className="overflow-y-auto border-b border-zinc-200 bg-zinc-50 px-6 py-6 dark:border-zinc-800 dark:bg-zinc-950/40 lg:w-[var(--left-width)] lg:shrink-0 lg:border-b-0 lg:border-r">
-          <EditForm data={data} onChange={setData} />
+          <EditForm data={data} onChange={setData} templateId={template.id} />
         </div>
 
         <div

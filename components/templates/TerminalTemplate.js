@@ -50,7 +50,22 @@ export default function TerminalTemplate({ data }) {
   const user = slug(name);
 
   return (
-    <div className="relative min-h-dvh bg-zinc-950 font-mono text-[14px] leading-relaxed text-zinc-300">
+    <div className="relative min-h-dvh overflow-hidden bg-zinc-950 font-mono text-[14px] leading-relaxed text-zinc-300">
+      {/* Ambient wash + scanline texture, full-viewport — without this the
+          space around the narrow reading column reads as empty rather than
+          deliberate on a wide screen. The interactive CursorGlow alone only
+          shows up once the mouse moves; this is what's there before that. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-25"
+        style={{ background: "radial-gradient(650px circle at 12% 0%, #10b981 0%, transparent 60%)" }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
       <CursorGlow />
 
       {/* Window chrome */}
@@ -59,236 +74,330 @@ export default function TerminalTemplate({ data }) {
         <span className="text-xs text-zinc-600">{user}@dev — zsh</span>
       </div>
 
-      <div className="mx-auto max-w-2xl px-6 py-12 sm:px-10">
-        {/* about */}
-        <Block label="About">
-          <p className="text-xl font-semibold text-white">{name || "Your Name"}</p>
-          <p className="mt-1 text-emerald-400">{role || "Your Role"}</p>
-          <p className="mt-3 max-w-xl leading-relaxed text-zinc-400">{bio}</p>
-        </Block>
-
-        {/* contact */}
-        <Block label="Contact">
-          <ul className="space-y-2 text-zinc-400">
-            {email && (
-              <li className="flex items-center gap-2.5">
-                <IconMail className="h-4 w-4 text-zinc-600" />
-                <a href={`mailto:${email}`} className="hover:text-zinc-100">
-                  {email}
-                </a>
-              </li>
-            )}
-            {links?.github && (
-              <li className="flex items-center gap-2.5">
-                <IconGithub className="h-4 w-4 text-zinc-600" />
-                <a href={`https://${stripProtocol(links.github)}`} className="hover:text-zinc-100">
-                  {stripProtocol(links.github)}
-                </a>
-              </li>
-            )}
-            {links?.linkedin && (
-              <li className="flex items-center gap-2.5">
-                <IconLinkedin className="h-4 w-4 text-zinc-600" />
-                <a href={`https://${stripProtocol(links.linkedin)}`} className="hover:text-zinc-100">
-                  {stripProtocol(links.linkedin)}
-                </a>
-              </li>
-            )}
-            {links?.website && (
-              <li className="flex items-center gap-2.5">
-                <IconLink className="h-4 w-4 text-zinc-600" />
-                <a href={`https://${stripProtocol(links.website)}`} className="hover:text-zinc-100">
-                  {stripProtocol(links.website)}
-                </a>
-              </li>
-            )}
-          </ul>
-        </Block>
-
-        {/* skills */}
-        {skills?.length > 0 && (
-          <Block label="Skills">
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
-                  {skill}
-                </span>
-              ))}
-            </div>
+      {/* One outer container for the whole page, so every section shares
+          the same left edge. Narrow (text) sections are max-w-2xl *without*
+          their own mx-auto — left-anchored inside this container, not
+          independently centered — while wide (visual) sections use the
+          full width. Independently centering each section is what made the
+          page zigzag left-right while scrolling; this keeps one consistent
+          reading edge throughout, ragged-right instead. */}
+      <div className="mx-auto max-w-5xl px-6 pb-12 pt-12 sm:px-10">
+        <div className="max-w-2xl">
+          {/* about */}
+          <Block label="About">
+            <p className="break-words text-xl font-semibold text-white">{name || "Your Name"}</p>
+            <p className="mt-1 break-words text-emerald-400">{role || "Your Role"}</p>
+            <p className="mt-3 max-w-xl break-words leading-relaxed text-zinc-400">{bio}</p>
           </Block>
-        )}
 
-        {/* coding profiles */}
-        {codingProfiles?.length > 0 && (
-          <Block label="Coding Profiles">
-            <div className="flex flex-wrap gap-2">
-              {codingProfiles.map((profile, i) => (
-                <a
-                  key={i}
-                  href={`https://${stripProtocol(profile.url)}`}
-                  className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300 hover:text-zinc-100"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(profile.platform) }} />
-                  {profile.platform}
-                </a>
-              ))}
-            </div>
+          {/* contact */}
+          <Block label="Contact">
+            <ul className="space-y-2 text-zinc-400">
+              {email && (
+                <li className="flex items-center gap-2.5">
+                  <IconMail className="h-4 w-4 text-zinc-600" />
+                  <a href={`mailto:${email}`} className="hover:text-zinc-100">
+                    {email}
+                  </a>
+                </li>
+              )}
+              {links?.github && (
+                <li className="flex items-center gap-2.5">
+                  <IconGithub className="h-4 w-4 text-zinc-600" />
+                  <a href={`https://${stripProtocol(links.github)}`} className="hover:text-zinc-100">
+                    {stripProtocol(links.github)}
+                  </a>
+                </li>
+              )}
+              {links?.linkedin && (
+                <li className="flex items-center gap-2.5">
+                  <IconLinkedin className="h-4 w-4 text-zinc-600" />
+                  <a href={`https://${stripProtocol(links.linkedin)}`} className="hover:text-zinc-100">
+                    {stripProtocol(links.linkedin)}
+                  </a>
+                </li>
+              )}
+              {links?.website && (
+                <li className="flex items-center gap-2.5">
+                  <IconLink className="h-4 w-4 text-zinc-600" />
+                  <a href={`https://${stripProtocol(links.website)}`} className="hover:text-zinc-100">
+                    {stripProtocol(links.website)}
+                  </a>
+                </li>
+              )}
+            </ul>
           </Block>
-        )}
 
-        {/* experience */}
+          {/* skills */}
+          {skills?.length > 0 && (
+            <Block label="Skills">
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </Block>
+          )}
+
+          {/* coding profiles */}
+          {codingProfiles?.length > 0 && (
+            <Block label="Coding Profiles">
+              <div className="flex flex-wrap gap-2">
+                {codingProfiles.map((profile, i) => (
+                  <a
+                    key={i}
+                    href={`https://${stripProtocol(profile.url)}`}
+                    className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300 hover:text-zinc-100"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(profile.platform) }} />
+                    {profile.platform}
+                  </a>
+                ))}
+              </div>
+            </Block>
+          )}
+        </div>
+
+        {/* Experience gets the same wider treatment as Projects — once a
+            role can carry a photo, cramming it into the narrow reading
+            column undersells it the same way a project screenshot would
+            be. */}
         {experience?.length > 0 && (
-          <Block label="Experience">
-            <div className="space-y-6">
-              {experience.map((job, i) => (
-                <div key={i}>
-                  <p className="text-zinc-200">
-                    <span className="font-semibold text-white">{job.role}</span>{" "}
-                    <span className="text-zinc-500">at</span> {job.company}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-600">
-                    {job.start} — {job.end}
-                  </p>
-                  <ul className="mt-2.5 space-y-1.5">
-                    {job.bullets?.map((bullet, j) => (
-                      <li key={j} className="flex gap-2 text-zinc-400">
-                        <span className="text-zinc-700">·</span>
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </Block>
-        )}
-
-        {/* education */}
-        {education?.length > 0 && (
-          <Block label="Education">
-            <ul className="space-y-2.5">
-              {education.map((edu, i) => (
-                <li key={i} className="text-zinc-300">
-                  <span className="font-semibold text-white">{edu.degree}</span>
-                  <span className="text-zinc-500"> — {edu.school}</span>
-                  <div className="text-xs text-zinc-600">
-                    {edu.start} — {edu.end}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Block>
-        )}
-
-        {/* achievements */}
-        {achievements?.length > 0 && (
-          <Block label="Achievements">
-            <ul className="space-y-2">
-              {achievements.map((item, i) => (
-                <li key={i} className="flex gap-2 text-zinc-300">
-                  <span className="text-zinc-700">·</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </Block>
-        )}
-
-        {/* projects */}
-        {projects?.length > 0 && (
-          <Block label="Projects">
+          <section className="border-t border-zinc-900 py-8">
+            <SectionLabel>Experience</SectionLabel>
             <div className="space-y-5">
-              {projects.map((project, i) => (
-                <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-white">
-                        {project.name || "package-name"}
-                      </span>
-                      <span className="text-xs text-zinc-600">v{project.version || "1.0.0"}</span>
-                    </div>
-                    {project.status && (
-                      <span
-                        className={`text-xs ${
-                          project.status.toLowerCase() === "active"
-                            ? "text-emerald-400"
-                            : project.status.toLowerCase() === "archived"
-                              ? "text-zinc-500"
-                              : "text-amber-400"
-                        }`}
-                      >
-                        {project.status}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-2 text-zinc-400">{project.description}</p>
-
-                  {project.highlights?.length > 0 && (
-                    <ul className="mt-2.5 space-y-1">
-                      {project.highlights.map((point, j) => (
-                        <li key={j} className="flex gap-2 text-sm text-zinc-500">
-                          <span className="text-zinc-700">·</span>
-                          <span>{point}</span>
+              {experience.map((job, i) => (
+                <div
+                  key={i}
+                  className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40 sm:flex-row"
+                  style={{ borderLeftWidth: 3, borderLeftColor: dotColor(job.company || String(i)) }}
+                >
+                  {job.image && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={job.image}
+                      alt=""
+                      className="h-40 w-full shrink-0 object-cover sm:h-auto sm:w-56"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1 p-4">
+                    <p className="break-words text-zinc-200">
+                      <span className="font-semibold text-white">{job.role}</span>{" "}
+                      <span className="text-zinc-500">at</span> {job.company}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-600">
+                      {job.start} — {job.end}
+                    </p>
+                    <ul className="mt-2.5 space-y-1.5">
+                      {job.bullets?.map((bullet, j) => (
+                        <li key={j} className="flex min-w-0 gap-2 text-zinc-400">
+                          <span className="shrink-0 text-zinc-700">·</span>
+                          <span className="break-words">{bullet}</span>
                         </li>
                       ))}
                     </ul>
-                  )}
-
-                  {project.tags?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {project.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="flex items-center gap-1.5 rounded-md bg-zinc-800/60 px-2 py-0.5 text-xs text-zinc-400"
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(tag) }} />
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {(project.link || project.demo) && (
-                    <div className="mt-3 flex flex-wrap gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-500">
-                      {project.link && (
-                        <a
-                          href={`https://${stripProtocol(project.link)}`}
-                          className="flex items-center gap-1.5 hover:text-zinc-200"
-                        >
-                          <IconGithub className="h-3.5 w-3.5" />
-                          Source
-                        </a>
-                      )}
-                      {project.demo && (
-                        <a
-                          href={`https://${stripProtocol(project.demo)}`}
-                          className="flex items-center gap-1.5 hover:text-zinc-200"
-                        >
-                          <IconLink className="h-3.5 w-3.5" />
-                          Live demo
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
-          </Block>
+          </section>
         )}
 
-        {/* closing prompt */}
-        <div className="border-t border-zinc-900 pt-8">
-          <p className="flex items-center gap-2 text-[13px] text-zinc-500">
-            <span>{user}@dev:~</span>
-            <span className="text-emerald-500">$</span>
-            <span className="inline-block h-4 w-2 animate-pulse bg-emerald-500" />
-          </p>
+        <div className="max-w-2xl">
+          {/* education — not using the shared Block here since it would
+              wrongly treat this as "first" (stripping its top border) now
+              that it's the first child of this inner wrapper rather than
+              of the page. */}
+          {education?.length > 0 && (
+            <section className="border-t border-zinc-900 py-8">
+              <SectionLabel>Education</SectionLabel>
+              <ul className="space-y-2.5">
+                {education.map((edu, i) => (
+                  <li key={i} className="break-words text-zinc-300">
+                    <span className="font-semibold text-white">{edu.degree}</span>
+                    <span className="text-zinc-500"> — {edu.school}</span>
+                    <div className="text-xs text-zinc-600">
+                      {edu.start} — {edu.end}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* achievements */}
+          {achievements?.length > 0 && (
+            <Block label="Achievements">
+              <ul className="space-y-2">
+                {achievements.map((item, i) => (
+                  <li key={i} className="flex min-w-0 gap-2 text-zinc-300">
+                    <span className="shrink-0 text-zinc-700">·</span>
+                    <span className="break-words">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Block>
+          )}
         </div>
+
+        {/* Projects break out of the reading column deliberately — a bio
+            benefits from a narrow line length, a grid of project work
+            doesn't, and squeezing both into the same width undersells the
+            part that's actually the "portfolio." */}
+        {projects?.length > 0 && (
+          <section className="border-t border-zinc-900 py-8">
+            <SectionLabel>Projects</SectionLabel>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project, i) => (
+                <div
+                  key={i}
+                  className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40"
+                >
+                  <div className="h-1" style={{ backgroundColor: dotColor(project.name || String(i)) }} />
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-baseline gap-2">
+                        <span className="break-words font-semibold text-white">
+                          {project.name || "package-name"}
+                        </span>
+                        <span className="shrink-0 text-xs text-zinc-600">v{project.version || "1.0.0"}</span>
+                      </div>
+                      {project.status && (
+                        <span
+                          className={`text-xs ${
+                            project.status.toLowerCase() === "active"
+                              ? "text-emerald-400"
+                              : project.status.toLowerCase() === "archived"
+                                ? "text-zinc-500"
+                                : "text-amber-400"
+                          }`}
+                        >
+                          {project.status}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-2 break-words text-zinc-400">{project.description}</p>
+
+                    {project.highlights?.length > 0 && (
+                      <ul className="mt-2.5 space-y-1">
+                        {project.highlights.map((point, j) => (
+                          <li key={j} className="flex min-w-0 gap-2 text-sm text-zinc-500">
+                            <span className="shrink-0 text-zinc-700">·</span>
+                            <span className="break-words">{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {project.tags?.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {project.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="flex items-center gap-1.5 rounded-md bg-zinc-800/60 px-2 py-0.5 text-xs text-zinc-400"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(tag) }} />
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {(project.link || project.demo) && (
+                      <div className="mt-auto flex flex-wrap gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-500 [margin-top:0.75rem]">
+                        {project.link && (
+                          <a
+                            href={`https://${stripProtocol(project.link)}`}
+                            className="flex items-center gap-1.5 hover:text-zinc-200"
+                          >
+                            <IconGithub className="h-3.5 w-3.5" />
+                            Source
+                          </a>
+                        )}
+                        {project.demo && (
+                          <a
+                            href={`https://${stripProtocol(project.demo)}`}
+                            className="flex items-center gap-1.5 hover:text-zinc-200"
+                          >
+                            <IconLink className="h-3.5 w-3.5" />
+                            Live demo
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="max-w-2xl">
+        {/* closing / contact CTA — a real sign-off, not just a blinking
+            cursor, with actual clickable ways to reach out. */}
+        <section className="border-t border-zinc-900 pt-8">
+          <SectionLabel>Get in touch</SectionLabel>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+            <p className="flex flex-wrap items-center gap-2 text-[13px] text-zinc-500">
+              <span>{user}@dev:~</span>
+              <span className="text-emerald-500">$</span>
+              <span className="break-words text-zinc-300">echo &quot;Let&rsquo;s build something.&quot;</span>
+            </p>
+            <p className="mt-2 flex items-center gap-2 text-[13px] text-zinc-500">
+              <span>{user}@dev:~</span>
+              <span className="text-emerald-500">$</span>
+              <span className="inline-block h-4 w-2 animate-pulse bg-emerald-500" />
+            </p>
+          </div>
+
+          {(email || links?.github || links?.linkedin || links?.website) && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {email && (
+                <a
+                  href={`mailto:${email}`}
+                  className="flex items-center gap-2 rounded-md bg-emerald-500 px-4 py-2 text-xs font-semibold text-zinc-950 transition-colors hover:bg-emerald-400"
+                >
+                  <IconMail className="h-3.5 w-3.5" />
+                  Say hi
+                </a>
+              )}
+              {links?.github && (
+                <a
+                  href={`https://${stripProtocol(links.github)}`}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 px-4 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white"
+                >
+                  <IconGithub className="h-3.5 w-3.5" />
+                  GitHub
+                </a>
+              )}
+              {links?.linkedin && (
+                <a
+                  href={`https://${stripProtocol(links.linkedin)}`}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 px-4 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white"
+                >
+                  <IconLinkedin className="h-3.5 w-3.5" />
+                  LinkedIn
+                </a>
+              )}
+              {links?.website && (
+                <a
+                  href={`https://${stripProtocol(links.website)}`}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 px-4 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white"
+                >
+                  <IconLink className="h-3.5 w-3.5" />
+                  Website
+                </a>
+              )}
+            </div>
+          )}
+        </section>
 
         <footer className="mt-10 border-t border-zinc-900 pt-6">
           <p className="text-xs text-zinc-600">
@@ -296,6 +405,7 @@ export default function TerminalTemplate({ data }) {
           </p>
           <p className="mt-1 text-[10px] text-zinc-800">Made with Dev Portfolio Builder</p>
         </footer>
+        </div>
       </div>
     </div>
   );
