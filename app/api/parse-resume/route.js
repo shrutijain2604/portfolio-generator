@@ -166,7 +166,8 @@ export async function POST(request) {
       },
     });
     extracted = JSON.parse(response.text);
-  } catch {
+  } catch (err) {
+    console.error("gemini extraction failed:", err.message || err);
     return Response.json(
       { error: "The resume parser is temporarily unavailable — please try again in a moment." },
       { status: 502 }

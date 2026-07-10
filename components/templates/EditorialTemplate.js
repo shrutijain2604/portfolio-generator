@@ -94,7 +94,7 @@ export default function EditorialTemplate({ data }) {
   );
 
   return (
-    <div className="relative min-h-full" style={{ backgroundColor: PAPER, color: INK }}>
+    <div className="relative min-h-dvh" style={{ backgroundColor: PAPER, color: INK }}>
       <CursorGlow colorRgb="193, 67, 46" size={550} />
       <div className="relative mx-auto max-w-xl px-6 py-20 sm:px-8 sm:py-28">
         {/* Header */}

@@ -358,7 +358,7 @@ export default function RetroDesktopTemplate({ data }) {
 
   return (
     <div
-      className="relative flex h-full flex-col"
+      className="relative flex h-dvh flex-col"
       style={{ background: "radial-gradient(140% 100% at 30% 0%, #0a9a9a 0%, #007575 55%, #005f5f 100%)" }}
     >
       {/* Diagonal texture + vignette so the desktop reads as a textured

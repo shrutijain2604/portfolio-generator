@@ -87,7 +87,7 @@ export default function WarmTemplate({ data }) {
   );
 
   return (
-    <div className={`relative min-h-full ${nunito.className}`} style={{ backgroundColor: PAPER, color: INK }}>
+    <div className={`relative min-h-dvh ${nunito.className}`} style={{ backgroundColor: PAPER, color: INK }}>
       <CursorGlow colorRgb="193, 112, 74" size={550} />
 
       <div className="relative mx-auto max-w-xl px-6 py-20 sm:px-10 sm:py-24">

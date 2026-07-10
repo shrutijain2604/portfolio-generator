@@ -102,7 +102,7 @@ export default function SpotifyTemplate({ data }) {
   );
 
   return (
-    <div className="relative min-h-full" style={{ backgroundColor: BG }}>
+    <div className="relative min-h-dvh" style={{ backgroundColor: BG }}>
       <CursorGlow colorRgb="29, 185, 84" size={500} />
 
       {/* Header */}

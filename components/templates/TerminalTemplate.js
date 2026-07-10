@@ -50,7 +50,7 @@ export default function TerminalTemplate({ data }) {
   const user = slug(name);
 
   return (
-    <div className="relative min-h-full bg-zinc-950 font-mono text-[14px] leading-relaxed text-zinc-300">
+    <div className="relative min-h-dvh bg-zinc-950 font-mono text-[14px] leading-relaxed text-zinc-300">
       <CursorGlow />
 
       {/* Window chrome */}

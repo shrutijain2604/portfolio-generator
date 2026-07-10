@@ -153,7 +153,7 @@ export default function DashboardTemplate({ data }) {
   );
 
   return (
-    <div className="relative flex min-h-full bg-slate-50 text-slate-900">
+    <div className="relative flex min-h-dvh bg-slate-50 text-slate-900">
       <CursorGlow colorRgb="79, 70, 229" size={500} />
 
       {/* Sidebar */}

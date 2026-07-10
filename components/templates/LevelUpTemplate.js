@@ -194,7 +194,7 @@ export default function LevelUpTemplate({ data }) {
   );
 
   return (
-    <div className={`relative min-h-full ${vt323.className}`} style={{ backgroundColor: BG, color: TEXT }}>
+    <div className={`relative min-h-dvh ${vt323.className}`} style={{ backgroundColor: BG, color: TEXT }}>
       <CursorGlow colorRgb="74, 222, 128" size={450} />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03]"

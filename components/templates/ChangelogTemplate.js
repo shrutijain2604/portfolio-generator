@@ -53,7 +53,7 @@ export default function ChangelogTemplate({ data }) {
   const { name, role, bio, email, links, skills, codingProfiles, experience, education, achievements, projects } = data;
 
   return (
-    <div className="relative min-h-full bg-zinc-950 text-zinc-200">
+    <div className="relative min-h-dvh bg-zinc-950 text-zinc-200">
       {/* ambient glow */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-96 opacity-20"

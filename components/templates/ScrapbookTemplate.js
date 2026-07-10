@@ -150,7 +150,7 @@ export default function ScrapbookTemplate({ data }) {
 
   return (
     <div
-      className="relative min-h-full"
+      className="relative min-h-dvh"
       style={{ background: "radial-gradient(150% 120% at 22% 0%, #faf3e0 0%, #e8d4a8 42%, #c9a86e 78%, #a9824f 100%)" }}
     >
       {/* Corkboard speckle texture — layered dots instead of a flat fill. */}
