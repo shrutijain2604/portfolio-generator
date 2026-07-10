@@ -22,7 +22,7 @@ const TEMPLATE_IDS = new Set(templates.map((t) => t.id));
 // route below refuses to build a deploy link rather than send someone to a
 // broken clone.
 const TEMPLATE_REPOS = {
-  changelog: null,
+  changelog: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/changelog",
   terminal: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/terminal",
   editorial: null,
   warm: null,
