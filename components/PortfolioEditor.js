@@ -126,17 +126,6 @@ export default function PortfolioEditor({ template }) {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          {deployStatus === "error" && (
-            <span className="max-w-xs text-right text-xs text-red-600 dark:text-red-400">{deployError}</span>
-          )}
-          {deployStatus === "ready" && (
-            <a
-              href={deployUrl}
-              className="max-w-xs truncate text-xs font-medium text-emerald-600 underline underline-offset-2 hover:text-emerald-500 dark:text-emerald-400"
-            >
-              Draft saved — continue to Vercel →
-            </a>
-          )}
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
             Autosaved to this browser
           </span>
@@ -173,6 +162,48 @@ export default function PortfolioEditor({ template }) {
           <Template data={sanitizePortfolioData(data)} />
         </div>
       </div>
+
+      {(deployStatus === "ready" || deployStatus === "error") && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+          onClick={() => setDeployStatus("idle")}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {deployStatus === "ready" ? (
+              <>
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Draft saved</h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  Next, continue to Vercel to finish deploying — it creates a real repo and a live site under your
+                  own GitHub and Vercel accounts.
+                </p>
+                <a
+                  href={deployUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-5 block rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+                >
+                  Continue to Vercel →
+                </a>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Couldn&rsquo;t start deployment</h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{deployError}</p>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setDeployStatus("idle")}
+              className="mt-4 text-xs font-medium text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              {deployStatus === "ready" ? "Not now" : "Close"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
