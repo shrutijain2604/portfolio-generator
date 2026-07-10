@@ -252,7 +252,7 @@ export default function ChangelogTemplate({ data }) {
                 )}
               </div>
 
-              <p className="mt-2.5 break-words font-sans text-sm leading-relaxed text-zinc-400">
+              <p className="mt-2.5 whitespace-pre-line break-words font-sans text-sm leading-relaxed text-zinc-400">
                 {project.description}
               </p>
 

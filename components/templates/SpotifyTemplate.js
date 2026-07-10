@@ -217,7 +217,7 @@ export default function SpotifyTemplate({ data }) {
                   Project · {project.status || "Released"}
                 </p>
                 {project.description && (
-                  <p className="mt-2 text-xs leading-relaxed" style={{ color: MUTED }}>
+                  <p className="mt-2 whitespace-pre-line text-xs leading-relaxed" style={{ color: MUTED }}>
                     {project.description}
                   </p>
                 )}

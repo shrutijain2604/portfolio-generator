@@ -228,7 +228,7 @@ export default function RetroDesktopTemplate({ data }) {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 pl-5 text-xs text-gray-700">{project.description}</p>
+                <p className="mt-1 whitespace-pre-line pl-5 text-xs text-gray-700">{project.description}</p>
                 {project.tags?.length > 0 && (
                   <p className="mt-1 pl-5 text-[10px] text-gray-500">{project.tags.join(", ")}</p>
                 )}

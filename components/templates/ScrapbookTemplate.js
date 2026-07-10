@@ -264,7 +264,7 @@ export default function ScrapbookTemplate({ data }) {
                     seed={`proj-${project.name}-${i}`}
                   />
                   <StickyNote seed={`proj-note-${project.name}-${i}`}>
-                    <p className={`${kalam.className} text-sm leading-relaxed`} style={{ color: INK }}>
+                    <p className={`${kalam.className} whitespace-pre-line text-sm leading-relaxed`} style={{ color: INK }}>
                       {project.description}
                     </p>
                     {project.status && (

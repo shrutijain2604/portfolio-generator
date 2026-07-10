@@ -206,7 +206,7 @@ export default function WarmTemplate({ data }) {
                     <h3 className="text-lg font-bold" style={{ color: INK }}>
                       {project.name || "Project name"}
                     </h3>
-                    <p className="mt-2 text-[15px] leading-relaxed" style={{ color: INK }}>
+                    <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed" style={{ color: INK }}>
                       {project.description}
                     </p>
                     {project.tags?.length > 0 && (

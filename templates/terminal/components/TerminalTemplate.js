@@ -225,7 +225,7 @@ export default function TerminalTemplate({ data }) {
                 )}
               </div>
 
-              <p className="break-words text-zinc-400">{project.description}</p>
+              <p className="whitespace-pre-line break-words text-zinc-400">{project.description}</p>
 
               {project.highlights?.length > 0 && (
                 <ul className="space-y-1">

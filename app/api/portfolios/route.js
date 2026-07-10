@@ -24,7 +24,7 @@ const TEMPLATE_IDS = new Set(templates.map((t) => t.id));
 const TEMPLATE_REPOS = {
   changelog: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/changelog",
   terminal: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/terminal",
-  editorial: null,
+  editorial: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/editorial",
   warm: null,
   dashboard: null,
   "level-up": null,

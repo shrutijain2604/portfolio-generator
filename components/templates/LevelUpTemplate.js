@@ -326,7 +326,7 @@ export default function LevelUpTemplate({ data }) {
                         {r.label}
                       </span>
                     </div>
-                    <p className="text-base leading-snug" style={{ color: MUTED }}>
+                    <p className="whitespace-pre-line text-base leading-snug" style={{ color: MUTED }}>
                       {project.description}
                     </p>
                     {project.tags?.length > 0 && (

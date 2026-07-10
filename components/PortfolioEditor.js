@@ -3,9 +3,11 @@
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import EditForm from "./EditForm";
+import ThemeSwitcher from "./ThemeSwitcher";
 import { defaultPortfolioData, sanitizePortfolioData } from "@/lib/portfolioData";
 import { templateComponents } from "@/components/templates";
-import { PORTFOLIO_STORAGE_KEY, loadStoredPortfolioData } from "@/lib/portfolioStorage";
+import { loadStoredPortfolioData, saveStoredPortfolioData } from "@/lib/portfolioStorage";
+import { getPalettesForTemplate } from "@/lib/palettes";
 
 const MIN_PANE_PERCENT = 25;
 const MAX_PANE_PERCENT = 75;
@@ -28,10 +30,25 @@ function MobileIcon(props) {
   );
 }
 
+// Pinned above the live preview (not inside the scrollable form) — a theme
+// is only worth anything if it's seen, and it's easy to scroll past as just
+// another card in a long form. Sitting right next to the render it
+// controls, with zero scrolling or clicks needed to see it, is what makes
+// it register as a feature rather than something to miss entirely.
+function ThemeSwatchBar({ palettes, selectedId, onChange }) {
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Theme</span>
+      <ThemeSwitcher palettes={palettes} selectedId={selectedId} onChange={onChange} />
+    </div>
+  );
+}
+
 export default function PortfolioEditor({ template }) {
   const [data, setData] = useState(defaultPortfolioData);
   const [restored, setRestored] = useState(false);
   const Template = templateComponents[template.id];
+  const palettes = getPalettesForTemplate(template.id);
 
   const containerRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -45,7 +62,7 @@ export default function PortfolioEditor({ template }) {
   // that's the only way to show the actual full-width desktop rendering
   // with real browser chrome, rather than a scaled-down approximation.
   function openDesktopPreview() {
-    window.open(`/preview/${template.id}`, "_blank", "noopener,noreferrer");
+    window.open(`/preview/${template.id}?mode=desktop`, "_blank", "noopener,noreferrer");
   }
 
   // Deliberately doesn't auto-navigate on success — surfacing the
@@ -94,7 +111,7 @@ export default function PortfolioEditor({ template }) {
   // and briefly stomp over the real saved draft.
   useEffect(() => {
     if (!restored) return;
-    localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(data));
+    saveStoredPortfolioData(data);
   }, [data, restored]);
 
   // Dragging mutates the CSS variable directly (like CursorGlow) instead of
@@ -196,8 +213,17 @@ export default function PortfolioEditor({ template }) {
           title="Drag to resize. Double-click to reset."
         />
 
-        <div className="min-w-0 flex-1 overflow-y-auto">
-          <Template data={sanitizePortfolioData(data)} />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {palettes && (
+            <ThemeSwatchBar
+              palettes={palettes}
+              selectedId={data.paletteId}
+              onChange={(paletteId) => setData({ ...data, paletteId })}
+            />
+          )}
+          <div className="min-w-0 flex-1 overflow-y-auto">
+            <Template data={sanitizePortfolioData(data)} />
+          </div>
         </div>
       </div>
 
@@ -213,7 +239,7 @@ export default function PortfolioEditor({ template }) {
             <div className="absolute top-0 left-1/2 z-10 h-5 w-32 -translate-x-1/2 rounded-b-2xl bg-zinc-800" />
             <iframe
               key={template.id}
-              src={`/preview/${template.id}`}
+              src={`/preview/${template.id}?mode=mobile`}
               title="Mobile preview"
               className="h-full w-full rounded-[1.75rem] bg-white"
             />

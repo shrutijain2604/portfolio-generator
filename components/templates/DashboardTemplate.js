@@ -411,7 +411,7 @@ export default function DashboardTemplate({ data }) {
                         </span>
                       )}
                     </div>
-                    <p className="mt-1.5 text-sm text-slate-600">{project.description}</p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm text-slate-600">{project.description}</p>
                     {project.tags?.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {project.tags.map((tag) => (
