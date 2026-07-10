@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import SectionOrderField from "./SectionOrderField";
+import { normalizeSectionOrder } from "@/lib/portfolioData";
 
 const RESUME_ACCEPT = ".pdf,.docx";
 
@@ -83,6 +85,47 @@ function ResumeImport({ onImport }) {
         <p className="relative mt-2 text-xs text-zinc-500 dark:text-zinc-400">Parsing {fileName}…</p>
       )}
       {status === "error" && <p className="relative mt-2 text-xs text-red-600 dark:text-red-400">{errorMessage}</p>}
+    </div>
+  );
+}
+
+function IconLayers(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3 2 8l10 5 10-5-10-5Z" />
+      <path d="m2 13 10 5 10-5" />
+    </svg>
+  );
+}
+
+// Reordering sections is a structural, page-wide control, not a content
+// field — buried as just another FormSection between Links and Skills, it
+// read as one more input to skim past. Giving it the same "distinct card"
+// treatment as ResumeImport, right up top, is what makes it register as an
+// actual feature worth trying rather than something to overlook.
+function SectionOrderCard({ order, onChange }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50 via-white to-white p-5 shadow-sm dark:border-indigo-900/40 dark:from-indigo-950/20 dark:via-zinc-900 dark:to-zinc-900">
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
+        style={{ background: "radial-gradient(circle, #6366f1, transparent 70%)" }}
+      />
+      <div className="relative flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
+          <IconLayers className="h-4 w-4" />
+        </span>
+        <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Reorder your sections</p>
+        <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          New
+        </span>
+      </div>
+      <p className="relative mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+        Drag to change what flows first — lead with Projects if that&rsquo;s your strongest section, or Experience if
+        that is. Intro and Contact always stay first and last.
+      </p>
+      <div className="relative mt-4">
+        <SectionOrderField order={order} onChange={onChange} />
+      </div>
     </div>
   );
 }
@@ -323,6 +366,11 @@ export default function EditForm({ data, onChange, templateId }) {
   return (
     <div className="space-y-6">
       <ResumeImport onImport={importResume} />
+
+      <SectionOrderCard
+        order={normalizeSectionOrder(data.sectionOrder)}
+        onChange={(sectionOrder) => set({ sectionOrder })}
+      />
 
       <FormSection title="Basic info">
         <Field
