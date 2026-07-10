@@ -5,10 +5,28 @@ import Link from "next/link";
 import EditForm from "./EditForm";
 import { defaultPortfolioData, sanitizePortfolioData } from "@/lib/portfolioData";
 import { templateComponents } from "@/components/templates";
+import { PORTFOLIO_STORAGE_KEY, loadStoredPortfolioData } from "@/lib/portfolioStorage";
 
 const MIN_PANE_PERCENT = 25;
 const MAX_PANE_PERCENT = 75;
-const STORAGE_KEY = "dev-portfolio-builder:data";
+
+function DesktopIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="4" width="18" height="12" rx="1.5" />
+      <path d="M8 20h8M12 16v4" />
+    </svg>
+  );
+}
+
+function MobileIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+      <path d="M11 18h2" />
+    </svg>
+  );
+}
 
 export default function PortfolioEditor({ template }) {
   const [data, setData] = useState(defaultPortfolioData);
@@ -21,6 +39,14 @@ export default function PortfolioEditor({ template }) {
   const [deployStatus, setDeployStatus] = useState("idle"); // idle | saving | ready | error
   const [deployUrl, setDeployUrl] = useState("");
   const [deployError, setDeployError] = useState("");
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  // Desktop preview opens in a real new tab instead of an in-page frame —
+  // that's the only way to show the actual full-width desktop rendering
+  // with real browser chrome, rather than a scaled-down approximation.
+  function openDesktopPreview() {
+    window.open(`/preview/${template.id}`, "_blank", "noopener,noreferrer");
+  }
 
   // Deliberately doesn't auto-navigate on success — surfacing the
   // constructed link instead means the save-draft step can be verified on
@@ -55,18 +81,10 @@ export default function PortfolioEditor({ template }) {
   // the client and trigger a hydration mismatch, same reason templates never
   // use Math.random()/Date.now() in render.
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // A draft saved before a schema field existed (e.g. codingProfiles)
-        // won't have it — default missing arrays to empty rather than
-        // undefined, or every `.map()` on that field throws.
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate one-time hydrate from a client-only source, not a derived-state loop
-        setData({ ...defaultPortfolioData, ...parsed, codingProfiles: parsed.codingProfiles || [] });
-      } catch {
-        // Corrupted or incompatible saved data — keep the default.
-      }
+    const stored = loadStoredPortfolioData();
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate one-time hydrate from a client-only source, not a derived-state loop
+      setData(stored);
     }
     setRestored(true);
   }, []);
@@ -76,7 +94,7 @@ export default function PortfolioEditor({ template }) {
   // and briefly stomp over the real saved draft.
   useEffect(() => {
     if (!restored) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(data));
   }, [data, restored]);
 
   // Dragging mutates the CSS variable directly (like CursorGlow) instead of
@@ -125,7 +143,27 @@ export default function PortfolioEditor({ template }) {
             Editing: {template.name}
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-y-2 gap-x-3">
+          <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500/10 to-sky-500/10 p-1 ring-1 ring-inset ring-indigo-500/25 dark:from-indigo-400/10 dark:to-sky-400/10 dark:ring-indigo-400/25">
+            <button
+              type="button"
+              onClick={openDesktopPreview}
+              title="See the full desktop layout in a new tab"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-white hover:shadow-sm dark:text-indigo-300 dark:hover:bg-zinc-800"
+            >
+              <DesktopIcon className="h-3.5 w-3.5" />
+              Desktop
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMobilePreview(true)}
+              title="See how this looks on a phone"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-white hover:shadow-sm dark:text-indigo-300 dark:hover:bg-zinc-800"
+            >
+              <MobileIcon className="h-3.5 w-3.5" />
+              Mobile
+            </button>
+          </div>
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
             Autosaved to this browser
           </span>
@@ -162,6 +200,33 @@ export default function PortfolioEditor({ template }) {
           <Template data={sanitizePortfolioData(data)} />
         </div>
       </div>
+
+      {showMobilePreview && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/70 p-6"
+          onClick={() => setShowMobilePreview(false)}
+        >
+          <div
+            className="relative h-[780px] max-h-[85vh] w-[380px] max-w-full rounded-[2.5rem] border-[10px] border-zinc-800 bg-zinc-800 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute top-0 left-1/2 z-10 h-5 w-32 -translate-x-1/2 rounded-b-2xl bg-zinc-800" />
+            <iframe
+              key={template.id}
+              src={`/preview/${template.id}`}
+              title="Mobile preview"
+              className="h-full w-full rounded-[1.75rem] bg-white"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMobilePreview(false)}
+            className="text-xs font-medium text-zinc-300 hover:text-white"
+          >
+            Close preview
+          </button>
+        </div>
+      )}
 
       {(deployStatus === "ready" || deployStatus === "error") && (
         <div
