@@ -25,7 +25,7 @@ const TEMPLATE_REPOS = {
   changelog: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/changelog",
   terminal: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/terminal",
   editorial: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/editorial",
-  warm: null,
+  warm: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/warm",
   dashboard: null,
   "level-up": null,
   "retro-desktop": null,
