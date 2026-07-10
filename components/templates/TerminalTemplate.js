@@ -77,39 +77,35 @@ export default function TerminalTemplate({ data }) {
   const sections = {
     skills: skills?.length > 0 && (
       <MovableSection>
-        <div className="max-w-2xl">
-          <SectionLabel>Skills</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {skills.map((skill) => (
-              <span
-                key={skill}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300"
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
-                {skill}
-              </span>
-            ))}
-          </div>
+        <SectionLabel>Skills</SectionLabel>
+        <div className="flex flex-wrap gap-2">
+          {skills.map((skill) => (
+            <span
+              key={skill}
+              className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300"
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
+              {skill}
+            </span>
+          ))}
         </div>
       </MovableSection>
     ),
 
     codingProfiles: codingProfiles?.length > 0 && (
       <MovableSection>
-        <div className="max-w-2xl">
-          <SectionLabel>Coding Profiles</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {codingProfiles.map((profile, i) => (
-              <a
-                key={i}
-                href={`https://${stripProtocol(profile.url)}`}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300 hover:text-zinc-100"
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(profile.platform) }} />
-                {profile.platform}
-              </a>
-            ))}
-          </div>
+        <SectionLabel>Coding Profiles</SectionLabel>
+        <div className="flex flex-wrap gap-2">
+          {codingProfiles.map((profile, i) => (
+            <a
+              key={i}
+              href={`https://${stripProtocol(profile.url)}`}
+              className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-zinc-300 hover:text-zinc-100"
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(profile.platform) }} />
+              {profile.platform}
+            </a>
+          ))}
         </div>
       </MovableSection>
     ),
@@ -160,126 +156,124 @@ export default function TerminalTemplate({ data }) {
 
     education: education?.length > 0 && (
       <MovableSection>
-        <div className="max-w-2xl">
-          <SectionLabel>Education</SectionLabel>
-          <ul className="space-y-2.5">
-            {education.map((edu, i) => (
-              <li key={i} className="break-words text-zinc-300">
-                <span className="font-semibold text-white">{edu.degree}</span>
-                <span className="text-zinc-500"> — {edu.school}</span>
-                <div className="text-xs text-zinc-600">
-                  {edu.start} — {edu.end}
-                </div>
-              </li>
-            ))}
-          </ul>
+        <SectionLabel>Education</SectionLabel>
+        <div className="space-y-3">
+          {education.map((edu, i) => (
+            <div
+              key={i}
+              className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4"
+            >
+              <div className="min-w-0">
+                <p className="break-words font-semibold text-white">{edu.school}</p>
+                <p className="break-words text-zinc-400">{edu.degree}</p>
+              </div>
+              <div className="shrink-0 whitespace-nowrap text-xs text-zinc-600">
+                {edu.start} — {edu.end}
+              </div>
+            </div>
+          ))}
         </div>
       </MovableSection>
     ),
 
     achievements: achievements?.length > 0 && (
       <MovableSection>
-        <div className="max-w-2xl">
-          <SectionLabel>Achievements</SectionLabel>
-          <ul className="space-y-2">
-            {achievements.map((item, i) => (
-              <li key={i} className="flex min-w-0 gap-2 text-zinc-300">
-                <span className="shrink-0 text-zinc-700">·</span>
-                <span className="break-words">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <SectionLabel>Achievements</SectionLabel>
+        <ul className="space-y-2">
+          {achievements.map((item, i) => (
+            <li key={i} className="flex min-w-0 gap-2 text-zinc-300">
+              <span className="shrink-0 text-zinc-700">·</span>
+              <span className="break-words">{item}</span>
+            </li>
+          ))}
+        </ul>
       </MovableSection>
     ),
 
-    // Projects break out of the reading column deliberately — a bio
-    // benefits from a narrow line length, a grid of project work doesn't,
-    // and squeezing both into the same width undersells the part that's
-    // actually the "portfolio."
+    // Full-width rows, same as Experience — a 3-column grid left an
+    // awkward wall of empty space for anyone with only one or two
+    // projects, since a single grid item doesn't stretch to fill its row.
     projects: projects?.length > 0 && (
       <MovableSection>
         <SectionLabel>Projects</SectionLabel>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-5">
           {projects.map((project, i) => (
             <div
               key={i}
-              className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40"
+              className="flex min-w-0 flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4"
+              style={{ borderLeftWidth: 3, borderLeftColor: dotColor(project.name || String(i)) }}
             >
-              <div className="h-1" style={{ backgroundColor: dotColor(project.name || String(i)) }} />
-              <div className="flex flex-1 flex-col p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="break-words font-semibold text-white">
-                      {project.name || "package-name"}
-                    </span>
-                    <span className="shrink-0 text-xs text-zinc-600">v{project.version || "1.0.0"}</span>
-                  </div>
-                  {project.status && (
-                    <span
-                      className={`text-xs ${
-                        project.status.toLowerCase() === "active"
-                          ? "text-emerald-400"
-                          : project.status.toLowerCase() === "archived"
-                            ? "text-zinc-500"
-                            : "text-amber-400"
-                      }`}
-                    >
-                      {project.status}
-                    </span>
-                  )}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <span className="break-words font-semibold text-white">
+                    {project.name || "package-name"}
+                  </span>
+                  <span className="shrink-0 text-xs text-zinc-600">v{project.version || "1.0.0"}</span>
                 </div>
-
-                <p className="mt-2 break-words text-zinc-400">{project.description}</p>
-
-                {project.highlights?.length > 0 && (
-                  <ul className="mt-2.5 space-y-1">
-                    {project.highlights.map((point, j) => (
-                      <li key={j} className="flex min-w-0 gap-2 text-sm text-zinc-500">
-                        <span className="shrink-0 text-zinc-700">·</span>
-                        <span className="break-words">{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {project.tags?.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="flex items-center gap-1.5 rounded-md bg-zinc-800/60 px-2 py-0.5 text-xs text-zinc-400"
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(tag) }} />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {(project.link || project.demo) && (
-                  <div className="mt-auto flex flex-wrap gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-500 [margin-top:0.75rem]">
-                    {project.link && (
-                      <a
-                        href={`https://${stripProtocol(project.link)}`}
-                        className="flex items-center gap-1.5 hover:text-zinc-200"
-                      >
-                        <IconGithub className="h-3.5 w-3.5" />
-                        Source
-                      </a>
-                    )}
-                    {project.demo && (
-                      <a
-                        href={`https://${stripProtocol(project.demo)}`}
-                        className="flex items-center gap-1.5 hover:text-zinc-200"
-                      >
-                        <IconLink className="h-3.5 w-3.5" />
-                        Live demo
-                      </a>
-                    )}
-                  </div>
+                {project.status && (
+                  <span
+                    className={`text-xs ${
+                      project.status.toLowerCase() === "active"
+                        ? "text-emerald-400"
+                        : project.status.toLowerCase() === "archived"
+                          ? "text-zinc-500"
+                          : "text-amber-400"
+                    }`}
+                  >
+                    {project.status}
+                  </span>
                 )}
               </div>
+
+              <p className="break-words text-zinc-400">{project.description}</p>
+
+              {project.highlights?.length > 0 && (
+                <ul className="space-y-1">
+                  {project.highlights.map((point, j) => (
+                    <li key={j} className="flex min-w-0 gap-2 text-sm text-zinc-500">
+                      <span className="shrink-0 text-zinc-700">·</span>
+                      <span className="break-words">{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {project.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {project.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="flex items-center gap-1.5 rounded-md bg-zinc-800/60 px-2 py-0.5 text-xs text-zinc-400"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor(tag) }} />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {(project.link || project.demo) && (
+                <div className="flex flex-wrap gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+                  {project.link && (
+                    <a
+                      href={`https://${stripProtocol(project.link)}`}
+                      className="flex items-center gap-1.5 hover:text-zinc-200"
+                    >
+                      <IconGithub className="h-3.5 w-3.5" />
+                      Source
+                    </a>
+                  )}
+                  {project.demo && (
+                    <a
+                      href={`https://${stripProtocol(project.demo)}`}
+                      className="flex items-center gap-1.5 hover:text-zinc-200"
+                    >
+                      <IconLink className="h-3.5 w-3.5" />
+                      Live demo
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -313,23 +307,21 @@ export default function TerminalTemplate({ data }) {
       </div>
 
       {/* One outer container for the whole page, so every section shares
-          the same left edge. Narrow (text) sections are max-w-2xl *without*
-          their own mx-auto — left-anchored inside this container, not
-          independently centered — while wide (visual) sections use the
-          full width. Independently centering each section is what made the
-          page zigzag left-right while scrolling; this keeps one consistent
-          reading edge throughout, ragged-right instead. */}
+          the same left edge — independently centering each section is what
+          made the page zigzag left-right while scrolling. Sections use the
+          full container width now; only the bio paragraph and the closing
+          CTA keep their own inner max-width, for prose readability, not to
+          leave the rest of the page looking cramped next to Experience and
+          Projects. */}
       <div className="mx-auto max-w-5xl px-6 pb-12 pt-12 sm:px-10">
-        <div className="max-w-2xl">
-          {/* about — the only contact info shown up top is the "Get in
-              touch" CTA at the very bottom of the page; a second contact
-              list here duplicated it for no reason. */}
-          <Block label="About">
-            <p className="break-words text-xl font-semibold text-white">{name || "Your Name"}</p>
-            <p className="mt-1 break-words text-emerald-400">{role || "Your Role"}</p>
-            <p className="mt-3 max-w-xl break-words leading-relaxed text-zinc-400">{bio}</p>
-          </Block>
-        </div>
+        {/* about — the only contact info shown up top is the "Get in touch"
+            CTA at the very bottom of the page; a second contact list here
+            duplicated it for no reason. */}
+        <Block label="About">
+          <p className="break-words text-xl font-semibold text-white">{name || "Your Name"}</p>
+          <p className="mt-1 break-words text-emerald-400">{role || "Your Role"}</p>
+          <p className="mt-3 max-w-xl break-words leading-relaxed text-zinc-400">{bio}</p>
+        </Block>
 
         {(sectionOrder || []).map((id) => (
           <Fragment key={id}>{sections[id]}</Fragment>
