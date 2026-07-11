@@ -28,7 +28,7 @@ const TEMPLATE_REPOS = {
   warm: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/warm",
   dashboard: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/dashboard",
   "level-up": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/level-up",
-  "retro-desktop": null,
+  "retro-desktop": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/retro-desktop",
   scrapbook: null,
   spotify: null,
 };
