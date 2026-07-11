@@ -221,7 +221,17 @@ export default function PortfolioEditor({ template }) {
               onChange={(paletteId) => setData({ ...data, paletteId })}
             />
           )}
-          <div className="min-w-0 flex-1 overflow-y-auto">
+          {/* `transform` makes this pane the containing block for any
+              `position: fixed` element a template renders (e.g. a fixed
+              background wallpaper) — without it, `fixed` inside a template
+              resolves against the real browser window, not this bounded
+              scrollable pane, and would cover the edit form on the left
+              instead of staying confined to the preview. Templates
+              themselves stay unaware of this — they use plain `fixed` as if
+              they were a normal full page, same as the actual deployed
+              site and the standalone /preview route, both of which have no
+              such wrapper and don't need one. */}
+          <div className="min-w-0 flex-1 overflow-y-auto" style={{ transform: "translateZ(0)" }}>
             <Template data={sanitizePortfolioData(data)} />
           </div>
         </div>

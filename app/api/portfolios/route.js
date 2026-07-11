@@ -29,7 +29,7 @@ const TEMPLATE_REPOS = {
   dashboard: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/dashboard",
   "level-up": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/level-up",
   "retro-desktop": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/retro-desktop",
-  scrapbook: null,
+  scrapbook: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/scrapbook",
   spotify: null,
 };
 
