@@ -30,7 +30,7 @@ const TEMPLATE_REPOS = {
   "level-up": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/level-up",
   "retro-desktop": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/retro-desktop",
   scrapbook: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/scrapbook",
-  spotify: null,
+  spotify: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/spotify",
 };
 
 export async function POST(request) {
