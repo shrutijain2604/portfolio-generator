@@ -7,6 +7,7 @@ import DashboardTemplate from "./DashboardTemplate";
 import RetroDesktopTemplate from "./RetroDesktopTemplate";
 import ScrapbookTemplate from "./ScrapbookTemplate";
 import SpotifyTemplate from "./SpotifyTemplate";
+import NewspaperTemplate from "./NewspaperTemplate";
 // import NetflixTemplate from "./NetflixTemplate";
 
 export const templateComponents = {
@@ -19,5 +20,6 @@ export const templateComponents = {
   "retro-desktop": RetroDesktopTemplate,
   scrapbook: ScrapbookTemplate,
   spotify: SpotifyTemplate,
+  newspaper: NewspaperTemplate,
   //netflix: NetflixTemplate,
 };
