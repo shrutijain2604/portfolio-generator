@@ -3,12 +3,13 @@
 // templates without touching the user's entered data.
 /* eslint-disable @next/next/no-img-element */
 
-import { Fragment } from "react";
 import { Fredoka, Figtree } from "next/font/google";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";
 import { WARM_PALETTES, getPalette } from "@/lib/palettes";
 import { IconGithub, IconLinkedin, IconLink, IconMail, initials, stripProtocol, dotColor, tint, shade, hexToRgb } from "./shared";
 import CursorGlow from "./CursorGlow";
+import TimeGreeting from "./TimeGreeting";
+import RevealOnScroll from "./RevealOnScroll";
 
 // Fredoka's rounded terminals carry the "warm and personal" feel in the
 // headlines; Figtree keeps body copy clean and readable rather than also
@@ -118,6 +119,83 @@ function ContactPill({ href, icon, label, colors, filled }) {
       <span style={filled ? undefined : { color: colors.ACCENT }}>{icon}</span>
       {label}
     </a>
+  );
+}
+
+// Emoji scattered at uneven heights and insets, not a tidy repeating
+// column — meant to actually catch the eye, unlike the soft color blobs
+// alone, which read as barely-there ambience rather than content.
+const MARGIN_EMOJI = {
+  left: [
+    { top: "9%", inset: "2.5rem", size: "text-2xl", rotate: "-rotate-12", glyph: "🌿", delay: "0s" },
+    { top: "24%", inset: "1rem", size: "text-lg", rotate: "rotate-6", glyph: "✨", delay: "0.6s" },
+    { top: "41%", inset: "3rem", size: "text-3xl", rotate: "rotate-3", glyph: "☁️", delay: "1.4s" },
+    { top: "58%", inset: "1.5rem", size: "text-xl", rotate: "-rotate-6", glyph: "💛", delay: "2.1s" },
+    { top: "73%", inset: "2.75rem", size: "text-2xl", rotate: "rotate-12", glyph: "🌸", delay: "0.3s" },
+    { top: "89%", inset: "1.25rem", size: "text-lg", rotate: "-rotate-3", glyph: "⭐", delay: "1.8s" },
+  ],
+  right: [
+    { top: "14%", inset: "1.5rem", size: "text-xl", rotate: "rotate-6", glyph: "💫", delay: "0.9s" },
+    { top: "29%", inset: "3rem", size: "text-2xl", rotate: "-rotate-12", glyph: "🌸", delay: "0.2s" },
+    { top: "47%", inset: "1rem", size: "text-lg", rotate: "rotate-3", glyph: "🌿", delay: "1.6s" },
+    { top: "64%", inset: "2.5rem", size: "text-3xl", rotate: "-rotate-6", glyph: "✨", delay: "1.1s" },
+    { top: "80%", inset: "1.5rem", size: "text-xl", rotate: "rotate-12", glyph: "☁️", delay: "0.5s" },
+    { top: "94%", inset: "2rem", size: "text-lg", rotate: "-rotate-3", glyph: "💛", delay: "2.3s" },
+  ],
+};
+
+// Big soft color pinned to both margins for the full height of the
+// viewport — not just the three blobs behind the hero, which only fill the
+// very top of a long page. Fixed to the viewport rather than the document,
+// so the gutters stay colorful no matter how far down the customer scrolls,
+// instead of the page reading as empty cream everywhere past the hero. The
+// scattered emoji on top are what actually reads as "filled" — the blobs
+// alone are too soft/blurred to register as more than a faint tint.
+function AmbientMargins({ side, palette }) {
+  const blobs =
+    side === "left"
+      ? [
+          { top: "6%", size: 220, color: palette[0], delay: "0s" },
+          { top: "40%", size: 170, color: palette[2] || palette[0], delay: "-4s" },
+          { top: "75%", size: 240, color: palette[1] || palette[0], delay: "-8s" },
+        ]
+      : [
+          { top: "18%", size: 200, color: palette[1] || palette[0], delay: "-3s" },
+          { top: "52%", size: 260, color: palette[0], delay: "-7s" },
+          { top: "86%", size: 180, color: palette[2] || palette[0], delay: "-1s" },
+        ];
+
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed top-0 z-[1] hidden h-dvh w-56 overflow-hidden xl:block ${
+        side === "left" ? "left-0" : "right-0"
+      }`}
+    >
+      {blobs.map((spot, i) => (
+        <div
+          key={i}
+          className="warm-float absolute rounded-full opacity-30 blur-3xl"
+          style={{
+            top: spot.top,
+            [side]: `-${Math.round(spot.size * 0.35)}px`,
+            width: spot.size,
+            height: spot.size,
+            backgroundColor: spot.color,
+            animationDelay: spot.delay,
+          }}
+        />
+      ))}
+      {MARGIN_EMOJI[side].map((spot, i) => (
+        <span
+          key={i}
+          className={`warm-twinkle absolute ${spot.size} ${spot.rotate} drop-shadow-sm`}
+          style={{ top: spot.top, [side]: spot.inset, animationDelay: spot.delay }}
+        >
+          {spot.glyph}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -330,10 +408,21 @@ export default function WarmTemplate({ data }) {
           content. Contained by the root's overflow-hidden; nothing in this
           template needs position: sticky, so that's safe here (unlike
           Editorial's sidebar). */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full opacity-25 blur-3xl" style={{ backgroundColor: PALETTE[0] }} />
-      <div className="pointer-events-none absolute -right-40 top-1/4 h-[28rem] w-[28rem] rounded-full opacity-20 blur-3xl" style={{ backgroundColor: PALETTE[1] }} />
-      <div className="pointer-events-none absolute bottom-0 left-1/4 h-80 w-80 rounded-full opacity-15 blur-3xl" style={{ backgroundColor: PALETTE[2] }} />
+      <div
+        className="warm-float pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full opacity-25 blur-3xl"
+        style={{ backgroundColor: PALETTE[0], animationDelay: "0s" }}
+      />
+      <div
+        className="warm-float pointer-events-none absolute -right-40 top-1/4 h-[28rem] w-[28rem] rounded-full opacity-20 blur-3xl"
+        style={{ backgroundColor: PALETTE[1], animationDelay: "-3s" }}
+      />
+      <div
+        className="warm-float pointer-events-none absolute bottom-0 left-1/4 h-80 w-80 rounded-full opacity-15 blur-3xl"
+        style={{ backgroundColor: PALETTE[2], animationDelay: "-6s" }}
+      />
       <CursorGlow colorRgb={hexToRgb(POP)} size={550} />
+      <AmbientMargins side="left" palette={PALETTE} />
+      <AmbientMargins side="right" palette={PALETTE} />
 
       <div className="relative mx-auto max-w-5xl px-6 py-16 sm:px-10 sm:py-20">
         {/* Hero */}
@@ -357,18 +446,30 @@ export default function WarmTemplate({ data }) {
                 {initials(name)}
               </div>
             )}
+            <span aria-hidden className="warm-twinkle pointer-events-none absolute -left-3 top-3 text-lg" style={{ animationDelay: "0s" }}>
+              ✨
+            </span>
+            <span aria-hidden className="warm-twinkle pointer-events-none absolute -right-4 top-12 text-base" style={{ animationDelay: "1s" }}>
+              ⭐
+            </span>
+            <span aria-hidden className="warm-twinkle pointer-events-none absolute -bottom-1 left-8 text-sm" style={{ animationDelay: "2s" }}>
+              💫
+            </span>
           </div>
 
           <div className="min-w-0">
             <h1 className={`${fredoka.className} break-words text-4xl font-semibold tracking-tight sm:text-5xl`} style={{ color: INK }}>
-              Hi, I&rsquo;m {firstName} 👋
+              Hi, I&rsquo;m {firstName} <span className="warm-wave">👋</span>
             </h1>
-            <span
-              className="mt-3 inline-block rounded-full px-4 py-1.5 text-sm font-semibold"
-              style={{ backgroundColor: tint(POP, 16), color: POP }}
-            >
-              {role || "Your Role"}
-            </span>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <span
+                className="inline-block rounded-full px-4 py-1.5 text-sm font-semibold"
+                style={{ backgroundColor: tint(POP, 16), color: POP }}
+              >
+                {role || "Your Role"}
+              </span>
+              <TimeGreeting background={tint(PALETTE[1], 18)} textColor={shade(PALETTE[1], 20)} />
+            </div>
           </div>
 
           <p className="max-w-xl break-words text-[17px] leading-relaxed" style={{ color: INK_SOFT }}>
@@ -384,17 +485,20 @@ export default function WarmTemplate({ data }) {
           )}
         </header>
 
-        {/* Sections, in the customer's chosen order */}
-        <div className="mt-20 space-y-20">
+        {/* Sections, in the customer's chosen order — each one settles
+            gently into place as the visitor scrolls to it, rather than the
+            whole page landing at once, matching this template's unhurried,
+            personal tone. */}
+        <div className="mt-20 space-y-14">
           {visibleIds.map((id, i) => (
-            <Fragment key={id}>
+            <RevealOnScroll key={id}>
               <section>
                 <SectionHeading id={`section-${id}`} colors={colors} accent={PALETTE[i % PALETTE.length]}>
                   {{ label: SECTION_LABELS[id] || SECTION_DEFS[id]?.label, emoji: SECTION_EMOJI[id] || "✦" }}
                 </SectionHeading>
                 {sections[id]}
               </section>
-            </Fragment>
+            </RevealOnScroll>
           ))}
         </div>
 
@@ -402,7 +506,7 @@ export default function WarmTemplate({ data }) {
         <section className="relative mt-20 overflow-hidden rounded-[2.5rem] p-10 text-center" style={{ backgroundColor: tint(POP, 12) }}>
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-30 blur-2xl" style={{ backgroundColor: PALETTE[1] }} />
           <p className={`${fredoka.className} relative text-2xl font-semibold`} style={{ color: INK }}>
-            Say hello 👋
+            Say hello <span className="warm-wave">👋</span>
           </p>
           <p className="relative mt-2 text-[15px]" style={{ color: MUTED }}>
             I&rsquo;d love to hear from you — about a role, a project, or just to say hi.
@@ -422,7 +526,9 @@ export default function WarmTemplate({ data }) {
           <p>
             © {new Date().getFullYear()} {name || "Your Name"}
           </p>
-          <p className="mt-1 opacity-70">Made with Dev Portfolio Builder</p>
+          <p className="mt-1 opacity-70">
+            Made with Dev Portfolio Builder <span className="warm-heartbeat" aria-hidden>❤️</span>
+          </p>
         </footer>
       </div>
     </div>

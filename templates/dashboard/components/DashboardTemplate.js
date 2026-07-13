@@ -25,6 +25,9 @@ import {
   hexToRgb,
 } from "./shared";
 import CursorGlow from "./CursorGlow";
+import SidebarNav from "./SidebarNav";
+import LiveSynced from "./LiveSynced";
+import RevealOnScroll from "./RevealOnScroll";
 
 // Space Grotesk's geometric, slightly technical character reads as "data" —
 // used for numbers and headings; Inter keeps body copy neutral and dense,
@@ -109,24 +112,9 @@ function BarRow({ label, count, max, color, colors }) {
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: tint(colors.INK, 8) }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+        <div className="dashboard-bar-fill h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
     </div>
-  );
-}
-
-function NavLink({ href, icon, children, colors }) {
-  return (
-    <a
-      href={href}
-      className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-transform hover:translate-x-0.5"
-      style={{ color: colors.INK_SOFT }}
-    >
-      <span className="shrink-0" style={{ color: colors.MUTED }}>
-        {icon}
-      </span>
-      <span className="min-w-0 truncate">{children}</span>
-    </a>
   );
 }
 
@@ -423,6 +411,15 @@ export default function DashboardTemplate({ data }) {
   const order = sectionOrder || [];
   const visibleIds = order.filter((id) => sections[id]);
 
+  const navItems = [
+    { href: "#overview", icon: <IconHome className="h-4 w-4" />, label: "Overview" },
+    ...visibleIds.map((id) => {
+      const Icon = SECTION_ICONS[id];
+      return { href: `#section-${id}`, icon: Icon && <Icon className="h-4 w-4" />, label: SECTION_DEFS[id]?.label };
+    }),
+    { href: "#contact", icon: <IconMail className="h-4 w-4" />, label: "Contact" },
+  ];
+
   return (
     <div className={`relative flex min-h-dvh ${inter.className}`} style={{ backgroundColor: PAPER, color: INK }}>
       <CursorGlow colorRgb={hexToRgb(POP)} size={500} />
@@ -437,11 +434,22 @@ export default function DashboardTemplate({ data }) {
           <div className="relative">
             <div className="h-16 w-full" style={{ background: `linear-gradient(135deg, ${POP}, ${PALETTE[1]})` }} />
             <div className="px-6 pb-5">
-              <div
-                className="-mt-8 flex h-16 w-16 items-center justify-center rounded-full text-lg font-bold shadow-md ring-4"
-                style={{ backgroundColor: POP, color: PAPER, "--tw-ring-color": PAPER }}
-              >
-                {initials(name)}
+              <div className="relative -mt-8 inline-block">
+                <div
+                  className="flex h-16 w-16 items-center justify-center rounded-full text-lg font-bold shadow-md ring-4"
+                  style={{ backgroundColor: POP, color: PAPER, "--tw-ring-color": PAPER }}
+                >
+                  {initials(name)}
+                </div>
+                {/* Presence dot — a small, standard "active" indicator
+                    rather than anything playful, matching the rest of this
+                    template's real-product register. */}
+                <span
+                  className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full ring-2"
+                  style={{ backgroundColor: "#10b981", "--tw-ring-color": PAPER }}
+                >
+                  <span className="absolute h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                </span>
               </div>
               <p className="mt-3 break-words text-sm font-semibold" style={{ color: INK }}>
                 {name || "Your Name"}
@@ -479,23 +487,16 @@ export default function DashboardTemplate({ data }) {
             </div>
           )}
 
-          {/* Nav */}
-          <nav className="mt-5 space-y-1 border-t px-3 pt-4" style={{ borderColor: tint(ACCENT, 12) }}>
-            <NavLink href="#overview" icon={<IconHome className="h-4 w-4" />} colors={colors}>
-              Overview
-            </NavLink>
-            {visibleIds.map((id) => {
-              const Icon = SECTION_ICONS[id];
-              return (
-                <NavLink key={id} href={`#section-${id}`} icon={Icon && <Icon className="h-4 w-4" />} colors={colors}>
-                  {SECTION_DEFS[id]?.label}
-                </NavLink>
-              );
-            })}
-            <NavLink href="#contact" icon={<IconMail className="h-4 w-4" />} colors={colors}>
-              Contact
-            </NavLink>
-          </nav>
+          {/* Nav — highlights whichever section is actually scrolled into
+              view, like a real docs/dashboard sidebar. */}
+          <SidebarNav
+            items={navItems}
+            accent={ACCENT}
+            ink={INK}
+            inkSoft={INK_SOFT}
+            muted={MUTED}
+            borderColor={tint(ACCENT, 12)}
+          />
 
           {/* Skills preview */}
           {skills?.length > 0 && (
@@ -560,9 +561,12 @@ export default function DashboardTemplate({ data }) {
         </div>
 
         <div id="overview" className="scroll-mt-6">
-          <h1 className={`${spaceGrotesk.className} break-words text-2xl font-bold tracking-tight`} style={{ color: INK }}>
-            Overview
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <h1 className={`${spaceGrotesk.className} break-words text-2xl font-bold tracking-tight`} style={{ color: INK }}>
+              Overview
+            </h1>
+            <LiveSynced accent={PALETTE[0]} textColor={MUTED} />
+          </div>
           {bio && (
             <p className="mt-2 max-w-2xl break-words text-[15px] leading-relaxed" style={{ color: INK_SOFT }}>
               {bio}
@@ -573,57 +577,63 @@ export default function DashboardTemplate({ data }) {
               absent rather than showing a wall of zeros for an empty
               portfolio. */}
           {statItems.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-4">
-              {statItems.map((stat, i) => (
-                <StatCard key={stat.label} {...stat} accent={PALETTE[i % PALETTE.length]} colors={colors} />
-              ))}
-            </div>
+            <RevealOnScroll arrivedClassName="dashboard-pop-in" threshold={0.4} rootMargin="0px">
+              <div className="mt-6 flex flex-wrap gap-4">
+                {statItems.map((stat, i) => (
+                  <StatCard key={stat.label} {...stat} accent={PALETTE[i % PALETTE.length]} colors={colors} />
+                ))}
+              </div>
+            </RevealOnScroll>
           )}
 
-          {/* Chart widgets */}
+          {/* Chart widgets — bars fill in from zero once the widget
+              actually scrolls into view, the way a real analytics product's
+              charts animate on load rather than appearing pre-drawn. */}
           {(statusCounts.length > 0 || tagFrequency.length > 0) && (
-            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {statusCounts.length > 0 && (
-                <Widget title="Project status" colors={colors}>
-                  {statusCounts.map(([status, count]) => (
-                    <BarRow key={status} label={status} count={count} max={maxStatusCount} color={statusColor(status)} colors={colors} />
-                  ))}
-                </Widget>
-              )}
-              {tagFrequency.length > 0 && (
-                <Widget title="Tech stack across projects" colors={colors}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {tagFrequency.map(([tag, count]) => {
-                      const ratio = count / maxTagCount;
-                      const tier = ratio >= 0.75 ? "high" : ratio >= 0.4 ? "mid" : "low";
-                      return (
-                        <span
-                          key={tag}
-                          className={`flex min-w-0 items-center gap-1.5 rounded-full border ${
-                            tier === "high"
-                              ? "px-3 py-1.5 text-sm font-semibold"
-                              : tier === "mid"
-                                ? "px-2.5 py-1 text-sm font-medium"
-                                : "px-2 py-1 text-xs"
-                          }`}
-                          style={{ backgroundColor: tint(INK, 5), borderColor: tint(ACCENT, 14), color: tier === "high" ? INK : tier === "mid" ? INK_SOFT : MUTED }}
-                        >
+            <RevealOnScroll arrivedClassName="dashboard-reveal-arrived" threshold={0.3} rootMargin="0px">
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {statusCounts.length > 0 && (
+                  <Widget title="Project status" colors={colors}>
+                    {statusCounts.map(([status, count]) => (
+                      <BarRow key={status} label={status} count={count} max={maxStatusCount} color={statusColor(status)} colors={colors} />
+                    ))}
+                  </Widget>
+                )}
+                {tagFrequency.length > 0 && (
+                  <Widget title="Tech stack across projects" colors={colors}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {tagFrequency.map(([tag, count]) => {
+                        const ratio = count / maxTagCount;
+                        const tier = ratio >= 0.75 ? "high" : ratio >= 0.4 ? "mid" : "low";
+                        return (
                           <span
-                            className="shrink-0 rounded-full"
-                            style={{
-                              width: tier === "high" ? 8 : 6,
-                              height: tier === "high" ? 8 : 6,
-                              backgroundColor: dotColor(tag),
-                            }}
-                          />
-                          <span className="break-words">{tag}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                </Widget>
-              )}
-            </div>
+                            key={tag}
+                            className={`flex min-w-0 items-center gap-1.5 rounded-full border ${
+                              tier === "high"
+                                ? "px-3 py-1.5 text-sm font-semibold"
+                                : tier === "mid"
+                                  ? "px-2.5 py-1 text-sm font-medium"
+                                  : "px-2 py-1 text-xs"
+                            }`}
+                            style={{ backgroundColor: tint(INK, 5), borderColor: tint(ACCENT, 14), color: tier === "high" ? INK : tier === "mid" ? INK_SOFT : MUTED }}
+                          >
+                            <span
+                              className="shrink-0 rounded-full"
+                              style={{
+                                width: tier === "high" ? 8 : 6,
+                                height: tier === "high" ? 8 : 6,
+                                backgroundColor: dotColor(tag),
+                              }}
+                            />
+                            <span className="break-words">{tag}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </Widget>
+                )}
+              </div>
+            </RevealOnScroll>
           )}
         </div>
 

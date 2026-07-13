@@ -14,6 +14,10 @@ import { Press_Start_2P, Chakra_Petch, Inter } from "next/font/google";
 import { LEVEL_UP_PALETTES, getPalette } from "@/lib/palettes";
 import { IconGithub, IconLinkedin, IconLink, IconMail, stripProtocol, initials, tint, shade, hexToRgb } from "./shared";
 import CursorGlow from "./CursorGlow";
+import RevealOnScroll from "./RevealOnScroll";
+import HudStatus from "./HudStatus";
+import ReticleCursor from "./ReticleCursor";
+import TypingChallenge from "./TypingChallenge";
 
 // Press Start 2P is used only for short eyebrow labels/badges, at sizes
 // where a pixel font is legible (it wasn't, at body/heading size, in this
@@ -68,17 +72,88 @@ function IconCompass(props) {
   );
 }
 
+// A blocky, pixel-art cloud built from a few stacked rectangles rather
+// than a smooth SVG curve, so it reads as "8-bit" even at a glance.
+function PixelCloudShape({ color }) {
+  return (
+    <div aria-hidden style={{ width: 64, height: 28, position: "relative" }}>
+      <div style={{ position: "absolute", left: 8, top: 8, width: 48, height: 12, backgroundColor: color }} />
+      <div style={{ position: "absolute", left: 0, top: 12, width: 16, height: 8, backgroundColor: color }} />
+      <div style={{ position: "absolute", left: 16, top: 0, width: 16, height: 8, backgroundColor: color }} />
+      <div style={{ position: "absolute", left: 48, top: 12, width: 16, height: 8, backgroundColor: color }} />
+    </div>
+  );
+}
+
+// A small blocky pixel star — a second, smaller silhouette mixed in with
+// the clouds so the drifting layer reads as varied scenery, not one shape
+// repeated on a loop.
+function PixelStarShape({ color }) {
+  return (
+    <div aria-hidden style={{ width: 14, height: 14, position: "relative" }}>
+      <div style={{ position: "absolute", left: 5, top: 0, width: 4, height: 14, backgroundColor: color }} />
+      <div style={{ position: "absolute", left: 0, top: 5, width: 14, height: 4, backgroundColor: color }} />
+    </div>
+  );
+}
+
+// A field of pixel clouds and stars drifting across the background at
+// different heights, sizes and speeds — actual "world" scenery for the
+// game framing, covering the full viewport rather than a thin band near
+// the top. Fixed to the viewport so they're part of the scene at any
+// scroll position, not just up near the character panel. Every value here
+// is a fixed hand-picked set, not random-per-render, so the layout doesn't
+// reshuffle on refresh or differ between server and client render.
+function PixelClouds({ color, altColor }) {
+  const drifters = [
+    { top: "4%", scale: 1, duration: "42s", opacity: 0.14, delay: "-4s", type: "cloud" },
+    { top: "12%", scale: 0.5, duration: "26s", opacity: 0.35, delay: "-9s", type: "star" },
+    { top: "18%", scale: 0.6, duration: "58s", opacity: 0.09, delay: "-22s", type: "cloud" },
+    { top: "27%", scale: 0.8, duration: "50s", opacity: 0.11, delay: "-31s", type: "cloud" },
+    { top: "34%", scale: 0.4, duration: "22s", opacity: 0.3, delay: "-6s", type: "star" },
+    { top: "43%", scale: 0.9, duration: "46s", opacity: 0.1, delay: "-18s", type: "cloud" },
+    { top: "52%", scale: 0.55, duration: "30s", opacity: 0.28, delay: "-14s", type: "star" },
+    { top: "60%", scale: 0.7, duration: "54s", opacity: 0.1, delay: "-40s", type: "cloud" },
+    { top: "69%", scale: 1.1, duration: "62s", opacity: 0.13, delay: "-8s", type: "cloud" },
+    { top: "77%", scale: 0.45, duration: "24s", opacity: 0.32, delay: "-16s", type: "star" },
+    { top: "85%", scale: 0.65, duration: "48s", opacity: 0.1, delay: "-27s", type: "cloud" },
+    { top: "92%", scale: 0.5, duration: "20s", opacity: 0.26, delay: "-11s", type: "star" },
+  ];
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      {drifters.map((drifter, i) => (
+        <div key={i} className="absolute" style={{ top: drifter.top, opacity: drifter.opacity }}>
+          <div className="levelup-cloud-drift" style={{ animationDuration: drifter.duration, animationDelay: drifter.delay }}>
+            <div style={{ transform: `scale(${drifter.scale})`, transformOrigin: "left top" }}>
+              {drifter.type === "star" ? (
+                <PixelStarShape color={altColor || color} />
+              ) : (
+                <PixelCloudShape color={color} />
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Small L-shaped marks at each corner — the classic sci-fi/game HUD
 // "targeting frame" cue that reads as a game panel rather than a generic
-// rounded card.
-function CornerBrackets({ color }) {
+// rounded card. `auto` plays the lock-on snap immediately on mount (for
+// above-the-fold chrome like the character panel); otherwise the brackets
+// stay in their normal resting position until an ancestor picks up the
+// `levelup-panel-armed` class (see Panel below), which is how the same
+// snap plays once each panel actually scrolls into view.
+function CornerBrackets({ color, auto }) {
   const base = "absolute h-3 w-3";
+  const cls = auto ? "levelup-bracket-auto" : "levelup-bracket";
   return (
     <>
-      <span className={`${base} -left-1 -top-1 border-l-2 border-t-2`} style={{ borderColor: color }} />
-      <span className={`${base} -right-1 -top-1 border-r-2 border-t-2`} style={{ borderColor: color }} />
-      <span className={`${base} -bottom-1 -left-1 border-b-2 border-l-2`} style={{ borderColor: color }} />
-      <span className={`${base} -bottom-1 -right-1 border-b-2 border-r-2`} style={{ borderColor: color }} />
+      <span className={`${base} -left-1 -top-1 border-l-2 border-t-2 ${cls}`} style={{ borderColor: color }} />
+      <span className={`${base} -right-1 -top-1 border-r-2 border-t-2 ${cls}`} style={{ borderColor: color }} />
+      <span className={`${base} -bottom-1 -left-1 border-b-2 border-l-2 ${cls}`} style={{ borderColor: color }} />
+      <span className={`${base} -bottom-1 -right-1 border-b-2 border-r-2 ${cls}`} style={{ borderColor: color }} />
     </>
   );
 }
@@ -104,13 +179,17 @@ function Panel({ id, label, icon: Icon, colors, children }) {
           {label}
         </h2>
       </div>
-      <div className="relative">
-        <CornerBrackets color={ACCENT} />
-        <div className="overflow-hidden rounded-md border-2" style={{ borderColor: tint(ACCENT, 32), backgroundColor: tint(INK, 3) }}>
-          <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${ACCENT}, transparent)` }} />
-          <div className="p-5 sm:p-6">{children}</div>
+      {/* Corner brackets "lock on" like a targeting reticle the first time
+          this panel scrolls into view, instead of just sitting there. */}
+      <RevealOnScroll arrivedClassName="levelup-panel-armed" threshold={0.15} rootMargin="0px 0px -60px 0px">
+        <div className="relative">
+          <CornerBrackets color={ACCENT} />
+          <div className="overflow-hidden rounded-md border-2" style={{ borderColor: tint(ACCENT, 32), backgroundColor: tint(INK, 3) }}>
+            <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${ACCENT}, transparent)` }} />
+            <div className="p-5 sm:p-6">{children}</div>
+          </div>
         </div>
-      </div>
+      </RevealOnScroll>
     </section>
   );
 }
@@ -295,8 +374,8 @@ export default function LevelUpTemplate({ data }) {
               style={{ borderColor: tint(ACCENT, 20), backgroundColor: tint(ACCENT, 6) }}
             >
               <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded"
-                style={{ backgroundColor: tint(ACCENT, 20), color: ACCENT }}
+                className="levelup-shimmer-wrap flex h-7 w-7 shrink-0 items-center justify-center rounded"
+                style={{ backgroundColor: tint(ACCENT, 20), color: ACCENT, "--lu-shimmer-delay": `${(i % 4) * 0.6}s` }}
               >
                 <IconTrophy className="h-3.5 w-3.5" />
               </span>
@@ -321,7 +400,10 @@ export default function LevelUpTemplate({ data }) {
 
   return (
     <div className={`relative min-h-dvh ${inter.className}`} style={{ backgroundColor: PAPER, color: INK }}>
+      <PixelClouds color={ACCENT} altColor={PALETTE[3] || ACCENT} />
       <CursorGlow colorRgb={hexToRgb(ACCENT)} size={450} />
+      <ReticleCursor color={ACCENT} />
+      <HudStatus accent={ACCENT} ink="#e5e7eb" pixelClassName={pressStart.className} />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -338,7 +420,7 @@ export default function LevelUpTemplate({ data }) {
         {/* Character panel */}
         <aside className="lg:sticky lg:top-10 lg:self-start">
           <div className="relative">
-            <CornerBrackets color={ACCENT} />
+            <CornerBrackets color={ACCENT} auto />
             <div className="overflow-hidden rounded-md border-2" style={{ borderColor: tint(ACCENT, 32), backgroundColor: tint(INK, 3) }}>
               <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${ACCENT}, transparent)` }} />
               <div className="flex flex-col items-center p-6 text-center">
@@ -376,19 +458,30 @@ export default function LevelUpTemplate({ data }) {
               {(email || contactLinks.length > 0) && (
                 <div className="border-t-2 p-5" style={{ borderColor: tint(ACCENT, 20) }}>
                   {email && (
-                    <a
-                      href={`mailto:${email}`}
-                      className="flex w-full items-center justify-center gap-2 rounded-md border-2 px-4 py-2.5 text-sm font-semibold transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-                      style={{
-                        backgroundColor: ACCENT,
-                        color: PAPER,
-                        borderColor: shade(ACCENT, 25),
-                        boxShadow: `3px 3px 0 ${shade(ACCENT, 45)}`,
-                      }}
-                    >
-                      <IconMail className="h-4 w-4" />
-                      Recruit Me
-                    </a>
+                    <div className="relative">
+                      {/* Soft pulsing glow behind the button — a separate
+                          layer rather than animating the button's own
+                          box-shadow, so it never fights with the button's
+                          existing pressed-state shadow. */}
+                      <div
+                        aria-hidden
+                        className="levelup-button-glow pointer-events-none absolute inset-0 rounded-md blur-md"
+                        style={{ backgroundColor: ACCENT }}
+                      />
+                      <a
+                        href={`mailto:${email}`}
+                        className="relative flex w-full items-center justify-center gap-2 rounded-md border-2 px-4 py-2.5 text-sm font-semibold transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                        style={{
+                          backgroundColor: ACCENT,
+                          color: PAPER,
+                          borderColor: shade(ACCENT, 25),
+                          boxShadow: `3px 3px 0 ${shade(ACCENT, 45)}`,
+                        }}
+                      >
+                        <IconMail className="h-4 w-4" />
+                        Recruit Me
+                      </a>
+                    </div>
                   )}
                   {contactLinks.length > 0 && (
                     <div className="mt-3 flex flex-wrap justify-center gap-4">
@@ -410,6 +503,19 @@ export default function LevelUpTemplate({ data }) {
           {visibleIds.map((id) => (
             <Fragment key={id}>{sections[id]}</Fragment>
           ))}
+
+          {/* A real skill test, not a decorative toy — always last, since
+              it's not part of the customer's own content/section order. */}
+          <Panel label="Speed Run" icon={IconBolt} colors={colors}>
+            <TypingChallenge
+              accent={ACCENT}
+              paper={PAPER}
+              ink={INK}
+              inkSoft={INK_SOFT}
+              muted={MUTED}
+              pixelClassName={pressStart.className}
+            />
+          </Panel>
 
           <footer className="text-center text-xs sm:text-left" style={{ color: MUTED }}>
             © {new Date().getFullYear()} {name || "Your Name"} · Made with Dev Portfolio Builder

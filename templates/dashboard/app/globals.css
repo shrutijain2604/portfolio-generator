@@ -16,3 +16,46 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Dashboard template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes dashboard-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.dashboard-pop-in > * {
+  animation: dashboard-pop 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dashboard-pop-in > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.dashboard-pop-in > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.dashboard-pop-in > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.dashboard-bar-fill {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dashboard-reveal-arrived .dashboard-bar-fill {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-pop-in > * {
+    animation: none;
+  }
+  .dashboard-bar-fill {
+    transition: none;
+  }
+}

@@ -16,3 +16,114 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Level Up template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes levelup-lock-on {
+  0% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.92);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.levelup-bracket-auto {
+  animation: levelup-lock-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.levelup-bracket-auto:nth-child(1) {
+  animation-delay: 0ms;
+}
+.levelup-bracket-auto:nth-child(2) {
+  animation-delay: 60ms;
+}
+.levelup-bracket-auto:nth-child(3) {
+  animation-delay: 90ms;
+}
+.levelup-bracket-auto:nth-child(4) {
+  animation-delay: 30ms;
+}
+
+.levelup-panel-armed .levelup-bracket:nth-child(1) {
+  animation: levelup-lock-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0ms;
+}
+.levelup-panel-armed .levelup-bracket:nth-child(2) {
+  animation: levelup-lock-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 60ms;
+}
+.levelup-panel-armed .levelup-bracket:nth-child(3) {
+  animation: levelup-lock-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 90ms;
+}
+.levelup-panel-armed .levelup-bracket:nth-child(4) {
+  animation: levelup-lock-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 30ms;
+}
+
+@keyframes levelup-button-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.levelup-button-glow {
+  animation: levelup-button-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes levelup-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+.levelup-shimmer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.levelup-shimmer-wrap::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: levelup-shimmer 3.2s ease-in-out infinite;
+  animation-delay: var(--lu-shimmer-delay, 0s);
+}
+
+@keyframes levelup-cloud-drift {
+  from {
+    transform: translateX(-20vw);
+  }
+  to {
+    transform: translateX(120vw);
+  }
+}
+.levelup-cloud-drift {
+  animation: levelup-cloud-drift linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levelup-bracket-auto,
+  .levelup-panel-armed .levelup-bracket:nth-child(1),
+  .levelup-panel-armed .levelup-bracket:nth-child(2),
+  .levelup-panel-armed .levelup-bracket:nth-child(3),
+  .levelup-panel-armed .levelup-bracket:nth-child(4),
+  .levelup-button-glow,
+  .levelup-shimmer-wrap::after,
+  .levelup-cloud-drift {
+    animation: none;
+  }
+}
