@@ -33,6 +33,7 @@ const TEMPLATE_REPOS = {
   spotify: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/spotify",
   newspaper: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/newspaper",
   prism: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/prism",
+  holographic: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/holographic",
 };
 
 export async function POST(request) {
