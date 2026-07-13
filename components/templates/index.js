@@ -8,6 +8,8 @@ import RetroDesktopTemplate from "./RetroDesktopTemplate";
 import ScrapbookTemplate from "./ScrapbookTemplate";
 import SpotifyTemplate from "./SpotifyTemplate";
 import NewspaperTemplate from "./NewspaperTemplate";
+import PrismTemplate from "./PrismTemplate";
+import HolographicTemplate from "./HolographicTemplate";
 // import NetflixTemplate from "./NetflixTemplate";
 
 export const templateComponents = {
@@ -21,5 +23,7 @@ export const templateComponents = {
   scrapbook: ScrapbookTemplate,
   spotify: SpotifyTemplate,
   newspaper: NewspaperTemplate,
+  prism: PrismTemplate,
+  holographic: HolographicTemplate,
   //netflix: NetflixTemplate,
 };

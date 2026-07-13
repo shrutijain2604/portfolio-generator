@@ -2,16 +2,16 @@
 
 Pick a template, fill in one form, watch your portfolio come alive — live, in your browser.
 
-Nine visually distinct templates (git-log dark mode, a magazine-style editorial layout, a Windows-95 desktop, a Spotify-style artist profile, and more) all read from the same shared data, so switching templates never means retyping anything.
+12 visually distinct templates (git-log dark mode, a magazine-style editorial layout, a Windows-95 desktop, a Spotify-style artist profile, a foil trading-card deck, and more) all read from the same shared data, so switching templates never means retyping anything.
 
 ## Features
 
-- **9 templates**, each with its own layout, tone, and interactivity — not five reskins of the same card.
+- **12 templates**, each with its own layout, tone, and interactivity — not a dozen reskins of the same card: Changelog, Terminal, Editorial Minimal, Warm & Personal, Dashboard, Level Up, Retro Desktop, Digital Scrapbook, Artist Profile (Spotify-style), Front Page (newspaper), Prism (aurora glassmorphism), and Holographic (foil trading-card deck).
 - **Live preview** — a resizable split-pane editor shows your real content rendered in the chosen template as you type.
 - **Resume import** — upload a PDF/DOCX and have the form auto-filled (deterministic regex for email/GitHub/LinkedIn, Gemini for everything else). Always reviewable/editable afterward — parsing isn't perfect.
 - **Autosave** — your draft persists to `localStorage`, so a refresh never loses your work.
 - **Honest data** — every stat, chip, and "achievement" shown in a template is derived from what you actually entered. Nothing is fabricated.
-- **Deploy my portfolio** — saves your data to Supabase and hands off to Vercel's clone flow, which creates a real repo and deployment under *your own* GitHub/Vercel accounts — no login to this app required, no ongoing hosting dependency on it either. Currently wired up for the Terminal template; the rest follow the same pattern.
+- **Deploy my portfolio** — saves your data to Supabase and hands off to Vercel's clone flow, which creates a real repo and deployment under *your own* GitHub/Vercel accounts — no login to this app required, no ongoing hosting dependency on it either. Currently wired up for Changelog, Terminal, Editorial, Warm, Dashboard, Level Up, Retro Desktop, Scrapbook, and Spotify; Front Page, Prism, and Holographic each still need their own `templates/<id>/` standalone app before they can go live the same way.
 
 ## Getting started
 
