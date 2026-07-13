@@ -6,8 +6,20 @@ import { Fragment } from "react";
 import { Fraunces } from "next/font/google";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";
 import { EDITORIAL_PALETTES, getPalette } from "@/lib/palettes";
-import { IconGithub, IconLinkedin, IconLink, IconMail, stripProtocol, dotColor, tint, hexToRgb, shade } from "./shared";
+import {
+  IconGithub,
+  IconLinkedin,
+  IconLink,
+  IconMail,
+  stripProtocol,
+  dotColor,
+  tint,
+  hexToRgb,
+  shade,
+  initials,
+} from "./shared";
 import CursorGlow from "./CursorGlow";
+import ReadingTimer from "./ReadingTimer";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -77,6 +89,158 @@ function TimelineEntry({ title, subtitle, start, end, lines, accent, colors }) {
         />
       )}
     </div>
+  );
+}
+
+// A rotated vertical "spine" label pinned to a page edge, like the running
+// folio text along a real magazine's margin — only shows once there's real
+// gutter space beside the centered layout (xl+), so it never sits near
+// actual content. Static copy, not derived from customer data, since a
+// vertical column has no safe way to truncate an arbitrarily long name.
+function Folio({ side, label }) {
+  return (
+    <div
+      aria-hidden
+      className={`editorial-breathe pointer-events-none fixed top-1/2 z-[2] hidden -translate-y-1/2 xl:block ${
+        side === "left" ? "left-5 rotate-180" : "right-5"
+      }`}
+      style={{ writingMode: "vertical-rl" }}
+    >
+      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-current opacity-60">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// A wax-seal-style medallion in the masthead, initials only — the print
+// equivalent of an avatar, built from data already on the page rather than
+// an added claim.
+function Seal({ name, accent }) {
+  return (
+    <div
+      aria-hidden
+      className="editorial-breathe pointer-events-none absolute -right-3 -top-5 hidden h-16 w-16 rotate-12 items-center justify-center rounded-full border-2 sm:flex"
+      style={{ borderColor: accent, color: accent }}
+    >
+      <span className="font-sans text-lg font-bold">{initials(name)}</span>
+    </div>
+  );
+}
+
+// A pulled quote, the classic magazine device for filling a column with a
+// line already said elsewhere on the page — sourced from the customer's own
+// achievements/highlights/bullets, in that priority order, never invented.
+function pickPullQuote({ achievements, projects, experience }) {
+  if (achievements?.length > 0) return achievements[0];
+  const projectHighlight = projects?.find((p) => p.highlights?.length > 0)?.highlights[0];
+  if (projectHighlight) return projectHighlight;
+  const bullet = experience?.find((e) => e.bullets?.length > 0)?.bullets[0];
+  if (bullet) return bullet;
+  return null;
+}
+
+function PullQuote({ text, accent, colors, fraunces }) {
+  if (!text) return null;
+  return (
+    <blockquote className="editorial-fade-up my-2 border-l-4 pl-6" style={{ borderColor: accent }}>
+      <span className={`${fraunces.className} block text-5xl leading-none`} style={{ color: accent, opacity: 0.4 }}>
+        &ldquo;
+      </span>
+      <p className={`${fraunces.className} -mt-3 max-w-xl break-words text-2xl italic leading-snug`} style={{ color: colors.INK }}>
+        {text}
+      </p>
+    </blockquote>
+  );
+}
+
+// A small ornamental break between sections — a real magazine's dinkus —
+// so the generous gap between sections reads as a deliberate pause instead
+// of dead space.
+function SectionOrnament({ accent }) {
+  return (
+    <div aria-hidden className="flex items-center justify-center gap-3">
+      <span className="h-px w-12" style={{ backgroundColor: `${accent}40` }} />
+      <span className="editorial-breathe text-sm" style={{ color: accent }}>
+        ❦
+      </span>
+      <span className="h-px w-12" style={{ backgroundColor: `${accent}40` }} />
+    </div>
+  );
+}
+
+// A wire-service style headline ticker built from real project/role data —
+// no invented copy, just the same facts already on the page reframed as
+// breaking-news banner text.
+function pickHeadlines({ role, projects, skills }) {
+  return [
+    role && `NOW FEATURING: ${role.toUpperCase()}`,
+    ...(projects || [])
+      .slice(0, 3)
+      .map((p) => p.name && `IN THIS ISSUE: ${p.name.toUpperCase()}`),
+    skills?.length > 0 && `${skills.length} SKILLS ON FILE`,
+  ].filter(Boolean);
+}
+
+function WireTicker({ items, accent }) {
+  if (items.length === 0) return null;
+  const line = `${items.join("   ✦   ")}   ✦   `;
+  return (
+    <div aria-hidden className="overflow-hidden border-b-4 py-1.5" style={{ borderColor: accent }}>
+      <div
+        className="editorial-marquee-track flex w-max whitespace-nowrap font-sans text-[10px] font-semibold uppercase tracking-[0.25em]"
+        style={{ color: accent }}
+      >
+        <span className="pr-6">{line}</span>
+        <span className="pr-6">{line}</span>
+      </div>
+    </div>
+  );
+}
+
+// A couple of scattered ink-stain blots in the page margins — press-room
+// texture that only shows once there's real gutter space (xl+), so it
+// never sits near actual content. Fixed positions, not random, so a
+// refresh doesn't reshuffle them.
+function InkBlots({ palette }) {
+  const blots = [
+    { top: "22%", side: "left", inset: "1.5rem", size: 90, color: palette[0] },
+    { top: "62%", side: "right", inset: "2rem", size: 70, color: palette[2] || palette[0] },
+    { top: "85%", side: "left", inset: "3rem", size: 55, color: palette[1] || palette[0] },
+  ];
+  return (
+    <>
+      {blots.map((b, i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="editorial-breathe pointer-events-none fixed z-[1] hidden rounded-full blur-sm xl:block"
+          style={{
+            top: b.top,
+            [b.side]: b.inset,
+            width: b.size,
+            height: b.size,
+            background: `radial-gradient(circle, ${b.color}33, transparent 70%)`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+// A fine, static paper-grain texture over the whole page — the tactile
+// detail that separates a print-styled page from a flat one, without any
+// motion of its own.
+function PaperGrain() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-[1] opacity-[0.05] mix-blend-multiply"
+      style={{
+        backgroundImage:
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+      }}
+    />
   );
 }
 
@@ -289,10 +453,18 @@ export default function EditorialTemplate({ data }) {
 
   const order = sectionOrder || [];
   const visibleIds = order.filter((id) => sections[id]);
+  const pullQuoteText = pickPullQuote({ achievements, projects, experience });
+  const headlines = pickHeadlines({ role, projects, skills });
 
   return (
     <div className="relative min-h-dvh" style={{ backgroundColor: PAPER, color: INK }}>
+      <PaperGrain />
       <CursorGlow colorRgb={hexToRgb(POP)} size={550} />
+      <Folio side="left" label="The Portfolio Edition" />
+      <Folio side="right" label="Printed With Care" />
+      <InkBlots palette={PALETTE} />
+
+      <WireTicker items={headlines} accent={POP} />
 
       <div className="relative mx-auto max-w-7xl px-6 py-14 sm:px-10 lg:py-16">
         {/* Masthead strip */}
@@ -300,8 +472,12 @@ export default function EditorialTemplate({ data }) {
           <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.3em]" style={{ color: POP }}>
             The Portfolio Edition
           </span>
-          <span className="font-sans text-[11px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
+          <span
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-[11px] uppercase tracking-[0.3em]"
+            style={{ color: MUTED }}
+          >
             Issue No. 01 — {issueDate}
+            <ReadingTimer accent={POP} />
           </span>
         </div>
 
@@ -310,8 +486,18 @@ export default function EditorialTemplate({ data }) {
               contact and the chip-based sections, pinned in place on desktop
               so the wide canvas reads as a deliberate two-column magazine
               spread instead of one narrow column adrift in empty space. */}
-          <aside className="mt-10 min-w-0 lg:sticky lg:top-10 lg:mt-14 lg:border-r lg:pr-10" style={{ borderColor: `${ACCENT}18` }}>
-            <h1 className={`${fraunces.className} break-words text-4xl font-semibold tracking-tight sm:text-5xl`} style={{ color: INK }}>
+          <aside className="relative mt-10 min-w-0 lg:sticky lg:top-10 lg:mt-14 lg:border-r lg:pr-10" style={{ borderColor: `${ACCENT}18` }}>
+            <Seal name={name} accent={POP} />
+            <h1
+              className={`${fraunces.className} editorial-highlight break-words text-4xl font-semibold tracking-tight sm:text-5xl`}
+              style={{
+                color: INK,
+                backgroundImage: `linear-gradient(${POP}4d, ${POP}4d)`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "0 90%",
+                backgroundSize: "0% 0.35em",
+              }}
+            >
               {name || "Your Name"}
             </h1>
             <p
@@ -376,7 +562,12 @@ export default function EditorialTemplate({ data }) {
                 {visibleIds
                   .filter((id) => id !== "skills" && id !== "codingProfiles")
                   .map((id, i) => (
-                    <a key={id} href={`#section-${id}`} className="flex items-center gap-1.5" style={{ color: MUTED }}>
+                    <a
+                      key={id}
+                      href={`#section-${id}`}
+                      className="editorial-toc-link flex items-center gap-1.5"
+                      style={{ color: MUTED }}
+                    >
                       <span style={{ color: PALETTE[i % PALETTE.length] }}>{String(i + 1).padStart(2, "0")}</span>
                       {SECTION_LABELS[id]}
                     </a>
@@ -384,11 +575,14 @@ export default function EditorialTemplate({ data }) {
               </nav>
             )}
 
-            <div className="mt-12 space-y-20">
+            <PullQuote text={pullQuoteText} accent={POP} colors={colors} fraunces={fraunces} />
+
+            <div className="mt-12 space-y-14">
               {visibleIds
                 .filter((id) => id !== "skills" && id !== "codingProfiles")
                 .map((id, i) => (
                   <Fragment key={id}>
+                    {i > 0 && <SectionOrnament accent={PALETTE[i % PALETTE.length]} />}
                     <section>
                       <SectionTitle
                         id={`section-${id}`}
@@ -431,11 +625,18 @@ export default function EditorialTemplate({ data }) {
             </section>
 
             <footer className="mt-16 border-t pt-6" style={{ borderColor: `${ACCENT}15` }}>
-              <p className="break-words font-sans text-xs" style={{ color: MUTED }}>
+              <p className="break-words font-sans text-[11px] uppercase tracking-[0.15em]" style={{ color: `${MUTED}cc` }}>
+                Editor-in-Chief: {name || "Your Name"}
+                {role && <> · Contributing Writer: {role}</>}
+              </p>
+              <p className="mt-3 break-words font-sans text-xs" style={{ color: MUTED }}>
                 © {new Date().getFullYear()} {name || "Your Name"}
               </p>
               <p className="mt-1 font-sans text-[10px]" style={{ color: `${MUTED}99` }}>
                 Made with Dev Portfolio Builder
+              </p>
+              <p className="editorial-breathe mt-2 font-sans text-[10px] italic" style={{ color: `${MUTED}99` }}>
+                Set in Fraunces · printed fresh for every visit
               </p>
             </footer>
           </main>

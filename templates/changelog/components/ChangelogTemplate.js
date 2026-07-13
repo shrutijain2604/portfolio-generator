@@ -3,8 +3,20 @@
 // templates without touching the user's entered data.
 
 import { Fragment } from "react";
-import { IconGithub, IconLinkedin, IconLink, IconMail, TrafficLights, dotColor, initials, stripProtocol } from "./shared";
+import {
+  IconGithub,
+  IconLinkedin,
+  IconLink,
+  IconMail,
+  TrafficLights,
+  computeYearsOfExperience,
+  dotColor,
+  initials,
+  stripProtocol,
+} from "./shared";
 import CursorGlow from "./CursorGlow";
+import DeployLog from "./DeployLog";
+import DeployedAgo from "./DeployedAgo";
 
 function commitHash(seed) {
   // Deterministic fake hash so it doesn't change on every re-render/refresh.
@@ -13,6 +25,50 @@ function commitHash(seed) {
     h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   }
   return h.toString(16).slice(0, 7).padStart(7, "0");
+}
+
+// A "release tag" sticker for the header — the changelog theme's answer to
+// a status badge, but built from the customer's own stats (years coding,
+// skill/project counts) mapped onto a fake semver, not an asserted claim.
+function ReleaseTag({ skills, experience, projects }) {
+  const years = computeYearsOfExperience(experience);
+  if (years < 1 && !skills?.length && !projects?.length) return null;
+  const tag = `v${Math.max(years, 1)}.${skills?.length || 0}.${projects?.length || 0}`;
+  return (
+    <span className="inline-flex -rotate-2 items-center gap-1 rounded border border-dashed border-indigo-400/40 bg-indigo-500/10 px-2 py-0.5 font-mono text-[11px] text-indigo-300">
+      {tag} released
+    </span>
+  );
+}
+
+// A decorative commit-graph strip, styled after a GitHub contribution
+// graph — deterministic from the customer's own name/role so it's stable
+// across reloads and identical between server and client render, not a
+// per-visit random pattern.
+function CommitGraph({ seed }) {
+  const cols = 20;
+  const rows = 4;
+  const cells = Array.from({ length: cols * rows }, (_, i) => i);
+
+  return (
+    <div aria-hidden className="mb-14 -mt-4 hidden items-center gap-3 sm:flex">
+      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+        commits
+      </span>
+      <div className="grid grid-flow-col grid-rows-4 gap-[3px]">
+        {cells.map((i) => {
+          const on = (i * 7 + seed.length * 3) % 5 !== 0;
+          return (
+            <span
+              key={i}
+              className="h-[7px] w-[7px] rounded-[2px]"
+              style={{ backgroundColor: on ? dotColor(`${seed}-${i}`) : "rgba(255,255,255,0.05)" }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function SectionLabel({ children }) {
@@ -28,23 +84,95 @@ function SectionLabel({ children }) {
 
 function WindowBar() {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/10 bg-zinc-900/90 px-4 py-2.5 backdrop-blur">
-      <TrafficLights />
-      <div className="flex items-center gap-1.5 rounded-md bg-white/5 px-3 py-1 text-xs text-zinc-400">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-zinc-500" fill="currentColor">
-          <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5Z" />
-        </svg>
-        CHANGELOG.md
+    <div className="sticky top-0 z-10 flex flex-col border-b border-white/10 bg-zinc-900/90 backdrop-blur">
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <TrafficLights />
+        <div className="flex items-center gap-1.5 rounded-md bg-white/5 px-3 py-1 text-xs text-zinc-400">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-zinc-500" fill="currentColor">
+            <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5Z" />
+          </svg>
+          CHANGELOG.md
+        </div>
+        <div className="ml-auto hidden items-center gap-3 text-xs text-zinc-500 sm:flex">
+          <DeployedAgo />
+          <span className="text-zinc-700">•</span>
+          <div className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor">
+              <path d="M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm12-9a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM7.5 8.3v6.9M9 6h6a3 3 0 0 1 3 3v3" />
+            </svg>
+            main
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="ml-auto hidden items-center gap-1.5 text-xs text-zinc-500 sm:flex">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor">
-          <path d="M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm12-9a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM7.5 8.3v6.9M9 6h6a3 3 0 0 1 3 3v3" />
-        </svg>
-        main
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-        </span>
+      {/* A looping build-progress sweep — the changelog theme's ambient,
+          always-on motion, the same role CursorGlow plays but without
+          needing the visitor to move their mouse first. */}
+      <div aria-hidden className="h-[2px] w-full overflow-hidden bg-white/5">
+        <div
+          className="changelog-progress-sweep h-full w-1/3"
+          style={{ background: "linear-gradient(90deg, transparent, #10b981, #6366f1, transparent)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// A small pulsing "commit" node with a short dashed trace and fake hash —
+// the changelog theme's divider between sections, so scrolling past one
+// reads as moving along a commit history rather than crossing a plain rule.
+function SectionDivider({ seed }) {
+  return (
+    <div aria-hidden className="mb-6 flex items-center gap-3">
+      <span className="relative flex h-2 w-2 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-50" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-zinc-950 ring-1 ring-emerald-600" />
+      </span>
+      <span className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
+      <span className="font-mono text-[10px] text-zinc-700">{commitHash(seed)}</span>
+    </div>
+  );
+}
+
+function MovableSection({ seed, children }) {
+  return (
+    <section className="mb-14">
+      <SectionDivider seed={seed} />
+      {children}
+    </section>
+  );
+}
+
+// A vertical stream of small commit-graph squares pinned to a page gutter —
+// the changelog theme's take on ambient side motion, reusing the same
+// dotColor palette as the CommitGraph strip so the two read as one system.
+// Only shows once there's real gutter space beside the centered `max-w-5xl`
+// column (xl+), so it never sits near actual content. The pattern is a
+// fixed deterministic sequence, not per-render random, so server and client
+// markup always match.
+function CommitRain({ side, seed }) {
+  const offset = side === "left" ? 2 : 6;
+  const column = Array.from({ length: 30 }, (_, i) => (i * 7 + offset) % 5 !== 0);
+  const cells = [...column, ...column];
+
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed top-0 z-[2] hidden h-dvh w-6 overflow-hidden opacity-[0.35] xl:block ${
+        side === "left" ? "left-4" : "right-4"
+      }`}
+    >
+      <div className="changelog-rain-track flex flex-col items-center gap-[6px] py-[6px]">
+        {cells.map((on, i) => (
+          <span
+            key={i}
+            className="h-[7px] w-[7px] rounded-[2px]"
+            style={{ backgroundColor: on ? dotColor(`${seed}-${side}-${i}`) : "rgba(255,255,255,0.06)" }}
+          />
+        ))}
       </div>
     </div>
   );
@@ -71,7 +199,7 @@ export default function ChangelogTemplate({ data }) {
   // render, and in what sequence, between the header and the closing CTA.
   const sections = {
     skills: skills?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`skills-${name || "guest"}`}>
         <SectionLabel>Skills</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {skills.map((skill) => (
@@ -87,11 +215,11 @@ export default function ChangelogTemplate({ data }) {
             </span>
           ))}
         </div>
-      </section>
+      </MovableSection>
     ),
 
     codingProfiles: codingProfiles?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`coding-profiles-${name || "guest"}`}>
         <SectionLabel>Coding Profiles</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {codingProfiles.map((profile, i) => (
@@ -105,11 +233,11 @@ export default function ChangelogTemplate({ data }) {
             </a>
           ))}
         </div>
-      </section>
+      </MovableSection>
     ),
 
     experience: experience?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`experience-${name || "guest"}`}>
         <SectionLabel>Experience</SectionLabel>
         <div className="relative space-y-8">
           <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-emerald-500/60 via-white/10 to-transparent" />
@@ -152,11 +280,11 @@ export default function ChangelogTemplate({ data }) {
             </div>
           ))}
         </div>
-      </section>
+      </MovableSection>
     ),
 
     education: education?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`education-${name || "guest"}`}>
         <SectionLabel>Education</SectionLabel>
         <div className="space-y-2.5">
           {education.map((edu, i) => (
@@ -182,11 +310,11 @@ export default function ChangelogTemplate({ data }) {
             </div>
           ))}
         </div>
-      </section>
+      </MovableSection>
     ),
 
     achievements: achievements?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`achievements-${name || "guest"}`}>
         <SectionLabel>Achievements</SectionLabel>
         <ul className="space-y-2">
           {achievements.map((item, i) => (
@@ -199,14 +327,14 @@ export default function ChangelogTemplate({ data }) {
             </li>
           ))}
         </ul>
-      </section>
+      </MovableSection>
     ),
 
     // Full-width rows instead of a grid, so an uneven project count (e.g.
     // 2 or 4) never leaves a dangling half-empty row like a fixed column
     // count would.
     projects: projects?.length > 0 && (
-      <section className="mb-14">
+      <MovableSection seed={`projects-${name || "guest"}`}>
         <SectionLabel>Projects</SectionLabel>
         <div className="space-y-4">
           {projects.map((project, i) => (
@@ -308,7 +436,7 @@ export default function ChangelogTemplate({ data }) {
             </div>
           ))}
         </div>
-      </section>
+      </MovableSection>
     ),
   };
 
@@ -323,6 +451,8 @@ export default function ChangelogTemplate({ data }) {
         }}
       />
       <CursorGlow />
+      <CommitRain side="left" seed={name || role || "guest"} />
+      <CommitRain side="right" seed={name || role || "guest"} />
 
       <WindowBar />
 
@@ -336,12 +466,15 @@ export default function ChangelogTemplate({ data }) {
             {initials(name)}
           </div>
           <div className="min-w-0">
-            <h1 className="break-words font-sans text-3xl font-bold tracking-tight text-white">
+            <h1 className="changelog-diff-flash break-words rounded font-sans text-3xl font-bold tracking-tight text-white">
               {name || "Your Name"}
             </h1>
-            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-xs text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {role || "Your Role"}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-xs text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {role || "Your Role"}
+              </div>
+              <ReleaseTag skills={skills} experience={experience} projects={projects} />
             </div>
             <p className="mt-3 max-w-xl break-words font-sans leading-relaxed text-zinc-400">{bio}</p>
 
@@ -373,6 +506,10 @@ export default function ChangelogTemplate({ data }) {
             </div>
           </div>
         </header>
+
+        <DeployLog name={name} />
+
+        <CommitGraph seed={name || role || "guest"} />
 
         {(sectionOrder || []).map((id) => (
           <Fragment key={id}>{sections[id]}</Fragment>
@@ -443,7 +580,11 @@ export default function ChangelogTemplate({ data }) {
         </section>
 
         <footer className="mt-10 border-t border-white/10 pt-6 text-center">
-          <p className="font-mono text-xs text-zinc-500">
+          <p className="font-mono text-[11px] text-zinc-600">
+            ## [Unreleased] <span className="text-emerald-500">— Added:</span> new opportunities
+            <span className="ml-1 inline-block h-3 w-[6px] translate-y-[2px] animate-pulse bg-zinc-600" />
+          </p>
+          <p className="mt-3 font-mono text-xs text-zinc-500">
             © {new Date().getFullYear()} {name || "Your Name"}
           </p>
           <p className="mt-1 font-mono text-[10px] text-zinc-700">

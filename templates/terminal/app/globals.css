@@ -16,3 +16,100 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Terminal template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes terminal-scan-sweep {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.4;
+  }
+  92% {
+    opacity: 0.4;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+.terminal-scan-sweep {
+  animation: terminal-scan-sweep 7s linear infinite;
+}
+
+@keyframes terminal-rain {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.terminal-rain-track {
+  animation: terminal-rain 16s linear infinite;
+}
+
+@keyframes terminal-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.terminal-marquee-track {
+  animation: terminal-marquee 22s linear infinite;
+}
+
+@keyframes terminal-glitch {
+  0%,
+  100% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+  20% {
+    text-shadow: -2px 0 #f43f5e, 2px 0 #22d3ee;
+    transform: translate(-1px, 0);
+  }
+  40% {
+    text-shadow: 2px 0 #f43f5e, -2px 0 #22d3ee;
+    transform: translate(1px, 0);
+  }
+  60% {
+    text-shadow: -1px 0 #f43f5e, 1px 0 #22d3ee;
+    transform: translate(0, 1px);
+  }
+  80% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+}
+.terminal-glitch:hover {
+  animation: terminal-glitch 420ms steps(2, jump-none) 1;
+}
+
+@keyframes terminal-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.terminal-fade-up {
+  animation: terminal-fade-up 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-scan-sweep,
+  .terminal-rain-track,
+  .terminal-marquee-track,
+  .terminal-glitch:hover,
+  .terminal-fade-up {
+    animation: none;
+  }
+}

@@ -9,10 +9,13 @@ import {
   IconLink,
   IconMail,
   TrafficLights,
+  computeYearsOfExperience,
   dotColor,
   stripProtocol,
 } from "./shared";
 import CursorGlow from "./CursorGlow";
+import SessionUptime from "./SessionUptime";
+import BootSequence from "./BootSequence";
 
 function slug(name) {
   return (
@@ -46,11 +49,116 @@ function Block({ label, children }) {
   );
 }
 
+// A small pulsing "connector" node centered on a section's top border — ties
+// sections together like circuit-trace joints, so scrolling past a divider
+// is a moment of motion instead of a static line.
+function DividerNode() {
+  return (
+    <span aria-hidden className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-zinc-950 ring-1 ring-emerald-600" />
+      </span>
+    </span>
+  );
+}
+
 // Every reorderable section always carries its own border-t — unlike Block,
 // none of these are ever the first thing on the page (About/Contact always
 // render above them), so there's no first-child case to special-case.
 function MovableSection({ children }) {
-  return <section className="border-t border-zinc-900 py-8">{children}</section>;
+  return (
+    <section className="relative border-t border-zinc-900 py-8">
+      <DividerNode />
+      {children}
+    </section>
+  );
+}
+
+// A vertical stream of binary digits pinned to a page gutter — a nod to
+// "code rain" that only shows once there's real gutter space beside the
+// centered `max-w-5xl` column (xl+), so it never sits near actual content.
+// The 0/1 pattern is a fixed deterministic sequence, not per-render random,
+// so server and client markup always match and a refresh doesn't reshuffle it.
+function CodeRain({ side }) {
+  const offset = side === "left" ? 3 : 5;
+  const column = Array.from({ length: 36 }, (_, i) => (i * 7 + offset) % 2);
+  const cells = [...column, ...column];
+
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed top-0 z-[2] hidden h-dvh w-8 overflow-hidden opacity-[0.16] xl:block ${
+        side === "left" ? "left-3" : "right-3"
+      }`}
+    >
+      <div className="terminal-rain-track flex flex-col items-center font-mono text-[11px] leading-[1.6] text-emerald-400">
+        {cells.map((bit, i) => (
+          <span key={i}>{bit}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// A scrolling "system status" ticker, styled after the fake dashboards in
+// hacker-movie UIs — a full-bleed animated strip under the window chrome so
+// the page has ambient motion even before the visitor moves their mouse.
+function StatusTicker() {
+  const items = [
+    "SYS.STATUS: ONLINE",
+    "UPTIME: NOMINAL",
+    "FIREWALL: ACTIVE",
+    "ENCRYPTION: AES-256",
+    "ACCESS: GRANTED",
+    "LATENCY: 12ms",
+  ];
+  const line = `${items.join("   ▸   ")}   ▸   `;
+
+  return (
+    <div aria-hidden className="overflow-hidden border-b border-zinc-900 bg-zinc-950/60 py-1.5">
+      <div className="terminal-marquee-track flex w-max whitespace-nowrap font-mono text-[10px] tracking-wide text-emerald-700">
+        <span className="pr-4">{line}</span>
+        <span className="pr-4">{line}</span>
+      </div>
+    </div>
+  );
+}
+
+// A `neofetch`-style stat readout — the terminal/hacker take on the
+// "available for hire" badges other portfolios use, built entirely from
+// numbers already in the customer's own data rather than an asserted claim.
+// Sits beside the bio to fill the wide gutter a short bio otherwise leaves
+// blank next to the narrow `max-w-xl` prose column on desktop.
+function StatsReadout({ name, skills, experience, projects }) {
+  const years = computeYearsOfExperience(experience);
+  const rows = [
+    { k: "user", v: `${slug(name)}@portfolio` },
+    years > 0 && { k: "uptime", v: `${years} yr${years === 1 ? "" : "s"} coding` },
+    skills?.length > 0 && { k: "packages", v: `${skills.length} skills installed` },
+    projects?.length > 0 && { k: "shipped", v: `${projects.length} project${projects.length === 1 ? "" : "s"}` },
+  ].filter(Boolean);
+
+  if (rows.length < 2) return null;
+
+  return (
+    <div className="terminal-fade-up mt-5 flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 px-4 py-3 sm:mt-0 sm:max-w-xs sm:shrink-0">
+      <div
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/5 font-mono text-sm font-bold text-emerald-400"
+      >
+        &gt;_
+      </div>
+      <dl className="min-w-0 space-y-1 font-mono text-[12px]">
+        {rows.map(({ k, v }) => (
+          <div key={k} className="flex gap-2">
+            <dt className="shrink-0 text-zinc-600">{k}:</dt>
+            <dd className="min-w-0 break-words text-zinc-300">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 export default function TerminalTemplate({ data }) {
@@ -281,6 +389,8 @@ export default function TerminalTemplate({ data }) {
     ),
   };
 
+  const activeSectionCount = (sectionOrder || []).filter((id) => sections[id]).length;
+
   return (
     <div className="relative min-h-dvh overflow-hidden bg-zinc-950 font-mono text-[14px] leading-relaxed text-zinc-300">
       {/* Ambient wash + scanline texture, full-viewport — without this the
@@ -298,13 +408,26 @@ export default function TerminalTemplate({ data }) {
             "repeating-linear-gradient(rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
         }}
       />
+      {/* A soft light beam sweeping top-to-bottom on a loop — the passive,
+          always-on counterpart to CursorGlow, which only appears once the
+          mouse moves. Fixed to the viewport rather than the document so it
+          reads as one continuous scanline regardless of scroll position. */}
+      <div
+        aria-hidden
+        className="terminal-scan-sweep pointer-events-none fixed inset-x-0 top-0 z-[3] h-24 opacity-0"
+        style={{ background: "linear-gradient(to bottom, transparent, rgba(16,185,129,0.5), transparent)" }}
+      />
       <CursorGlow />
+      <CodeRain side="left" />
+      <CodeRain side="right" />
 
       {/* Window chrome */}
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-zinc-800/80 bg-zinc-950/95 px-4 py-2.5 backdrop-blur">
         <TrafficLights />
         <span className="text-xs text-zinc-600">{user}@dev — zsh</span>
+        <SessionUptime />
       </div>
+      <StatusTicker />
 
       {/* One outer container for the whole page, so every section shares
           the same left edge — independently centering each section is what
@@ -317,10 +440,19 @@ export default function TerminalTemplate({ data }) {
         {/* about — the only contact info shown up top is the "Get in touch"
             CTA at the very bottom of the page; a second contact list here
             duplicated it for no reason. */}
+        <BootSequence name={name} sectionCount={activeSectionCount} />
+
         <Block label="About">
-          <p className="break-words text-xl font-semibold text-white">{name || "Your Name"}</p>
-          <p className="mt-1 break-words text-emerald-400">{role || "Your Role"}</p>
-          <p className="mt-3 max-w-xl break-words leading-relaxed text-zinc-400">{bio}</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+            <div className="min-w-0 max-w-xl">
+              <p className="terminal-glitch break-words text-xl font-semibold text-white">
+                {name || "Your Name"}
+              </p>
+              <p className="mt-1 break-words text-emerald-400">{role || "Your Role"}</p>
+              <p className="mt-3 break-words leading-relaxed text-zinc-400">{bio}</p>
+            </div>
+            <StatsReadout name={name} skills={skills} experience={experience} projects={projects} />
+          </div>
         </Block>
 
         {(sectionOrder || []).map((id) => (
@@ -330,7 +462,8 @@ export default function TerminalTemplate({ data }) {
         <div className="max-w-2xl">
           {/* closing / contact CTA — a real sign-off, not just a blinking
               cursor, with actual clickable ways to reach out. */}
-          <section className="border-t border-zinc-900 pt-8">
+          <section className="relative border-t border-zinc-900 pt-8">
+            <DividerNode />
             <SectionLabel>Get in touch</SectionLabel>
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
               <p className="flex flex-wrap items-center gap-2 text-[13px] text-zinc-500">
@@ -392,6 +525,13 @@ export default function TerminalTemplate({ data }) {
               © {new Date().getFullYear()} {name || "Your Name"}
             </p>
             <p className="mt-1 text-[10px] text-zinc-800">Made with Dev Portfolio Builder</p>
+            <p className="mt-3 font-mono text-[11px] text-zinc-700">
+              &gt; session active. thanks for stopping by.
+            </p>
+            <p className="mt-1 flex items-center gap-2 font-mono text-[11px] text-zinc-700">
+              <span>root@portfolio:~#</span>
+              <span className="inline-block h-3.5 w-[7px] animate-pulse bg-zinc-700" />
+            </p>
           </footer>
         </div>
       </div>

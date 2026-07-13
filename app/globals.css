@@ -24,3 +24,239 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Terminal template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes terminal-scan-sweep {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.4;
+  }
+  92% {
+    opacity: 0.4;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+.terminal-scan-sweep {
+  animation: terminal-scan-sweep 7s linear infinite;
+}
+
+@keyframes terminal-rain {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.terminal-rain-track {
+  animation: terminal-rain 16s linear infinite;
+}
+
+@keyframes terminal-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.terminal-marquee-track {
+  animation: terminal-marquee 22s linear infinite;
+}
+
+@keyframes terminal-glitch {
+  0%,
+  100% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+  20% {
+    text-shadow: -2px 0 #f43f5e, 2px 0 #22d3ee;
+    transform: translate(-1px, 0);
+  }
+  40% {
+    text-shadow: 2px 0 #f43f5e, -2px 0 #22d3ee;
+    transform: translate(1px, 0);
+  }
+  60% {
+    text-shadow: -1px 0 #f43f5e, 1px 0 #22d3ee;
+    transform: translate(0, 1px);
+  }
+  80% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+}
+.terminal-glitch:hover {
+  animation: terminal-glitch 420ms steps(2, jump-none) 1;
+}
+
+@keyframes terminal-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.terminal-fade-up {
+  animation: terminal-fade-up 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-scan-sweep,
+  .terminal-rain-track,
+  .terminal-marquee-track,
+  .terminal-glitch:hover,
+  .terminal-fade-up {
+    animation: none;
+  }
+}
+
+/* Changelog template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes changelog-progress-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+.changelog-progress-sweep {
+  animation: changelog-progress-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes changelog-rain {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.changelog-rain-track {
+  animation: changelog-rain 20s linear infinite;
+}
+
+@keyframes changelog-diff-flash {
+  0% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: rgba(16, 185, 129, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.changelog-diff-flash:hover {
+  animation: changelog-diff-flash 900ms ease-out 1;
+}
+
+@keyframes changelog-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.changelog-fade-up {
+  animation: changelog-fade-up 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .changelog-progress-sweep,
+  .changelog-rain-track,
+  .changelog-diff-flash:hover,
+  .changelog-fade-up {
+    animation: none;
+  }
+}
+
+/* Editorial template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes editorial-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+.editorial-breathe {
+  animation: editorial-breathe 5s ease-in-out infinite;
+}
+
+@keyframes editorial-highlight {
+  0% {
+    background-size: 0% 0.35em;
+  }
+  100% {
+    background-size: 100% 0.35em;
+  }
+}
+.editorial-highlight:hover {
+  animation: editorial-highlight 500ms ease-out forwards;
+}
+
+@keyframes editorial-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.editorial-fade-up {
+  animation: editorial-fade-up 500ms ease-out both;
+}
+
+@keyframes editorial-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.editorial-marquee-track {
+  animation: editorial-marquee 26s linear infinite;
+}
+
+.editorial-toc-link {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 250ms ease;
+}
+.editorial-toc-link:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorial-breathe,
+  .editorial-highlight:hover,
+  .editorial-fade-up,
+  .editorial-marquee-track {
+    animation: none;
+  }
+  .editorial-toc-link {
+    transition: none;
+  }
+}

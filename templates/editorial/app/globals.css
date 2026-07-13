@@ -16,3 +16,78 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Editorial template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes editorial-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+.editorial-breathe {
+  animation: editorial-breathe 5s ease-in-out infinite;
+}
+
+@keyframes editorial-highlight {
+  0% {
+    background-size: 0% 0.35em;
+  }
+  100% {
+    background-size: 100% 0.35em;
+  }
+}
+.editorial-highlight:hover {
+  animation: editorial-highlight 500ms ease-out forwards;
+}
+
+@keyframes editorial-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.editorial-fade-up {
+  animation: editorial-fade-up 500ms ease-out both;
+}
+
+@keyframes editorial-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.editorial-marquee-track {
+  animation: editorial-marquee 26s linear infinite;
+}
+
+.editorial-toc-link {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 250ms ease;
+}
+.editorial-toc-link:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorial-breathe,
+  .editorial-highlight:hover,
+  .editorial-fade-up,
+  .editorial-marquee-track {
+    animation: none;
+  }
+  .editorial-toc-link {
+    transition: none;
+  }
+}

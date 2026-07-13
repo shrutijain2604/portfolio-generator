@@ -16,3 +16,67 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Changelog template flourishes — classes prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. */
+@keyframes changelog-progress-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+.changelog-progress-sweep {
+  animation: changelog-progress-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes changelog-rain {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.changelog-rain-track {
+  animation: changelog-rain 20s linear infinite;
+}
+
+@keyframes changelog-diff-flash {
+  0% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: rgba(16, 185, 129, 0.18);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.changelog-diff-flash:hover {
+  animation: changelog-diff-flash 900ms ease-out 1;
+}
+
+@keyframes changelog-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.changelog-fade-up {
+  animation: changelog-fade-up 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .changelog-progress-sweep,
+  .changelog-rain-track,
+  .changelog-diff-flash:hover,
+  .changelog-fade-up {
+    animation: none;
+  }
+}
