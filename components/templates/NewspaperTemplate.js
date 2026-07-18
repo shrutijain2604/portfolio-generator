@@ -65,6 +65,31 @@ function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
+// CSS multi-column layout reserves however many equal-width tracks
+// `columns-N` asks for up front, independent of how much content there
+// actually is — a thin portfolio requesting 6 columns balances into 4-5
+// of them and leaves the last track empty but still full-width, a visible
+// gap on the right rather than the columns just being narrower. Capping
+// the requested column count to roughly how many "entries" worth of
+// content exist keeps every requested track actually filled. Tailwind's
+// build-time class scanner needs literal class strings, not
+// `` `columns-${n}` `` — hence a lookup table instead of interpolating.
+const COLUMN_CLASSES = {
+  2: "columns-1 sm:columns-2",
+  3: "columns-1 sm:columns-2 md:columns-3",
+  4: "columns-1 sm:columns-2 md:columns-3 lg:columns-4",
+  5: "columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5",
+  6: "columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6",
+};
+
+function maxColumnsFor(units) {
+  if (units <= 2) return 2;
+  if (units <= 4) return 3;
+  if (units <= 6) return 4;
+  if (units <= 9) return 5;
+  return 6;
+}
+
 // A section's masthead within the column flow: flag bar, caps headline,
 // hairline rule.
 function SectionFlag({ label, color, count, word }) {
@@ -98,9 +123,9 @@ function Section({ label, color, count, word, entries }) {
     <>
       <div className="break-inside-avoid">
         <SectionFlag label={label} color={color} count={count} word={word} />
-        <div className="mt-2.5">{first}</div>
+        <div className="mt-2">{first}</div>
       </div>
-      {rest.length > 0 && <div className="mt-3 space-y-3">{rest}</div>}
+      {rest.length > 0 && <div className="mt-2.5 space-y-2.5">{rest}</div>}
     </>
   );
 }
@@ -126,13 +151,6 @@ export default function NewspaperTemplate({ data }) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).toUpperCase();
   const allStartYears = [...(experience || []), ...(education || [])].map((x) => parseYear(x.start)).filter(Boolean);
   const estYear = allStartYears.length ? Math.min(...allStartYears) : null;
-
-  const contactItems = [
-    email && { label: email, href: `mailto:${email}`, Icon: IconMail },
-    links?.github && { label: stripProtocol(links.github), href: `https://${stripProtocol(links.github)}`, Icon: IconGithub },
-    links?.linkedin && { label: stripProtocol(links.linkedin), href: `https://${stripProtocol(links.linkedin)}`, Icon: IconLinkedin },
-    links?.website && { label: stripProtocol(links.website), href: `https://${stripProtocol(links.website)}`, Icon: IconLink },
-  ].filter(Boolean);
 
   const ctaLinks = [
     email && { label: "Email", value: email, href: `mailto:${email}`, Icon: IconMail },
@@ -260,11 +278,18 @@ export default function NewspaperTemplate({ data }) {
     skills:
       skills?.length > 0
         ? [
-            <p key="skills" className="text-justify text-[12.5px] leading-snug" style={{ color: INK_SOFT }}>
+            // flex-wrap + gap, not text-justify — justify stretches
+            // whatever whitespace it can find to fill each line, and for a
+            // multi-word skill name (e.g. "AWS EC2", "Unit Testing") that
+            // includes the literal space *inside* the name, splaying it
+            // apart unevenly. Each skill + its separator dot is glued into
+            // one flex item so a dot never gets orphaned at the start of a
+            // wrapped line.
+            <p key="skills" className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-[12.5px]" style={{ color: INK_SOFT }}>
               {skills.map((skill, i) => (
-                <span key={skill}>
+                <span key={skill} className="flex items-center gap-1.5">
                   {i > 0 && (
-                    <span className="mx-1" style={{ color: "rgba(0,0,0,0.3)" }}>
+                    <span aria-hidden style={{ color: "rgba(0,0,0,0.3)" }}>
                       ·
                     </span>
                   )}
@@ -303,24 +328,26 @@ export default function NewspaperTemplate({ data }) {
   }
 
   const order = (sectionOrder || []).filter((id) => sectionEntries[id]?.length > 0);
+  const contentUnits = order.reduce((sum, id) => sum + sectionEntries[id].length, 0);
+  const columnClasses = COLUMN_CLASSES[maxColumnsFor(contentUnits)];
 
   return (
     <div className="relative min-h-dvh" style={{ backgroundColor: PAPER }}>
       <CursorGlow colorRgb="200, 16, 46" size={550} />
 
-      <div className={`${serif.className} relative mx-auto max-w-[1800px] px-5 py-8 sm:px-10 sm:py-10 xl:px-16`}>
+      <div className={`${serif.className} relative mx-auto max-w-[1800px] px-5 py-6 sm:px-10 sm:py-7 xl:px-16`}>
         {/* Masthead */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b pb-1.5 text-[10px] font-semibold uppercase tracking-[0.25em]" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
           <span>{today}</span>
           <span>PORTFOLIO EDITION{estYear ? ` · EST. ${estYear}` : ""}</span>
         </div>
-        <h1 className={`${masthead.className} mt-2 break-words text-center text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-6xl`} style={{ color: INK }}>
+        <h1 className={`${masthead.className} mt-2 break-words text-center text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-5xl`} style={{ color: INK }}>
           {name || "Your Name"}
         </h1>
         <p className={`${masthead.className} mt-1.5 break-words text-center text-base italic sm:text-lg`} style={{ color: RED }}>
           {role || "Your Role"}
         </p>
-        <div className="mt-2.5 space-y-[3px]">
+        <div className="mt-2 space-y-[3px]">
           <div className="h-[3px] w-full" style={{ backgroundColor: INK }} />
           <div className="h-px w-full" style={{ backgroundColor: INK }} />
         </div>
@@ -328,46 +355,38 @@ export default function NewspaperTemplate({ data }) {
         {/* Byline / lead — a flex row centered on the photo rather than a
             float, so a short bio still reads as one balanced block instead
             of leaving dead space under a taller floated image. */}
-        <div className="mx-auto mt-5 flex max-w-3xl items-center gap-4 sm:gap-5">
+        <div className="mx-auto mt-3.5 flex max-w-3xl items-center gap-4 sm:gap-5">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={photoUrl}
               alt=""
-              className="w-20 shrink-0 rounded-none border object-cover sm:w-28"
+              className="w-16 shrink-0 rounded-none border object-cover sm:w-24"
               style={{ borderColor: "rgba(0,0,0,0.2)" }}
             />
           ) : (
             <div
-              className="flex aspect-square w-20 shrink-0 items-center justify-center rounded-none border text-2xl font-black text-white sm:w-28"
+              className="flex aspect-square w-16 shrink-0 items-center justify-center rounded-none border text-2xl font-black text-white sm:w-24"
               style={{ backgroundColor: dotColor(name || "portfolio"), borderColor: "rgba(0,0,0,0.2)" }}
             >
               {initials(name)}
             </div>
           )}
           <p
-            className="min-w-0 flex-1 whitespace-pre-line break-words text-justify text-[14.5px] leading-snug"
+            className="min-w-0 flex-1 whitespace-pre-line break-words text-justify text-[13.5px] leading-snug"
             style={{ color: INK_SOFT, hyphens: "auto" }}
           >
             {bio}
           </p>
         </div>
 
-        {contactItems.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 border-y py-2.5 text-[11.5px]" style={{ borderColor: "rgba(0,0,0,0.15)" }}>
-            {contactItems.map(({ label, href, Icon }) => (
-              <a key={href} href={href} className="flex min-w-0 items-center gap-1.5" style={{ color: MUTED }}>
-                <Icon className="h-3 w-3 shrink-0" />
-                <span className="break-words">{label}</span>
-              </a>
-            ))}
-          </div>
-        )}
-
         {/* Section index — a real front page's "Inside" line, not app-style
-            nav chips: plain text, pipe-separated, page numbers optional. */}
+            nav chips: plain text, pipe-separated, page numbers optional.
+            Contact details themselves only live in the "Get In Touch"
+            closing section below — showing them again here, right under
+            the bio, was pure duplication. */}
         {order.length > 0 && (
-          <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-wide" style={{ color: MUTED }}>
+          <p className="mt-4 border-t pt-2.5 text-center text-[11px] font-semibold uppercase tracking-wide" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
             Inside:{" "}
             {order.map((id, i) => (
               <span key={id}>
@@ -386,20 +405,25 @@ export default function NewspaperTemplate({ data }) {
 
         {/* Continuous ruled newsprint columns — every section flows in
             sequence, refilling each column before spilling to the next, so
-            there's no leftover gap the way mismatched cards left one. */}
+            there's no leftover gap the way mismatched cards left one. The
+            column count itself is capped by contentUnits (see
+            maxColumnsFor above) rather than viewport width alone, so a
+            lighter profile gets fewer, fully-used columns instead of
+            requesting more than it has content to fill and leaving a
+            blank track on the right. */}
         <div
-          className="mt-6 columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5"
-          style={{ columnGap: "2rem", columnRule: "1px solid rgba(0,0,0,0.18)" }}
+          className={`mt-4 ${columnClasses}`}
+          style={{ columnGap: "1.75rem", columnRule: "1px solid rgba(0,0,0,0.18)" }}
         >
           {order.map((id, i) => (
-            <div key={id} id={`section-${id}`} className={`scroll-mt-10 ${i === 0 ? "" : "mt-5"}`}>
+            <div key={id} id={`section-${id}`} className={`scroll-mt-10 ${i === 0 ? "" : "mt-4"}`}>
               <Section label={SECTION_LABELS[id]} color={SECTION_COLORS[id]} count={counts[id]} word={SECTION_WORDS[id]} entries={sectionEntries[id]} />
             </div>
           ))}
         </div>
 
         {/* Closing — a compact masthead-style strip, not a big CTA card. */}
-        <section className="mt-6 border-y-2 py-3" style={{ borderColor: INK }}>
+        <section className="mt-4 border-y-2 py-2.5" style={{ borderColor: INK }}>
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
             <div className="min-w-0">
               <h2 className={`${masthead.className} break-words text-base font-black uppercase tracking-tight`} style={{ color: INK }}>
@@ -422,7 +446,7 @@ export default function NewspaperTemplate({ data }) {
           </div>
         </section>
 
-        <footer className="mt-6 border-t pt-4 text-[11px]" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
+        <footer className="mt-4 border-t pt-3 text-[11px]" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
           © {new Date().getFullYear()} {name || "Your Name"} · Made with Dev Portfolio Builder
         </footer>
       </div>
