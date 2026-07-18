@@ -8,14 +8,17 @@
 // interleaved together) read as random, not curated, because nothing told
 // the eye what it was looking at. Within each section, cards lay out in a
 // centered flex-wrap grid, and every card gets one consistent signature
-// treatment: a torn-paper bottom edge via clip-path, the one motif applied
-// everywhere instead of a different decorative idea per section.
+// treatment: an organically torn paper edge on all sides (an SVG filter,
+// see TornPaperFilters below), the one motif applied everywhere instead
+// of a different decorative idea per section.
 /* eslint-disable @next/next/no-img-element */
 
 import { Fraunces, Inter, Caveat } from "next/font/google";
 import { SCRAPBOOK_PALETTES, getPalette } from "@/lib/palettes";
 import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, initials, stripProtocol, computeYearsOfExperience, tint, shade, hexToRgb } from "./shared";
 import CursorGlow from "./CursorGlow";
+import RevealOnScroll from "./RevealOnScroll";
+import FlipPolaroid from "./FlipPolaroid";
 
 // Fraunces is a soft, editorial display serif — carries names, headlines
 // and card titles. Inter keeps body copy clean and readable. Caveat is
@@ -25,24 +28,50 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["400", "500", "600"], s
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
 const caveat = Caveat({ subsets: ["latin"], weight: ["600", "700"] });
 
-// One fixed torn-edge shape, built once — not randomized per card, since a
-// different jagged pattern on every card is what read as chaotic rather
-// than deliberate. clip-path only draws straight segments, so the top
-// stays a clean rectangle (like a paper-trimmer cut) and only the bottom
-// tears — that combination is what actually reads as "torn paper" rather
-// than a random blob.
-const TORN_CLIP = (() => {
-  const teeth = 16;
-  const depth = 5; // percent of the card's own height
-  const baseY = 100 - depth;
-  const points = ["0% 0%", "100% 0%", `100% ${baseY}%`];
-  for (let i = 0; i <= teeth; i++) {
-    const x = 100 - (i / teeth) * 100;
-    const y = i % 2 === 0 ? 100 : baseY;
-    points.push(`${x.toFixed(2)}% ${y}%`);
-  }
-  return `polygon(${points.join(", ")})`;
-})();
+// Four torn-edge SVG filters, rendered once and referenced by every card
+// via CSS (see .scrapbook-torn in globals.css) — an organically torn,
+// raking-lit paper surface on all four sides, instead of a fixed zigzag
+// clip-path that could only ever cut straight segments. Ported directly
+// from happy358/TornPaper (MIT) as inline markup rather than pulling in
+// its runtime script — this codebase's decorative pieces are all
+// hand-rolled with no external dependency, and the technique is just an
+// SVG filter graph: fractal noise displaces + erodes the element's own
+// alpha edges into an irregular tear, and a second noise pass lit from a
+// raking angle (feDiffuseLighting) gives the paper surface real texture,
+// multiplied over the actual card content. Four fixed seeds (not
+// Math.random()) so each card's tear is a little different but stays
+// identical between server and client renders.
+const TORN_PAPER_VARIANTS = [
+  { id: "scrapbook-torn-1", seed: 7 },
+  { id: "scrapbook-torn-2", seed: 23 },
+  { id: "scrapbook-torn-3", seed: 41 },
+  { id: "scrapbook-torn-4", seed: 58 },
+];
+
+function TornPaperFilters() {
+  return (
+    <svg width="0" height="0" className="absolute" aria-hidden>
+      <defs>
+        {TORN_PAPER_VARIANTS.map(({ id, seed }) => (
+          <filter key={id} id={id} x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="10" seed={seed} result="paper_noise" />
+            <feDiffuseLighting in="paper_noise" lightingColor="white" surfaceScale="3" result="paper">
+              <feDistantLight azimuth="45" elevation="60" />
+            </feDiffuseLighting>
+            <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="10" seed={seed} result="edge_noise" />
+            <feGaussianBlur stdDeviation="0.5" in="SourceGraphic" />
+            <feMorphology operator="erode" radius="5" />
+            <feOffset dx="-2" dy="-2" />
+            <feDisplacementMap scale="10" xChannelSelector="B" yChannelSelector="G" in2="edge_noise" result="edge" />
+            <feComposite in="paper" in2="edge" operator="atop" result="result_rough" />
+            <feComposite in="SourceGraphic" in2="edge" operator="atop" result="result_sg" />
+            <feBlend mode="multiply" in="result_rough" in2="result_sg" />
+          </filter>
+        ))}
+      </defs>
+    </svg>
+  );
+}
 
 function WashiTape({ className = "", color, rotation = -6 }) {
   return (
@@ -57,14 +86,47 @@ function WashiTape({ className = "", color, rotation = -6 }) {
   );
 }
 
-// Every card in every section shares this shell. `filter: drop-shadow`
-// (not `box-shadow`) because a box-shadow would draw a rectangular shadow
-// ignoring the clip-path — drop-shadow follows the actual clipped, torn
-// silhouette instead.
+// A little metal tack pinning each card to the board — grounded with its
+// own tiny shadow ellipse so it reads as sitting slightly proud of the
+// paper, not printed on it. Idles with a sway (per-card delay comes from
+// the --pin-delay custom property set on the grid wrapper) and "presses
+// in" on hover/focus, in sync with the card lifting off the board — see
+// .scrapbook-card / .scrapbook-pin in globals.css. An SVG drawing, not an
+// emoji pushpin, so it stays crisp and consistent across platforms.
+function CorkPin({ color }) {
+  return (
+    <span aria-hidden className="scrapbook-pin pointer-events-none absolute left-1/2 top-0 z-10">
+      <svg width="26" height="28" viewBox="0 0 26 28" fill="none">
+        <ellipse cx="13" cy="24.5" rx="4" ry="1.6" fill="rgba(0,0,0,0.18)" />
+        <path d="M13 15 L13 22" stroke={shade(color, 35)} strokeWidth="2.4" strokeLinecap="round" />
+        <circle cx="13" cy="9" r="7.5" fill={shade(color, 12)} />
+        <circle cx="10.5" cy="6.5" r="2.6" fill="rgba(255,255,255,0.6)" />
+        <circle cx="10" cy="6" r="1.1" fill="rgba(255,255,255,0.9)" />
+      </svg>
+    </span>
+  );
+}
+
+// Every card in every section shares this shell — the one signature
+// treatment applied everywhere instead of a different decorative idea per
+// section, built up in real layers: a second sheet (.scrapbook-paper-peek),
+// tinted a shade darker, sits behind the main sheet and offset a few px so
+// it peeks out past the torn edge — the classic "there's another page
+// under this one" scrapbook tell. Both sheets get their tear + texture
+// from .scrapbook-torn (a shared class; which of the four TornPaperFilters
+// variants each card gets is chosen by nth-child position on the grid
+// wrapper, in globals.css — see .scrapbook-board there). No border or
+// clip-path anymore — the SVG filter draws the entire torn silhouette
+// itself, so a straight CSS border would just cut a rectangle across an
+// organic shape. `.scrapbook-card`'s own drop-shadow (globals.css) still
+// lifts the whole stack together and follows whatever the filter painted,
+// since drop-shadow shadows the element's actual rendered pixels.
 function Pin({ children, accent, colors, className = "" }) {
   return (
-    <div className={`relative ${className}`} style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.14))" }}>
-      <div className="border-x border-t" style={{ backgroundColor: colors.CARD, borderColor: tint(accent, 30), clipPath: TORN_CLIP }}>
+    <div className={`scrapbook-card ${className}`}>
+      <CorkPin color={accent} />
+      <div aria-hidden className="scrapbook-torn scrapbook-paper-peek pointer-events-none absolute inset-0" style={{ backgroundColor: shade(colors.CARD, 10) }} />
+      <div className="scrapbook-torn relative" style={{ backgroundColor: colors.CARD }}>
         {children}
         <div className="h-4" aria-hidden />
       </div>
@@ -89,18 +151,48 @@ function SectionHeading({ children, accent }) {
 }
 
 function ProjectCard({ project, accent, colors }) {
+  // The back only gets content — and the photo only becomes flippable —
+  // when there's a real highlight or description to show; flipping to a
+  // blank card would be a dead end. See FlipPolaroid.
+  const note = project.highlights?.[0] || project.description || "";
   return (
     <Pin accent={accent} colors={colors}>
-      {project.image ? (
-        <img src={project.image} alt={project.name || "Project"} className="w-full object-cover" />
-      ) : (
-        <div
-          className="flex h-36 w-full items-center justify-center text-4xl font-semibold text-white"
-          style={{ background: `linear-gradient(135deg, ${accent}, ${shade(accent, 30)})` }}
-        >
-          {(project.name || "?")[0]?.toUpperCase()}
-        </div>
-      )}
+      <FlipPolaroid
+        label={project.name || "this project"}
+        front={
+          // An actual polaroid — thick warm-white paper border (always
+          // this off-white, regardless of the section's accent, the way a
+          // real photo's paper border ignores whatever it's stuck next
+          // to), tucked into the card with its own slight independent
+          // tilt so it reads as a photo someone placed there, not a
+          // banner image the card was born with.
+          <div className="flex h-full w-full flex-col items-center justify-center p-3">
+            <div className="scrapbook-polaroid flex h-full w-full flex-col p-2 pb-5" style={{ backgroundColor: "#fbf9f4" }}>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {project.image ? (
+                  <img src={project.image} alt={project.name || "Project"} className="h-full w-full object-cover" />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center text-3xl font-semibold text-white"
+                    style={{ background: `linear-gradient(135deg, ${accent}, ${shade(accent, 30)})` }}
+                  >
+                    {(project.name || "?")[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+        back={
+          note && (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-3 text-center" style={{ backgroundColor: tint(accent, 14) }}>
+              <span className={`${caveat.className} break-words text-lg leading-snug`} style={{ color: colors.INK }}>
+                &ldquo;{note}&rdquo;
+              </span>
+            </div>
+          )
+        }
+      />
       <div className="p-5 pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className={`${fraunces.className} min-w-0 break-words text-lg font-medium`} style={{ color: colors.INK }}>
@@ -268,18 +360,54 @@ function AchievementCard({ text, accent, colors }) {
 // of hugging the left edge. A section with exactly one card (Toolkit,
 // Coding Profiles) just centers that one card instead of stretching it
 // across empty columns.
+// Cards flutter in and settle into their resting tilt the first time a
+// section scrolls into view, instead of the whole board landing at once.
+// `.scrapbook-board` is what the per-card tilt (--rest-rot) and stagger
+// delays in globals.css key off of; the extra wrapper div even in the
+// single-card case keeps that targeting consistent (and keeps the
+// flutter's own transform off the card's element, which owns its resting
+// rotation and hover-lift transform separately).
 function CardGrid({ items }) {
   if (items.length === 1) {
-    return <div className="mx-auto max-w-md">{items[0]}</div>;
+    return (
+      <RevealOnScroll arrivedClassName="scrapbook-flutter-arrive" threshold={0.2} rootMargin="0px 0px -60px 0px">
+        <div className="scrapbook-board mx-auto max-w-md">
+          <div>{items[0]}</div>
+        </div>
+      </RevealOnScroll>
+    );
   }
   return (
-    <div className="flex flex-wrap justify-center gap-6">
-      {items.map((item, i) => (
-        <div key={i} className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
-          {item}
-        </div>
-      ))}
-    </div>
+    <RevealOnScroll arrivedClassName="scrapbook-flutter-arrive" threshold={0.15} rootMargin="0px 0px -60px 0px">
+      <div className="scrapbook-board flex flex-wrap justify-center gap-6">
+        {items.map((item, i) => (
+          <div key={i} className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
+            {item}
+          </div>
+        ))}
+      </div>
+    </RevealOnScroll>
+  );
+}
+
+// A handwritten eyebrow line with an ink underline that draws itself the
+// first time it scrolls into view — `pathLength="1"` normalizes the SVG
+// path so the draw-on keyframe (globals.css) can animate stroke-dashoffset
+// 1 → 0 without measuring the path's real length. Stays fully drawn
+// (dashoffset 0) by default per RevealOnScroll's contract, so a visitor
+// without JS, or a crawler, never sees a missing/half-drawn line.
+function InkEyebrow({ children, color }) {
+  return (
+    <RevealOnScroll arrivedClassName="scrapbook-ink-arrive" threshold={0.6} rootMargin="0px">
+      <span className="inline-flex flex-col items-center">
+        <span className={`${caveat.className} text-lg`} style={{ color }}>
+          {children}
+        </span>
+        <svg width="150" height="12" viewBox="0 0 150 12" className="scrapbook-ink -mt-1" aria-hidden focusable="false">
+          <path d="M2,8 Q37,2 75,7 T148,5" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" pathLength="1" style={{ strokeDasharray: 1, strokeDashoffset: 0 }} />
+        </svg>
+      </span>
+    </RevealOnScroll>
   );
 }
 
@@ -318,6 +446,7 @@ export default function ScrapbookTemplate({ data }) {
 
   return (
     <div className={`relative min-h-dvh ${inter.className}`} style={{ backgroundColor: PAPER, color: INK }}>
+      <TornPaperFilters />
       {/* One shared wallpaper texture across every palette, `fixed` so it
           stays pinned to the viewport as the page scrolls instead of
           scrolling with the content — a translucent wash of the palette's
@@ -366,9 +495,7 @@ export default function ScrapbookTemplate({ data }) {
             )}
           </div>
           <div>
-            <span className={`${caveat.className} text-lg`} style={{ color: ACCENT }}>
-              welcome to my board
-            </span>
+            <InkEyebrow color={ACCENT}>welcome to my board</InkEyebrow>
             <h1 className={`${fraunces.className} mt-1 break-words text-5xl font-medium tracking-tight sm:text-6xl`} style={{ color: INK }}>
               {name || "Your Name"}
             </h1>
@@ -406,9 +533,7 @@ export default function ScrapbookTemplate({ data }) {
           <Pin accent={ACCENT} colors={colors}>
             <AccentBar color={ACCENT} />
             <div className="p-8 pb-4 text-center">
-              <span className={`${caveat.className} text-lg`} style={{ color: ACCENT }}>
-                always open to a chat
-              </span>
+              <InkEyebrow color={ACCENT}>always open to a chat</InkEyebrow>
               <p className={`${fraunces.className} mt-1 break-words text-3xl font-medium`} style={{ color: INK }}>
                 Let&rsquo;s connect
               </p>
