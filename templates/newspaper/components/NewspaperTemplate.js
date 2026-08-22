@@ -1,57 +1,110 @@
-// Pure presentational component: renders portfolio `data` only, no state of
-// its own. Every template follows this contract so the editor can swap
-// templates without touching the user's entered data.
+// Front Page: a MODERN newspaper, set as a single no-scroll page.
 //
-// No palette picker (see lib/palettes.js) — like Spotify, this template's
-// identity is a fixed look: warm newsprint paper plus a fixed set of
-// section colors modeled on how real newsrooms color-code their sections
-// (Business is always the same blue, Sports the same green, issue to
-// issue). Letting a customer recolor it would undercut the "looks like a
-// real paper" goal the same way it would for Spotify's black-and-green.
+// Design rules this template holds to, in priority order:
 //
-// The body is a single CSS multi-column flow (like real newsprint columns,
-// ruled apart) rather than a grid/flex-wrap of section cards — a grid or
-// flex-wrap row is only ever as tight as its tallest item per row, which is
-// exactly what left ugly gaps next to short sections. Columns instead
-// refill top-to-bottom automatically, so there's never leftover space
-// unless the content itself runs out.
+// 1. ONE PAGE, NO SCROLL (on lg and up). The root is `h-dvh` with
+//    `overflow-hidden` and the body flow is the flex child that absorbs
+//    whatever height is left over. A front page is a fixed piece of paper;
+//    this behaves like one.
+//
+//    The consequence to understand: height is a FIXED BUDGET, so copy that
+//    does not fit is clipped rather than pushed below the fold. That is
+//    managed by `densityFor()` — type size, leading, entry spacing, and
+//    column count are all derived from how many characters the customer
+//    actually entered, so a heavy portfolio sets tighter and still fits. It
+//    is a real budget, though, not magic: a genuinely enormous portfolio can
+//    still outrun the smallest tier.
+//
+//    Below `lg` the page scrolls normally and type returns to a readable
+//    fixed size. Fitting four roles and forty skills into 667px of phone at
+//    a legible size is not possible, and shipping unreadable 9px copy on
+//    mobile would be worse than scrolling.
+//
+// 2. WHITE PAPER, NO TEXTURE. Cream stock, paper grain, and halftone-screened
+//    photos all read "antique reproduction". This is white, with clean
+//    full-colour cuts.
+// 3. SEPARATE WITH SPACE AND WEIGHT, NOT WITH LINES. An earlier version drew
+//    roughly thirty hairlines on one page — double rules, a border above every
+//    entry, an underline beneath every skill, rules between every column — and
+//    the result was noise that fought the reading. There are exactly TWO rules
+//    here: one under the nameplate, one above the sign-off.
+// 4. Column inches matter: the body is ONE continuous multi-column flow and
+//    copy breaks across columns mid-story exactly like newsprint. Only
+//    headings are protected, via `break-after: avoid`. Making each heading
+//    plus its first entry an unbreakable block (an earlier attempt) meant any
+//    block too tall for the space left in a column jumped wholesale to the
+//    next, stranding hundreds of pixels of dead column.
+// 5. The customer's own section order decides what leads: sectionOrder[0] gets
+//    the largest heading, per the editor's reorder card ("lead with Projects
+//    if that's your strongest section").
+// 6. Nothing is fabricated. The tenure line is computed from real dates and
+//    the EST. year is the earliest real start year. Edition furniture is
+//    derived or omitted, never invented.
+//
+// Still a pure render of `data` with no state of its own — same contract as
+// every other template, and the density tiers below are derived from props, so
+// server and client always agree. Still no palette picker (see
+// lib/palettes.js): the fixed black-on-white editorial look IS the identity.
+//
+// No CursorGlow: a tracking light is a screen affordance, and on a page
+// pretending to be printed matter it broke the illusion.
 
-import { Playfair_Display, Source_Serif_4 } from "next/font/google";
+import { Fragment } from "react";
+import { Playfair_Display, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";
 import {
   IconGithub,
   IconLinkedin,
   IconLink,
   IconMail,
-  dotColor,
   initials,
   stripProtocol,
   parseYear,
   computeYearsOfExperience,
 } from "./shared";
-import CursorGlow from "./CursorGlow";
+import FitToPage from "./FitToPage";
 
-const masthead = Playfair_Display({ subsets: ["latin"], weight: ["700", "900"], style: ["normal", "italic"] });
-const serif = Source_Serif_4({ subsets: ["latin"], weight: ["400", "600", "700"], style: ["normal", "italic"] });
+// Exposed as CSS variables as well as classNames so ::first-letter can pick up
+// the display face for the drop cap — a pseudo-element can't be handed a React
+// className.
+const display = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
+  style: ["normal", "italic"],
+  variable: "--np-display",
+});
+const serif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["300", "400", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--np-serif",
+});
+// Datelines, kickers, and tags only — a mono reads as press furniture (and
+// quietly signals "developer") without a third serif voice.
+const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--np-mono" });
 
-const PAPER = "#faf8f3";
-const INK = "#18140f";
-const INK_SOFT = "#3d362e";
-const MUTED = "#8a8078";
-const RED = "#c8102e";
-
-// Fixed per-section colors — the whole point is that "Business" is always
-// the same blue issue to issue, not a color that shuffles with sectionOrder.
-const SECTION_COLORS = {
-  experience: "#c8102e",
-  projects: "#0057b8",
-  education: "#0f8a6f",
-  achievements: "#d69a00",
-  skills: "#7b2cbf",
-  codingProfiles: "#e8542e",
-};
+const PAPER = "#ffffff";
+const INK = "#111111";
+const INK_SOFT = "#2e2e2e";
+const MUTED = "#767676";
+const FAINT = "#9b9b9b";
+const RED = "#c8102e"; // keep in sync with the literal in the drop-cap class below
+const RULE = "#111111";
 
 const SECTION_LABELS = Object.fromEntries(SECTION_DEFINITIONS.map((s) => [s.id, s.label]));
+
+// Standing section kickers, the way a paper has "Business" and "Arts &
+// Leisure". Pure editorial furniture: it names the desk, it never asserts
+// anything about the customer.
+const SECTION_KICKERS = {
+  experience: "The Career Desk",
+  projects: "Shipped & Shipping",
+  education: "Credentials",
+  achievements: "Citations & Honors",
+  skills: "The Stack",
+  codingProfiles: "The Directory",
+};
+
 const SECTION_WORDS = {
   experience: "role",
   projects: "project",
@@ -61,72 +114,125 @@ const SECTION_WORDS = {
   codingProfiles: "profile",
 };
 
+const PRESENT = /^(present|current|now|ongoing)$/i;
+
 function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-// CSS multi-column layout reserves however many equal-width tracks
-// `columns-N` asks for up front, independent of how much content there
-// actually is — a thin portfolio requesting 6 columns balances into 4-5
-// of them and leaves the last track empty but still full-width, a visible
-// gap on the right rather than the columns just being narrower. Capping
-// the requested column count to roughly how many "entries" worth of
-// content exist keeps every requested track actually filled. Tailwind's
-// build-time class scanner needs literal class strings, not
-// `` `columns-${n}` `` — hence a lookup table instead of interpolating.
-const COLUMN_CLASSES = {
-  2: "columns-1 sm:columns-2",
-  3: "columns-1 sm:columns-2 md:columns-3",
-  4: "columns-1 sm:columns-2 md:columns-3 lg:columns-4",
-  5: "columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5",
-  6: "columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6",
-};
-
-function maxColumnsFor(units) {
-  if (units <= 2) return 2;
-  if (units <= 4) return 3;
-  if (units <= 6) return 4;
-  if (units <= 9) return 5;
-  return 6;
+// " – " with nothing either side is worse than no line at all.
+function dateRange(start, end) {
+  return [start, end].map((v) => (v || "").trim()).filter(Boolean).join(" – ");
 }
 
-// A section's masthead within the column flow: flag bar, caps headline,
-// hairline rule.
-function SectionFlag({ label, color, count, word }) {
+// Base type sizes, in `vh` so they track the window, each multiplied by
+// `--np-fit` — the multiplier FitToPage measures at runtime. The base only has
+// to be in the right neighbourhood; the fit does the rest.
+//
+// What used to be here was a weight model that derived sizes from character and
+// entry counts. It is gone on purpose. It could not be made correct: it clipped
+// real sentences on some window sizes and left a third of the page blank on
+// others, and one tier boundary alone cost 22% of the page. Measuring beats
+// predicting. See FitToPage.js.
+const FIT = (base, min, max) => `calc(clamp(${min}, ${base}vh, ${max}) * var(--np-fit))`;
+
+const SIZES = {
+  body: FIT(1.45, "7px", "15px"),
+  title: FIT(1.85, "9.5px", "19px"),
+  meta: FIT(0.92, "6px", "10px"),
+  entry: FIT(0.95, "0.35rem", "1.35rem"),
+  bullet: FIT(0.44, "0.14rem", "0.55rem"),
+  gap: FIT(2.0, "0.7rem", "2.6rem"),
+  colGap: FIT(1.7, "1rem", "2.3rem"),
+};
+
+// CONTAINER queries, not viewport ones, and that distinction matters here.
+// The editor renders this template inside a ~735px split pane while the window
+// is 1512px wide, so a `lg:` breakpoint (which reads the WINDOW) fired and
+// packed five columns into that pane at ~130px each — enough to hyphenate
+// "capabili-ties". `@container` measures the template's own box instead, so the
+// same code gives two columns in the editor pane and five on the full page.
+//
+// Tailwind's scanner needs literal class strings, not an interpolated
+// `columns-${n}`, hence the lookup. The tier caps the maximum; the container
+// width decides how many of those are actually reached.
+const COLUMN_CLASS =
+  "columns-1 @xl:columns-2 @4xl:columns-3 @6xl:columns-4 @7xl:columns-5";
+
+// Protects a heading from being split from the copy beneath it. The ONLY break
+// control in the body flow; everything else may break freely.
+const KEEP_WITH_NEXT = { breakAfter: "avoid", breakInside: "avoid" };
+
+function Kicker({ children, color = MUTED, className = "" }) {
   return (
-    <div>
-      <span className="block h-[3px] w-8" style={{ backgroundColor: color }} />
-      <h2 className={`${masthead.className} mt-1.5 break-words text-base font-black uppercase leading-tight tracking-tight sm:text-lg`} style={{ color: INK }}>
-        {label}
-        {count > 0 && (
-          <span className="ml-2 text-[10px] font-semibold normal-case tracking-normal" style={{ color: MUTED }}>
-            ({plural(count, word)})
-          </span>
-        )}
-      </h2>
-      <div className="mt-1 h-px w-full" style={{ backgroundColor: "rgba(0,0,0,0.18)" }} />
+    <span
+      className={`${mono.className} block text-[8.5px] font-medium uppercase leading-none tracking-[0.18em] ${className}`}
+      style={{ color }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// A photo in newspaper jargon is a "cut". Clean and full-colour: the previous
+// grayscale-plus-dot-mesh screening was authentic to 1935 letterpress and
+// exactly why the page read as an antique.
+function NewsCut({ src, alt, caption, className = "", aspect }) {
+  return (
+    <figure className={className}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt || ""} className="block w-full object-cover" style={{ aspectRatio: aspect }} />
+      {caption && (
+        <figcaption
+          className={`${mono.className} mt-1.5 text-[8px] uppercase leading-snug tracking-[0.11em]`}
+          style={{ color: FAINT }}
+        >
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+function InitialsCut({ name, className = "" }) {
+  return (
+    <div className={`flex aspect-square items-center justify-center ${className}`} style={{ backgroundColor: "#f2f2f2" }}>
+      <span className={`${display.className} text-4xl font-black leading-none`} style={{ color: INK }}>
+        {initials(name)}
+      </span>
     </div>
   );
 }
 
-// Renders one section as: [heading + first entry] glued together as one
-// unbreakable unit (so a column break can never separate a heading from all
-// of its content — the previous bug), followed by any remaining entries
-// flowing freely into later columns like a real continued newspaper column.
-// Forcing the *whole* section to stay together instead (the first attempt
-// at fixing that bug) backfired: a long Experience block dragged the
-// balanced column height up so far that the short remaining sections filled
-// only 1-2 of the 4 available columns, leaving the rest empty.
-function Section({ label, color, count, word, entries }) {
-  const [first, ...rest] = entries;
+// Section heading: red kicker over a bold serif label. Title case, no rule —
+// the space is the separator.
+function SectionHeading({ id, label, kicker, count, word, large, first }) {
   return (
-    <>
-      <div className="break-inside-avoid">
-        <SectionFlag label={label} color={color} count={count} word={word} />
-        <div className="mt-2">{first}</div>
+    <div
+      id={`section-${id}`}
+      className={`scroll-mt-8 ${first ? "" : "mt-[var(--np-section)]"} mb-[var(--np-head)]`}
+      style={KEEP_WITH_NEXT}
+    >
+      <Kicker color={RED}>{kicker}</Kicker>
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+        <h2
+          className={`${display.className} break-words font-black leading-[1.05] tracking-[-0.015em] ${
+            large ? "text-[19px] lg:text-[21px]" : "text-[16px] lg:text-[17px]"
+          }`}
+          style={{ color: INK }}
+        >
+          {label}
+        </h2>
+        {count > 0 && (
+          <span
+            className={`${mono.className} text-[8px] uppercase tracking-[0.13em]`}
+            style={{ color: FAINT }}
+          >
+            {plural(count, word)}
+          </span>
+        )}
       </div>
-      {rest.length > 0 && <div className="mt-2.5 space-y-2.5">{rest}</div>}
-    </>
+    </div>
   );
 }
 
@@ -148,19 +254,30 @@ export default function NewspaperTemplate({ data }) {
   } = data;
 
   const yearsXp = computeYearsOfExperience(experience);
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+  const today = new Date()
+    .toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+    .toUpperCase();
   const allStartYears = [...(experience || []), ...(education || [])].map((x) => parseYear(x.start)).filter(Boolean);
   const estYear = allStartYears.length ? Math.min(...allStartYears) : null;
 
-  const ctaLinks = [
-    email && { label: "Email", value: email, href: `mailto:${email}`, Icon: IconMail },
-    links?.github && { label: "GitHub", value: stripProtocol(links.github), href: `https://${stripProtocol(links.github)}`, Icon: IconGithub },
-    links?.linkedin && { label: "LinkedIn", value: stripProtocol(links.linkedin), href: `https://${stripProtocol(links.linkedin)}`, Icon: IconLinkedin },
-    links?.website && { label: "Website", value: stripProtocol(links.website), href: `https://${stripProtocol(links.website)}`, Icon: IconLink },
-  ].filter(Boolean);
+  // The current post if one is open-ended, else the most recent listed. Feeds
+  // the deck and byline only; Experience still tells the whole story.
+  const jobs = experience || [];
+  const leadJob = jobs.find((job) => PRESENT.test((job.end || "").trim())) || jobs[0] || null;
+  const leadIsCurrent = leadJob ? PRESENT.test((leadJob.end || "").trim()) : false;
+  // Trailing stop trimmed first: a company already ending in a period
+  // ("Analytical Engines Inc.") otherwise renders a double stop.
+  const leadCompany = (leadJob?.company || "").trim().replace(/[.,;:]+$/, "");
+  const deck = leadCompany
+    ? `${leadIsCurrent ? "Currently" : "Most recently"} at ${leadCompany}.${
+        yearsXp > 0 ? ` ${plural(yearsXp, "year")} in the field.` : ""
+      }`
+    : yearsXp > 0
+      ? `${plural(yearsXp, "year")} in the field.`
+      : "";
 
   const counts = {
-    experience: experience?.length || 0,
+    experience: jobs.length,
     projects: projects?.length || 0,
     education: education?.length || 0,
     achievements: achievements?.length || 0,
@@ -168,86 +285,127 @@ export default function NewspaperTemplate({ data }) {
     codingProfiles: codingProfiles?.length || 0,
   };
 
-  // Each section is an array of standalone entry nodes (not one composed
-  // block) so Section above can glue the heading to just the first entry
-  // and let the rest flow freely across columns.
-  const sectionEntries = {
-    experience: (experience || []).map((job, i) => (
-      <article key={i} className="break-inside-avoid">
-        <h3 className="break-words text-[14.5px] font-black leading-snug" style={{ color: INK }}>
-          {job.role || "Role"}
-        </h3>
-        <p className="mt-0.5 break-words text-[10px] font-bold uppercase tracking-wide" style={{ color: SECTION_COLORS.experience }}>
-          {job.company} · {job.start} – {job.end}
-        </p>
-        {job.bullets?.length > 0 && (
-          <div className="mt-1 space-y-1 text-[12.5px] leading-snug" style={{ color: INK_SOFT, hyphens: "auto" }}>
-            {job.bullets.map((b, j) => (
-              <p key={j} className="whitespace-pre-line break-words text-justify">
-                {b}
-              </p>
-            ))}
-          </div>
-        )}
-      </article>
-    )),
+  const ctaLinks = [
+    email && { label: "Email", value: email, href: `mailto:${email}`, Icon: IconMail },
+    links?.github && {
+      label: "GitHub",
+      value: stripProtocol(links.github),
+      href: `https://${stripProtocol(links.github)}`,
+      Icon: IconGithub,
+    },
+    links?.linkedin && {
+      label: "LinkedIn",
+      value: stripProtocol(links.linkedin),
+      href: `https://${stripProtocol(links.linkedin)}`,
+      Icon: IconLinkedin,
+    },
+    links?.website && {
+      label: "Website",
+      value: stripProtocol(links.website),
+      href: `https://${stripProtocol(links.website)}`,
+      Icon: IconLink,
+    },
+  ].filter(Boolean);
 
-    projects: (projects || []).map((project, i) => (
-      <article key={i} className="break-inside-avoid">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-none border" style={{ borderColor: "rgba(0,0,0,0.15)" }}>
-            {project.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={project.image} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center text-[10px] font-black text-white"
-                style={{ backgroundColor: dotColor(project.name || "project") }}
-              >
-                {initials(project.name || "PJ")}
-              </div>
+  // Mobile keeps a fixed readable size; only lg and up switch to the
+  // density-derived sizes, since only lg and up have the fixed height budget.
+  const prose =
+    "whitespace-pre-line break-words text-justify text-[13px] leading-[1.55] lg:text-[length:var(--np-body)] lg:leading-[var(--np-lead)]";
+  const fragment =
+    "whitespace-pre-line break-words text-[13px] leading-[1.55] lg:text-[length:var(--np-body)] lg:leading-[var(--np-lead)]";
+  const entryTitle = `${display.className} break-words font-bold leading-[1.2] text-[15px] lg:text-[length:var(--np-title)]`;
+  const entryMeta = `${mono.className} mt-1 break-words font-medium uppercase tracking-[0.12em] text-[9px] lg:text-[length:var(--np-meta)]`;
+  const linkClass = "underline decoration-1 underline-offset-2 transition-opacity hover:opacity-60";
+  const entryShell = "mb-4 lg:mb-[var(--np-entry)]";
+  const bulletGap = "mt-2 space-y-2 lg:mt-[var(--np-bullet)] lg:[&>*+*]:mt-[var(--np-bullet)] lg:space-y-0";
+
+  // Entries are standalone nodes rendered as direct children of the one column
+  // flow. Direct childhood matters: `break-after` only behaves reliably on
+  // immediate children of the multicol container, which is why sections render
+  // as fragments rather than wrappers.
+  const sectionEntries = {
+    experience: jobs.map((job, i) => {
+      const when = dateRange(job.start, job.end);
+      return (
+        <article key={`xp-${i}`} className={entryShell}>
+          <div style={KEEP_WITH_NEXT}>
+            <h3 className={entryTitle} style={{ color: INK }}>
+              {job.role || "Role"}
+            </h3>
+            {(job.company || when) && (
+              <p className={entryMeta} style={{ color: RED }}>
+                {[job.company, when].filter(Boolean).join(" · ")}
+              </p>
             )}
           </div>
-          <div className="min-w-0">
-            <h3 className="break-words text-[14.5px] font-black leading-tight" style={{ color: INK }}>
-              {project.name || "Project"}
-            </h3>
-            <p className="break-words text-[10px] font-bold uppercase tracking-wide" style={{ color: SECTION_COLORS.projects }}>
-              {project.status || "Independent"}
-              {project.version ? ` · v${project.version}` : ""}
-            </p>
-          </div>
+          {job.bullets?.length > 0 && (
+            <div className={bulletGap} style={{ color: INK_SOFT, hyphens: "auto" }}>
+              {job.bullets.map((b, j) => (
+                <p key={j} className={prose}>
+                  {b}
+                </p>
+              ))}
+            </div>
+          )}
+        </article>
+      );
+    }),
+
+    projects: (projects || []).map((project, i) => (
+      <article key={`pj-${i}`} className={entryShell}>
+        <div style={KEEP_WITH_NEXT}>
+          {project.image && (
+            <NewsCut src={project.image} alt={project.name || "Project"} className="mb-2" aspect="16 / 10" />
+          )}
+          <h3 className={entryTitle} style={{ color: INK }}>
+            {project.name || "Project"}
+          </h3>
+          <p className={entryMeta} style={{ color: RED }}>
+            {[project.status || "Independent", project.version && `v${project.version}`].filter(Boolean).join(" · ")}
+          </p>
         </div>
         {project.description && (
-          <p className="mt-1.5 whitespace-pre-line break-words text-justify text-[12.5px] leading-snug" style={{ color: INK_SOFT, hyphens: "auto" }}>
+          <p className={`mt-2 ${prose}`} style={{ color: INK_SOFT, hyphens: "auto" }}>
             {project.description}
           </p>
         )}
         {project.highlights?.length > 0 && (
-          <div className="mt-1 space-y-0.5 text-[11.5px] italic leading-snug" style={{ color: MUTED }}>
+          <ul className={bulletGap}>
             {project.highlights.map((h, j) => (
-              <p key={j} className="break-words">
-                — {h}
-              </p>
+              <li
+                key={j}
+                className="flex gap-1.5 italic text-[12px] leading-[1.45] lg:text-[length:var(--np-body)] lg:leading-[var(--np-lead)]"
+                style={{ color: MUTED }}
+              >
+                <span aria-hidden style={{ color: RED }}>
+                  &mdash;
+                </span>
+                <span className="break-words">{h}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
         {project.tags?.length > 0 && (
-          <p className="mt-1 break-words text-[10.5px]" style={{ color: MUTED }}>
-            <span className="font-semibold uppercase tracking-wide">Filed under:</span> {project.tags.join(", ")}
+          <p
+            className={`${mono.className} mt-2 break-words uppercase tracking-[0.11em] text-[8.5px] lg:text-[length:var(--np-meta)]`}
+            style={{ color: FAINT }}
+          >
+            {project.tags.join(" · ")}
           </p>
         )}
         {(project.link || project.demo) && (
-          <p className="mt-1 text-[11.5px] font-semibold">
+          <p
+            className={`${mono.className} mt-1.5 font-medium uppercase tracking-[0.12em] text-[9px] lg:text-[length:var(--np-meta)]`}
+          >
             {project.link && (
-              <a href={`https://${stripProtocol(project.link)}`} className="underline underline-offset-4" style={{ color: SECTION_COLORS.projects }}>
+              <a href={`https://${stripProtocol(project.link)}`} className={linkClass} style={{ color: RED }}>
                 Source
               </a>
             )}
-            {project.link && project.demo && <span className="mx-1.5" style={{ color: MUTED }}>·</span>}
+            {project.link && project.demo && <span className="mx-1.5" style={{ color: FAINT }}>&middot;</span>}
             {project.demo && (
-              <a href={`https://${stripProtocol(project.demo)}`} className="underline underline-offset-4" style={{ color: SECTION_COLORS.projects }}>
-                Live
+              <a href={`https://${stripProtocol(project.demo)}`} className={linkClass} style={{ color: RED }}>
+                Live site
               </a>
             )}
           </p>
@@ -255,48 +413,56 @@ export default function NewspaperTemplate({ data }) {
       </article>
     )),
 
-    education: (education || []).map((edu, i) => (
-      <article key={i} className="break-inside-avoid">
-        <p className="break-words text-[13.5px] font-bold leading-snug" style={{ color: INK }}>
-          {edu.degree || "Degree"}
-        </p>
-        <p className="mt-0.5 break-words text-[10px] font-bold uppercase tracking-wide" style={{ color: SECTION_COLORS.education }}>
-          {edu.school} · {edu.start} – {edu.end}
-        </p>
-      </article>
-    )),
+    education: (education || []).map((edu, i) => {
+      const when = dateRange(edu.start, edu.end);
+      return (
+        <article key={`ed-${i}`} className={entryShell} style={{ breakInside: "avoid" }}>
+          <h3
+            className="break-words font-semibold leading-[1.25] text-[14px] lg:text-[length:var(--np-title)]"
+            style={{ color: INK }}
+          >
+            {edu.degree || "Degree"}
+          </h3>
+          {(edu.school || when) && (
+            <p className={entryMeta} style={{ color: RED }}>
+              {[edu.school, when].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </article>
+      );
+    }),
 
     achievements: (achievements || []).map((item, i) => (
-      <p key={i} className="break-inside-avoid whitespace-pre-line break-words text-justify text-[12.5px] leading-snug" style={{ color: INK_SOFT, hyphens: "auto" }}>
-        <span className="mr-1.5 font-bold" style={{ color: SECTION_COLORS.achievements }}>
+      <div key={`ac-${i}`} className={`${entryShell} flex gap-2`} style={{ breakInside: "avoid" }}>
+        <span
+          className={`${mono.className} shrink-0 pt-[2px] font-bold tabular-nums text-[9px] lg:text-[length:var(--np-meta)]`}
+          style={{ color: RED }}
+        >
           {String(i + 1).padStart(2, "0")}
         </span>
-        {item}
-      </p>
+        <p className={fragment} style={{ color: INK_SOFT }}>
+          {item}
+        </p>
+      </div>
     )),
 
+    // A single flowing index line, middot-separated. The ruled grid this
+    // replaced left a gap between every column and a ragged blank strip on the
+    // right; inline text packs with no gaps at all and reads like a paper's
+    // market listing.
     skills:
       skills?.length > 0
         ? [
-            // flex-wrap + gap, not text-justify — justify stretches
-            // whatever whitespace it can find to fill each line, and for a
-            // multi-word skill name (e.g. "AWS EC2", "Unit Testing") that
-            // includes the literal space *inside* the name, splaying it
-            // apart unevenly. Each skill + its separator dot is glued into
-            // one flex item so a dot never gets orphaned at the start of a
-            // wrapped line.
-            <p key="skills" className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-[12.5px]" style={{ color: INK_SOFT }}>
+            <p key="skills" className={`${entryShell} break-words ${prose.replace("text-justify", "")}`} style={{ color: INK_SOFT }}>
               {skills.map((skill, i) => (
-                <span key={skill} className="flex items-center gap-1.5">
+                <Fragment key={skill}>
                   {i > 0 && (
-                    <span aria-hidden style={{ color: "rgba(0,0,0,0.3)" }}>
-                      ·
+                    <span aria-hidden style={{ color: FAINT }}>
+                      {" · "}
                     </span>
                   )}
-                  <span className="break-words font-bold" style={{ color: dotColor(skill) }}>
-                    {skill}
-                  </span>
-                </span>
+                  {skill}
+                </Fragment>
               ))}
             </p>,
           ]
@@ -304,152 +470,226 @@ export default function NewspaperTemplate({ data }) {
 
     codingProfiles: (codingProfiles || []).map((profile, i) => (
       <a
-        key={i}
+        key={`cp-${i}`}
         href={`https://${stripProtocol(profile.url)}`}
-        className="break-inside-avoid flex items-center justify-between gap-2 border-b py-1 text-[12.5px]"
-        style={{ borderColor: "rgba(0,0,0,0.1)" }}
+        className={`${entryShell} group block`}
+        style={{ breakInside: "avoid" }}
       >
-        <span className="break-words font-bold" style={{ color: INK }}>
+        <span
+          className="break-words font-semibold text-[14px] lg:text-[length:var(--np-title)]"
+          style={{ color: INK }}
+        >
           {profile.platform}
         </span>
-        <span className="shrink-0 truncate text-[10.5px]" style={{ color: MUTED }}>
-          {stripProtocol(profile.url)} →
+        <span
+          className={`${mono.className} mt-0.5 block uppercase tracking-[0.12em] transition-opacity group-hover:opacity-60 text-[9px] lg:text-[length:var(--np-meta)]`}
+          style={{ color: RED }}
+        >
+          {stripProtocol(profile.url)} &rarr;
         </span>
       </a>
     )),
   };
 
-  if (yearsXp > 0 && sectionEntries.experience.length > 0) {
-    sectionEntries.experience.push(
-      <p key="years-xp" className="break-inside-avoid text-[11px] italic" style={{ color: MUTED }}>
-        {yearsXp} years of combined experience.
-      </p>
-    );
-  }
-
   const order = (sectionOrder || []).filter((id) => sectionEntries[id]?.length > 0);
-  const contentUnits = order.reduce((sum, id) => sum + sectionEntries[id].length, 0);
-  const columnClasses = COLUMN_CLASSES[maxColumnsFor(contentUnits)];
 
   return (
-    <div className="relative min-h-dvh" style={{ backgroundColor: PAPER }}>
-      <CursorGlow colorRgb="200, 16, 46" size={550} />
-
-      <div className={`${serif.className} relative mx-auto max-w-[1800px] px-5 py-6 sm:px-10 sm:py-7 xl:px-16`}>
-        {/* Masthead */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b pb-1.5 text-[10px] font-semibold uppercase tracking-[0.25em]" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
+    <div
+      className={`${display.variable} ${serif.variable} ${mono.variable} @container min-h-dvh`}
+      style={{ backgroundColor: PAPER }}
+    >
+      <FitToPage
+        measure="[data-np-flow]"
+        className={`${serif.className} mx-auto flex w-full max-w-[1560px] flex-col px-5 py-4 sm:px-8 @6xl:h-dvh @6xl:overflow-hidden @6xl:px-10 @6xl:py-5`}
+        style={{
+          // Consumed by the lg: variants throughout. Kept as variables rather
+          // than inline font sizes so mobile can opt out of page-fitting.
+          "--np-fit": "1",
+          "--np-body": SIZES.body,
+          // The standfirst. Derived from the body size rather than set
+          // independently so it keeps its proportion at every fit value.
+          "--np-lede": "calc(var(--np-body) * 1.38)",
+          "--np-lead": "1.45",
+          "--np-title": SIZES.title,
+          "--np-meta": SIZES.meta,
+          "--np-entry": SIZES.entry,
+          "--np-bullet": SIZES.bullet,
+          "--np-section": SIZES.gap,
+          "--np-head": "0.5rem",
+        }}
+      >
+        {/* Folio line */}
+        <div
+          className={`${mono.className} flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[8.5px] uppercase tracking-[0.18em]`}
+          style={{ color: FAINT }}
+        >
           <span>{today}</span>
-          <span>PORTFOLIO EDITION{estYear ? ` · EST. ${estYear}` : ""}</span>
+          <span className="hidden sm:inline">Portfolio Edition</span>
+          <span>{estYear ? `Est. ${estYear}` : " "}</span>
         </div>
-        <h1 className={`${masthead.className} mt-2 break-words text-center text-4xl font-black uppercase leading-[0.95] tracking-tight sm:text-5xl`} style={{ color: INK }}>
+
+        {/* Nameplate. The customer's name IS the paper's masthead. RULE 1 OF 2
+            sits beneath it. */}
+        <h1
+          className={`${display.className} mt-2.5 break-words text-center text-[2.1rem] font-black uppercase leading-[0.88] tracking-[-0.03em] sm:text-[3.2rem] lg:text-[clamp(2.2rem,6.4vh,4.4rem)]`}
+          style={{ color: INK }}
+        >
           {name || "Your Name"}
         </h1>
-        <p className={`${masthead.className} mt-1.5 break-words text-center text-base italic sm:text-lg`} style={{ color: RED }}>
-          {role || "Your Role"}
-        </p>
-        <div className="mt-2 space-y-[3px]">
-          <div className="h-[3px] w-full" style={{ backgroundColor: INK }} />
-          <div className="h-px w-full" style={{ backgroundColor: INK }} />
-        </div>
+        <div className="mt-3" style={{ borderTop: `1px solid ${RULE}` }} />
 
-        {/* Byline / lead — a flex row centered on the photo rather than a
-            float, so a short bio still reads as one balanced block instead
-            of leaving dead space under a taller floated image. */}
-        <div className="mx-auto mt-3.5 flex max-w-3xl items-center gap-4 sm:gap-5">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt=""
-              className="w-16 shrink-0 rounded-none border object-cover sm:w-24"
-              style={{ borderColor: "rgba(0,0,0,0.2)" }}
-            />
-          ) : (
-            <div
-              className="flex aspect-square w-16 shrink-0 items-center justify-center rounded-none border text-2xl font-black text-white sm:w-24"
-              style={{ backgroundColor: dotColor(name || "portfolio"), borderColor: "rgba(0,0,0,0.2)" }}
+        {/* THE FOLD. A front page's masthead area: one big headline beside
+            one cut, and nothing else. The summary is NOT here — it is the lede
+            paragraph in the first body column, which is where a newspaper puts
+            its story text.
+
+            That placement is the point. Held up here beside the picture, a
+            two-line summary had nowhere good to go: run full width and it set a
+            200-character line; capped, it left a ~840px band of blank
+            newsprint; and split into two columns it broke a single sentence
+            across two one-line stubs. In a body column it is simply a
+            paragraph, at a proper measure, drop cap and all — and the space it
+            used to leave beside the cut is now taken by a headline big enough
+            to earn it. */}
+        <div className="mt-3.5 flex flex-col gap-x-9 gap-y-4 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
+            <Kicker color={RED}>{leadIsCurrent ? "In the role" : "Latest dispatch"}</Kicker>
+            <h2
+              className={`${display.className} mt-2.5 break-words text-[1.9rem] font-black leading-[1.0] tracking-[-0.03em] sm:text-[2.6rem] @6xl:text-[clamp(2.2rem,8.4vh,5rem)]`}
+              style={{ color: INK }}
             >
-              {initials(name)}
-            </div>
-          )}
-          <p
-            className="min-w-0 flex-1 whitespace-pre-line break-words text-justify text-[13.5px] leading-snug"
-            style={{ color: INK_SOFT, hyphens: "auto" }}
-          >
-            {bio}
-          </p>
-        </div>
-
-        {/* Section index — a real front page's "Inside" line, not app-style
-            nav chips: plain text, pipe-separated, page numbers optional.
-            Contact details themselves only live in the "Get In Touch"
-            closing section below — showing them again here, right under
-            the bio, was pure duplication. */}
-        {order.length > 0 && (
-          <p className="mt-4 border-t pt-2.5 text-center text-[11px] font-semibold uppercase tracking-wide" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
-            Inside:{" "}
-            {order.map((id, i) => (
-              <span key={id}>
-                {i > 0 && (
-                  <span className="mx-1.5" style={{ color: "rgba(0,0,0,0.25)" }}>
-                    |
-                  </span>
-                )}
-                <a href={`#section-${id}`} style={{ color: SECTION_COLORS[id] }} className="hover:underline">
-                  {SECTION_LABELS[id]}
-                </a>
-              </span>
-            ))}
-          </p>
-        )}
-
-        {/* Continuous ruled newsprint columns — every section flows in
-            sequence, refilling each column before spilling to the next, so
-            there's no leftover gap the way mismatched cards left one. The
-            column count itself is capped by contentUnits (see
-            maxColumnsFor above) rather than viewport width alone, so a
-            lighter profile gets fewer, fully-used columns instead of
-            requesting more than it has content to fill and leaving a
-            blank track on the right. */}
-        <div
-          className={`mt-4 ${columnClasses}`}
-          style={{ columnGap: "1.75rem", columnRule: "1px solid rgba(0,0,0,0.18)" }}
-        >
-          {order.map((id, i) => (
-            <div key={id} id={`section-${id}`} className={`scroll-mt-10 ${i === 0 ? "" : "mt-4"}`}>
-              <Section label={SECTION_LABELS[id]} color={SECTION_COLORS[id]} count={counts[id]} word={SECTION_WORDS[id]} entries={sectionEntries[id]} />
-            </div>
-          ))}
-        </div>
-
-        {/* Closing — a compact masthead-style strip, not a big CTA card. */}
-        <section className="mt-4 border-y-2 py-2.5" style={{ borderColor: INK }}>
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-            <div className="min-w-0">
-              <h2 className={`${masthead.className} break-words text-base font-black uppercase tracking-tight`} style={{ color: INK }}>
-                Get In Touch
-              </h2>
-              <p className="break-words text-[11px]" style={{ color: MUTED }}>
-                Open to new opportunities{role ? ` as a ${role}` : ""}.
+              {role || "Your Role"}
+            </h2>
+            {deck && (
+              <p
+                className={`${display.className} mt-3 break-words text-base italic leading-snug @6xl:text-[clamp(0.9rem,2.3vh,1.35rem)]`}
+                style={{ color: MUTED }}
+              >
+                {deck}
               </p>
-            </div>
-            {ctaLinks.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                {ctaLinks.map(({ label, value, href, Icon }) => (
-                  <a key={href} href={href} className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold" style={{ color: INK_SOFT }}>
-                    <Icon className="h-3 w-3 shrink-0" style={{ color: RED }} />
-                    <span className="break-words">{label === "Email" ? value : label}</span>
-                  </a>
-                ))}
-              </div>
+            )}
+            <p
+              className={`${mono.className} mt-2.5 text-[8.5px] uppercase tracking-[0.16em] @6xl:text-[length:var(--np-meta)]`}
+              style={{ color: FAINT }}
+            >
+              By {name || "Your Name"}
+              {leadJob?.company && (
+                <>
+                  <span className="mx-2" style={{ color: "#d4d4d4" }}>
+                    &middot;
+                  </span>
+                  {leadJob.company} Bureau
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="w-24 shrink-0 sm:w-28 lg:w-[clamp(7rem,17vh,12rem)]">
+            {photoUrl ? (
+              <NewsCut
+                src={photoUrl}
+                alt={name ? `${name}, ${role || "portrait"}` : "Portrait"}
+                aspect="1 / 1"
+                caption={[name, role].filter(Boolean).join(", ")}
+              />
+            ) : (
+              <InitialsCut name={name} />
             )}
           </div>
-        </section>
+        </div>
 
-        <footer className="mt-4 border-t pt-3 text-[11px]" style={{ borderColor: "rgba(0,0,0,0.15)", color: MUTED }}>
-          © {new Date().getFullYear()} {name || "Your Name"} · Made with Dev Portfolio Builder
+        {/* Inside this edition — a front page's index, set as press furniture
+            rather than app-style nav chips. Contact details live only in the
+            sign-off; repeating them here was pure duplication. */}
+        {order.length > 0 && (
+          <nav className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5" aria-label="Sections">
+            <Kicker color={RED} className="shrink-0">
+              Inside
+            </Kicker>
+            {order.map((id, i) => (
+              <a
+                key={id}
+                href={`#section-${id}`}
+                className={`${mono.className} text-[8.5px] uppercase tracking-[0.14em] transition-opacity hover:opacity-60`}
+                style={{ color: INK_SOFT }}
+              >
+                <span className="mr-1 tabular-nums" style={{ color: FAINT }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                {SECTION_LABELS[id]}
+              </a>
+            ))}
+          </nav>
+        )}
+
+        {/* THE BODY — one continuous flow, and the flex child that absorbs all
+            remaining height. `min-h-0` is what allows it to shrink inside the
+            flex column instead of forcing the page taller than the viewport. */}
+        {order.length > 0 && (
+          <div
+            data-np-flow
+            className={`mt-5 @6xl:mt-3 @6xl:min-h-0 @6xl:flex-1 @6xl:overflow-hidden ${COLUMN_CLASS}`}
+            style={{ columnGap: SIZES.colGap, orphans: 2, widows: 2 }}
+          >
+            {bio && (
+              <p
+                className="mb-[calc(var(--np-entry)*1.7)] whitespace-pre-line break-words text-[14.5px] font-semibold leading-[1.5] first-letter:float-left first-letter:mr-2.5 first-letter:mt-1 first-letter:text-[3.2rem] first-letter:font-black first-letter:leading-[0.7] first-letter:text-[#c8102e] first-letter:[font-family:var(--np-display)] @6xl:text-[length:var(--np-lede)] @6xl:first-letter:text-[clamp(2.2rem,7vh,4rem)]"
+                style={{ color: INK, hyphens: "auto" }}
+              >
+                {bio}
+              </p>
+            )}
+            {order.map((id, i) => (
+              <Fragment key={id}>
+                <SectionHeading
+                  id={id}
+                  label={SECTION_LABELS[id]}
+                  kicker={SECTION_KICKERS[id]}
+                  count={counts[id]}
+                  word={SECTION_WORDS[id]}
+                  large={i === 0}
+                  first={i === 0}
+                />
+                {sectionEntries[id]}
+              </Fragment>
+            ))}
+          </div>
+        )}
+
+        {/* Sign-off. RULE 2 OF 2. One compact strip: the separate CTA block and
+            footer were two stacked bands of mostly-empty page. */}
+        <footer
+          className="mt-4 flex shrink-0 flex-wrap items-baseline justify-between gap-x-8 gap-y-2 pt-2.5 @6xl:mt-3"
+          style={{ borderTop: `1px solid ${RULE}` }}
+        >
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className={`${display.className} text-[15px] font-black tracking-[-0.01em]`} style={{ color: INK }}>
+              Get in touch
+            </span>
+            <span className="text-[11px]" style={{ color: MUTED }}>
+              Open to new opportunities{role ? ` as a ${role}` : ""}.
+            </span>
+          </div>
+          {ctaLinks.length > 0 && (
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+              {ctaLinks.map(({ label, value, href, Icon }) => (
+                <a key={href} href={href} className="group flex min-w-0 items-center gap-1.5">
+                  <Icon className="h-3 w-3 shrink-0" style={{ color: RED }} />
+                  <span
+                    className={`${mono.className} break-words text-[9px] uppercase tracking-[0.12em] transition-opacity group-hover:opacity-60`}
+                    style={{ color: INK_SOFT }}
+                  >
+                    {label === "Email" ? value : label}
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+          <span className={`${mono.className} text-[8px] uppercase tracking-[0.14em]`} style={{ color: FAINT }}>
+            &copy; {new Date().getFullYear()} {name || "Your Name"} &middot; Made with Dev Portfolio Builder
+          </span>
         </footer>
-      </div>
+      </FitToPage>
     </div>
   );
 }
