@@ -1,11 +1,11 @@
-// Trimmed down from the builder app's lib/portfolioData.js — this
-// standalone site only ever renders one already-saved portfolio, so it
-// needs the sanitize step (defends against stray blank rows saved before
-// the builder's own sanitize pass existed) and SECTION_DEFINITIONS (read by
-// DashboardTemplate for section labels and its sidebar nav), but none of
+// Trimmed down from the builder app's lib/portfolioData.js: this standalone
+// site only ever renders one already-saved portfolio, so it needs the
+// sanitize step (which defends against stray blank rows saved before the
+// builder's own sanitize pass existed) and SECTION_DEFINITIONS (read by
+// DashboardTemplate for panel titles and its navigation rail), but none of
 // the editor's default data or template registry.
 //
-// Kept in sync with the builder app's lib/portfolioData.js — the ids and
+// Kept in sync with the builder app's lib/portfolioData.js: the ids and
 // labels must match exactly, since a draft's sectionOrder was written by
 // the builder using these same ids.
 
