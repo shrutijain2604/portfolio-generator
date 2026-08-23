@@ -10,6 +10,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-instrument);
+  --font-grotesque: var(--font-bricolage);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -740,5 +742,561 @@ body {
   .scrapbook-flip-inner,
   .scrapbook-flip-hint {
     transition: none;
+  }
+}
+
+/* Landing page (app/page.js) surface.
+   Scoped under .home-root rather than set globally, because this stylesheet
+   is also loaded by all twelve templates and the editor, and a page-level
+   font or color default leaking into those would restyle surfaces this
+   change never reviewed. The landing page commits to one dark look
+   regardless of prefers-color-scheme, so it paints its own background.
+
+   The ground is a warm off-black with a coarse grain layer rather than flat
+   near-black: pure #0b0b0c sat so far from the type that it flattened it.
+   Colour is rationed to exactly two places, the amber accent and the twelve
+   live template thumbnails, so hierarchy is carried by type scale and rules. */
+html:has(.home-root) {
+  scroll-behavior: smooth;
+}
+
+.home-root {
+  /* Palette taken from the reference board: navy #14365D, slate #2F5C8F,
+     orange #D85C27, rose #A96762, lilac #B999BE on a peach ground. Navy does
+     the job black was doing, which keeps the page warm rather than dark.
+
+     Every foreground is checked against the DARKEST ground it actually sits
+     on, which is --home-band, not --home-bg: strong 8.4:1, text 8.4:1,
+     dim 5.4:1, faint 4.7:1. Checking against --home-bg alone is what let a
+     failing label through on the first pass. The orange lands at 3.1:1,
+     which clears the 3:1 bar for large text but NOT the 4.5:1 bar for body,
+     so it is only ever used at display sizes. Small emphasis uses navy. */
+  --home-bg: #f8e5d8;
+  --home-band: #f3cfb9;
+  --home-surface: #fdf4ee;
+  --home-strong: #14365d;
+  --home-text: #2a3d52;
+  --home-dim: #45536a;
+  --home-faint: #4e5c70;
+  --home-rule: rgba(20, 54, 93, 0.18);
+  --home-rule-soft: rgba(20, 54, 93, 0.1);
+  --home-accent: #d85c27;
+  --home-blue: #2f5c8f;
+  --home-rose: #a96762;
+  --home-lilac: #b999be;
+  --home-radius: 14px;
+  --home-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  background: var(--home-bg);
+  color: var(--home-text);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Section grounds resolve into one another over a couple of hundred pixels
+   instead of butting together on a hard line. A gradient's last stop holds
+   for the remaining height, so each of these is a fade followed by a flat
+   field, not a full-height ramp. */
+.home-band {
+  background: linear-gradient(
+    180deg,
+    #f8e5d8 0,
+    #f3cfb9 240px,
+    #f3cfb9 calc(100% - 90px),
+    #f8e5d8 100%
+  );
+}
+
+/* The dark inset inside a light card. This is where blue earns its keep on a
+   light page: the artifact reads as a terminal or a repo view, and it echoes
+   the black template cards in the hero rather than washing a whole section in
+   navy, which did not sit well beside the peach. */
+.home-inset {
+  --home-strong: #f8e5d8;
+  --home-text: #c9d6e6;
+  --home-dim: #a4b6cc;
+  --home-faint: #a6b8cf;
+  --home-rule-soft: rgba(248, 229, 216, 0.14);
+
+  background: #14365d;
+  color: var(--home-text);
+}
+
+/* Inverted panel, on the palette's deep navy. It redefines the same tokens
+   rather than adding a second set of classes, so every rule below works
+   unchanged inside it. Foregrounds are checked against --home-surface, the
+   lighter of the two navies, so nothing fails once it is inside a card. The
+   orange lifts to #f0834a, which reaches 4.7:1 and is safe for body too. */
+.home-invert {
+  --home-bg: #14365d;
+  --home-surface: #1c4571;
+  --home-strong: #f8e5d8;
+  --home-text: #c9d6e6;
+  --home-dim: #a4b6cc;
+  --home-faint: #a6b8cf;
+  --home-rule: rgba(248, 229, 216, 0.2);
+  --home-rule-soft: rgba(248, 229, 216, 0.1);
+  --home-accent: #f0834a;
+  --home-blue: #9db8d8;
+  --home-lilac: #c9aecd;
+
+  background: var(--home-bg);
+  color: var(--home-text);
+}
+
+/* Coarse static grain. Sits behind the content rather than over it: laying
+   noise on top of body copy is what makes textured pages hard to read, and
+   the point here is to give the ground a tooth, not to distress the type.
+   Deliberately not animated, so it costs one paint and reads like printed
+   stock instead of television static. The tile is upscaled past its natural
+   size, which is what makes the grain coarse rather than fine. */
+.home-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  background-size: 128px 128px;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23g)' opacity='0.42'/%3E%3C/svg%3E");
+}
+
+/* Grotesque display face, used for every heading below the hero. Sizes are
+   shared with the serif steps; only the family, weight and tracking differ,
+   so the two voices stay on one scale. */
+
+.home-grotesque {
+  font-family: var(--font-grotesque), ui-sans-serif, system-ui, sans-serif;
+  color: var(--home-strong);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+/* Serif display, now reserved for the hero. Tracking tightens as the step
+   gets larger, which is why it is set per step rather than once globally. */
+.home-display {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  color: var(--home-strong);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.home-display-xl {
+  font-size: clamp(3.1rem, 8.2vw, 7.25rem);
+  letter-spacing: -0.035em;
+  line-height: 0.88;
+}
+.home-display-lg {
+  font-size: clamp(2.25rem, 4.4vw, 3.6rem);
+  line-height: 0.98;
+}
+/* The handoff section is the product's selling point, so its statement is
+   set one step above every other section head on the page. Scale is what
+   makes it read as the loudest thing here. */
+.home-display-shout {
+  font-size: clamp(2.9rem, 6.4vw, 5.5rem);
+  letter-spacing: -0.032em;
+  line-height: 0.9;
+}
+/* Row titles in the manifesto. Set in the display face rather than 17px
+   sans: three rows of small bold sans is what made the old version read as
+   compact and unimportant. */
+.home-display-row {
+  font-size: clamp(1.6rem, 2.4vw, 2.15rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+/* Manifesto numerals. Mono is right here, since these are counters rather
+   than words, and at this size they carry the row. */
+.home-manifesto-num {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2.4rem, 4.6vw, 4rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: var(--home-accent);
+}
+.home-display-num {
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* The verb in the headline is set in mono, not in the display serif: the
+   human half of the sentence is typeset, the machine half is monospaced, and
+   that contrast is doing the work a colour gradient was doing before. Mono
+   sits optically larger at the same size, hence the em step down. */
+.home-em {
+  font-style: italic;
+  color: var(--home-accent);
+  letter-spacing: -0.03em;
+}
+
+/* Mono labels. The one place tracking goes positive, so they read as
+   captions against the display face instead of competing with it. */
+/* Footer links. One rule rather than the same six utilities repeated on
+   every anchor down there. */
+.home-footer-link {
+  font-size: 13.5px;
+  color: var(--home-dim);
+  text-underline-offset: 4px;
+  transition: color 200ms var(--home-ease);
+}
+.home-footer-link:hover {
+  color: var(--home-strong);
+  text-decoration-line: underline;
+}
+.home-footer-link:focus-visible {
+  outline: 2px solid var(--home-strong);
+  outline-offset: 4px;
+}
+
+.home-label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--home-faint);
+}
+/* Tabular figures wherever numbers sit in a column or get counted, so they
+   line up and never shift width. */
+.home-nums {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scroll reveal on a view() timeline: no scroll handler and no JavaScript.
+   The hidden state lives inside @supports on purpose, so where scroll-driven
+   animations are unsupported the content is simply already visible rather
+   than stuck at opacity 0 waiting for a script that may never run. */
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  .home-reveal {
+    animation: home-rise linear both;
+    animation-timeline: view();
+    animation-range: entry calc(4% + var(--home-stagger, 0%)) entry 55%;
+  }
+}
+
+/* A framed live template render. The template lays out at its real desktop
+   width and is then scaled down, so what shows is the same component the
+   editor renders, never a screenshot that could drift from it. Scale is
+   stepped per breakpoint rather than derived, because transform: scale()
+   needs a unitless number and CSS cannot divide one length by another. */
+.home-frame {
+  --home-frame-render: 1100px;
+  /* Narrow enough on a phone that the fanned rear cards still land inside
+     the viewport rather than against its edge. */
+  --home-frame-w: 286px;
+  --home-frame-h: 179px;
+  --home-frame-scale: 0.26;
+}
+@media (min-width: 640px) {
+  .home-frame {
+    --home-frame-w: 440px;
+    --home-frame-h: 275px;
+    --home-frame-scale: 0.4;
+  }
+}
+@media (min-width: 1024px) {
+  .home-frame {
+    --home-frame-w: 528px;
+    --home-frame-h: 330px;
+    --home-frame-scale: 0.48;
+  }
+}
+.home-frame-viewport {
+  width: var(--home-frame-w);
+  height: var(--home-frame-h);
+}
+.home-frame-render {
+  width: var(--home-frame-render);
+  transform: scale(var(--home-frame-scale));
+  transform-origin: top left;
+}
+
+/* Gallery thumbnails. These scales deliberately OVERFILL their column at
+   every breakpoint and let the right edge crop, because the column is fluid
+   and a scale that merely fits the widest case leaves a dead black gutter
+   beside the render on every narrower one. Cropping reads as a zoomed
+   screenshot; the gutter read as a bug. */
+.home-thumb-render {
+  width: 1100px;
+  transform-origin: top left;
+  transform: scale(0.34);
+}
+@media (min-width: 640px) {
+  .home-thumb-render {
+    transform: scale(0.46);
+  }
+}
+@media (min-width: 1024px) {
+  .home-thumb-render {
+    transform: scale(0.44);
+  }
+}
+
+/* Hero deck. Each card's resting position derives from one --slot integer
+   (0 = front) set in HeroDeck.js, so restacking is a single custom property
+   change per card and the browser interpolates the rest on the compositor.
+   The receding cards get a flat neutral haze rather than a blur: cheaper to
+   paint, and it keeps the stack looking like stacked stock. */
+.home-deck-card {
+  /* The fan tightens on small screens: at full spread the rearmost card
+     reaches past the left edge of a phone viewport and gets clipped. */
+  --home-fan: -4%;
+  transform: translate3d(calc(var(--slot) * var(--home-fan)), calc(var(--slot) * -3.5%), calc(var(--slot) * -150px))
+    rotateY(calc(var(--slot) * 8deg)) scale(calc(1 - var(--slot) * 0.03));
+  z-index: calc(30 - var(--slot) * 10);
+  transition:
+    transform 750ms var(--home-ease),
+    opacity 750ms var(--home-ease);
+}
+/* The card that just lost the front sits at slot -1, one step nearer the
+   viewer, and fades out there rather than blinking off the stack. */
+.home-deck-card[data-exit="true"] {
+  opacity: 0;
+}
+@media (min-width: 640px) {
+  .home-deck-card {
+    --home-fan: -8.5%;
+  }
+}
+.home-deck-haze {
+  opacity: min(0.58, calc(var(--slot) * 0.19));
+  transition: opacity 750ms var(--home-ease);
+}
+
+/* Pointer parallax lives on its own element so the tilt written by JS and
+   the idle float never overwrite each other's transform. */
+.home-deck-tilt {
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 300ms ease-out;
+}
+@keyframes home-deck-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+.home-deck-float {
+  animation: home-deck-float 10s ease-in-out infinite;
+}
+
+/* The deck's call to action. The colours are declared here rather than as
+   Tailwind utilities because .home-label is unlayered and beats a layered
+   utility in the cascade, which is what left this pill drawn in --home-faint
+   on a near-black card. Peach on navy clears AA against the card behind it. */
+.home-deck-open {
+  color: var(--home-strong);
+  background: var(--home-bg);
+  box-shadow:
+    0 2px 6px rgba(23, 20, 15, 0.35),
+    0 14px 28px -12px rgba(23, 20, 15, 0.5);
+  transition:
+    background-color 200ms var(--home-ease),
+    transform 200ms var(--home-ease);
+}
+.home-deck-open-link:hover .home-deck-open,
+.home-deck-open-link:focus-visible .home-deck-open {
+  background: #ffffff;
+  transform: translate3d(0, -2px, 0);
+}
+
+/* Gallery card. Perspective sits on the wrapper so the card leans back from
+   its own bottom edge, reading as a plate lifted off a wall rather than a box
+   that got bigger. */
+.home-card {
+  box-shadow: 0 1px 2px rgba(20, 54, 93, 0.07), 0 14px 28px -20px rgba(20, 54, 93, 0.35);
+  transition:
+    transform 420ms var(--home-ease),
+    border-color 420ms var(--home-ease),
+    box-shadow 420ms var(--home-ease);
+}
+.home-card:hover,
+.home-card:focus-within {
+  transform: translate3d(0, -8px, 30px) rotateX(2.5deg);
+  border-color: rgba(20, 54, 93, 0.34);
+  box-shadow: 0 2px 6px rgba(20, 54, 93, 0.1), 0 34px 54px -26px rgba(20, 54, 93, 0.45);
+}
+
+
+/* Reduced motion keeps every relationship the motion communicates: the
+   reveal resolves to its final state, the deck still restacks, the cards
+   still respond. Only ambient looping and parallax stop, since neither
+   carries information. */
+@media (prefers-reduced-motion: reduce) {
+  html:has(.home-root) {
+    scroll-behavior: auto;
+  }
+  .home-deck-open {
+    transition-duration: 1ms;
+  }
+  .home-deck-open-link:hover .home-deck-open,
+  .home-deck-open-link:focus-visible .home-deck-open {
+    transform: none;
+  }
+  .home-deck-float {
+    animation: none;
+  }
+  .home-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .home-deck-card,
+  .home-deck-haze,
+  .home-card {
+    transition-duration: 1ms;
+  }
+  .home-deck-tilt {
+    transform: none;
+    transition: none;
+  }
+  .home-card:hover,
+  .home-card:focus-within {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+/* The handoff, told as a sequence instead of three equal cards in a row. A
+   hairline spine runs down the middle of the section and draws itself segment
+   by segment as each beat enters view, the numerals sit on the spine so the
+   line appears to pass behind them, and the artifacts alternate sides so the
+   eye zigzags down the page rather than scanning a row left to right.
+
+   Every artifact carries TWO transforms and they live on separate elements on
+   purpose: the parallax drift is a scroll-driven animation, and an active
+   animation beats a plain transform declaration in the cascade, so the tilt
+   and its hover would be silently dropped if they shared a node. */
+.home-beats {
+  list-style: none;
+}
+
+/* One rail segment per beat, absolutely positioned so consecutive segments
+   meet and read as a single unbroken line. */
+.home-beat-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--home-rule-soft);
+}
+.home-beat-rail-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: top;
+  background: linear-gradient(180deg, var(--home-accent) 0%, rgba(20, 54, 93, 0.45) 100%);
+}
+@keyframes home-beat-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+/* The drawn state lives inside @supports, so where scroll-driven animations
+   are unsupported the line is simply already there rather than stuck at zero
+   height waiting for a feature that never arrives. Same reasoning as
+   .home-reveal above. */
+@supports (animation-timeline: view()) {
+  .home-beat-rail-fill {
+    transform: scaleY(0);
+    animation: home-beat-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 15% entry 85%;
+  }
+}
+
+/* The numeral wears the page ground so the rail breaks around it. */
+.home-beat-num {
+  background: var(--home-bg);
+}
+
+/* Parallax. The artifact drifts against its own copy across the whole time
+   the beat is on screen, which is what makes the two read as separate planes
+   rather than one flat row. cover is used rather than entry because it is
+   monotonic for an element of any height. */
+@keyframes home-beat-drift {
+  from {
+    transform: translate3d(0, 26px, 0);
+  }
+  to {
+    transform: translate3d(0, -26px, 0);
+  }
+}
+@supports (animation-timeline: view()) {
+  .home-beat-art {
+    animation: home-beat-drift linear both;
+    animation-timeline: view();
+    animation-range: cover 0% cover 100%;
+  }
+}
+
+.home-beat-stage {
+  perspective: 1500px;
+}
+.home-beat-plate {
+  transform: rotateY(var(--home-beat-tilt, -6deg));
+  box-shadow:
+    0 2px 4px rgba(20, 54, 93, 0.08),
+    0 26px 46px -26px rgba(20, 54, 93, 0.42);
+  transition:
+    transform 550ms var(--home-ease),
+    box-shadow 550ms var(--home-ease);
+}
+/* Turning to face the reader and lifting toward them is the whole gesture:
+   the thing you are being handed comes forward when you reach for it. */
+.home-beat:hover .home-beat-plate,
+.home-beat:focus-within .home-beat-plate {
+  transform: rotateY(0deg) translateZ(46px);
+  box-shadow:
+    0 4px 10px rgba(20, 54, 93, 0.12),
+    0 48px 74px -30px rgba(20, 54, 93, 0.5);
+}
+
+/* The spine terminates in a mark rather than just stopping. */
+.home-beat-end {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--home-accent);
+}
+
+/* Reduced motion keeps every relationship the motion carries: the spine is
+   drawn, the beats are in place, and the artifact still answers a pointer.
+   Only the drift and the 3D turn stop, since neither carries information. */
+@media (prefers-reduced-motion: reduce) {
+  .home-beat-art {
+    animation: none;
+    transform: none;
+  }
+  .home-beat-rail-fill {
+    animation: none;
+    transform: scaleY(1);
+  }
+  .home-beat-plate {
+    transform: none;
+    transition-duration: 1ms;
+  }
+  .home-beat:hover .home-beat-plate,
+  .home-beat:focus-within .home-beat-plate {
+    transform: translate3d(0, -3px, 0);
   }
 }
