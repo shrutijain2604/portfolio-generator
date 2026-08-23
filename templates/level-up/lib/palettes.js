@@ -341,41 +341,101 @@ export const DASHBOARD_PALETTES = [
   },
 ];
 
-// Level Up's own palette set — deliberately just two entries. This template
-// reads as a game HUD, and the natural "themes" for a HUD are the same
-// light/dark modes as a phone's system appearance, not a wide color choice —
-// so unlike Editorial/Warm/Dashboard, more entries here would be scope
-// creep, not a feature. Same PAPER/INK/.../PALETTE shape as the others so it
-// still works with the existing ThemeSwitcher/getPalette() unmodified; each
-// swatch's conic sweep just reads as a small dark-panel or light-panel
-// preview, the same pattern iOS/Android use for their own appearance picker.
+// Level Up's own palette set. Each entry is a whole console: on top of the
+// usual PAPER/INK/.../PALETTE shape it carries the four colors the level
+// itself is built from, because this template's page is a side-scrolling
+// world rather than a document on a background. SKY_HI and SKY_LO are the
+// sky at the top of the screen and at the horizon, LAND and LAND_DEEP are
+// the terrain's lit face and the rock under it, and FRAME is the hard 2px
+// edge every panel wears. FRAME is a palette value rather than a mix of INK
+// and PAPER because a panel here floats over the sky, not over PAPER: it has
+// to separate from both, and on the dark palettes that means a light edge
+// where a derived one would have been another dark tone.
+//
+// Every pair was checked rather than eyeballed: all body, label and accent
+// text clears WCAG AA (4.5:1) against the surface it actually sits on, and
+// FRAME clears 3:1 against the panel, both sky stops and the terrain. Two
+// consequences are baked into the template. MUTED is only ever used inside a
+// panel, since it fails against the open sky on three of the four palettes;
+// and any hue used as a solid fill behind text picks PAPER or INK by that
+// hue's own luminance (see onFill in LevelUpTemplate.js) instead of assuming
+// PAPER, because the greens and golds here are light enough to need dark
+// text on them.
 export const LEVEL_UP_PALETTES = [
   {
-    id: "dark",
-    label: "Dark Mode",
-    description: "Deep-space HUD — near-black canvas, electric violet accent.",
+    id: "arcade",
+    label: "Arcade Cabinet",
+    description: "Cabinet-dark night sky with a neon-red marquee accent and a score-green pop.",
     colors: {
-      PAPER: "#0a0c12",
-      INK: "#f3f5fa",
-      INK_SOFT: "#c7ccdb",
-      MUTED: "#7b8299",
-      ACCENT: "#07a096",
-      POP: "#07a096",
-      PALETTE: ["#12151f", "#07a096", "#0a0c12", "#22d3ee"],
+      PAPER: "#0c111e",
+      INK: "#f4f7fd",
+      INK_SOFT: "#c5cddf",
+      MUTED: "#8b95ad",
+      ACCENT: "#ff3355",
+      POP: "#2fd07a",
+      FRAME: "#b9c3d8",
+      SKY_HI: "#080d1c",
+      SKY_LO: "#22305c",
+      LAND: "#1d2a4e",
+      LAND_DEEP: "#121b36",
+      PALETTE: ["#ff3355", "#4d8dff", "#2fd07a", "#ffc63d"],
     },
   },
   {
-    id: "light",
-    label: "Light Mode",
-    description: "Clean daylight HUD — crisp white canvas, same violet accent.",
+    id: "overworld",
+    label: "Overworld",
+    description: "Bright blue sky over green ground: the first level of a platformer, in daylight.",
     colors: {
-      PAPER: "#f5f6fb",
-      INK: "#12141f",
-      INK_SOFT: "#31364a",
-      MUTED: "#6b7086",
-      ACCENT: "#07a096",
-      POP: "#07a096",
-      PALETTE: ["#ffffff", "#07a096", "#f5f6fb", "#0891b2"],
+      PAPER: "#fdfaf0",
+      INK: "#17202b",
+      INK_SOFT: "#33404f",
+      MUTED: "#63707e",
+      ACCENT: "#c62f26",
+      POP: "#15629f",
+      FRAME: "#17202b",
+      SKY_HI: "#6cbdf0",
+      SKY_LO: "#bfe4f8",
+      LAND: "#3f9142",
+      LAND_DEEP: "#2a6a2d",
+      PALETTE: ["#c62f26", "#15629f", "#2f9e44", "#e07a00"],
+    },
+  },
+  {
+    id: "neon",
+    label: "Neon Circuit",
+    description: "Violet dusk and hot magenta over a cyan skyline: the late-night arcade run.",
+    colors: {
+      PAPER: "#100722",
+      INK: "#f7efff",
+      INK_SOFT: "#d0c2e8",
+      MUTED: "#9284b0",
+      ACCENT: "#ff2d8f",
+      POP: "#2ad4ee",
+      FRAME: "#c0b0dc",
+      SKY_HI: "#12062a",
+      SKY_LO: "#4f1156",
+      LAND: "#2c0c3f",
+      LAND_DEEP: "#1a0629",
+      PALETTE: ["#ff2d8f", "#2ad4ee", "#a855f7", "#facc15"],
+    },
+  },
+  {
+    id: "manual",
+    label: "Instruction Manual",
+    description: "Cream booklet paper with spot red and blue: the printed manual, not the screen.",
+    colors: {
+      PAPER: "#f4efe2",
+      INK: "#16161c",
+      INK_SOFT: "#33333d",
+      MUTED: "#65656f",
+      ACCENT: "#cf2222",
+      POP: "#1d4ed8",
+      FRAME: "#16161c",
+      SKY_HI: "#b3d2e8",
+      SKY_LO: "#dbe9f2",
+      LAND: "#ded1b3",
+      LAND_DEEP: "#c2b193",
+      PALETTE: ["#cf2222", "#1d4ed8", "#0f7b52", "#d18b00"],
     },
   },
 ];
