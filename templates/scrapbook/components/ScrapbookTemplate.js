@@ -2,587 +2,1014 @@
 // its own. Every template follows this contract so the editor can swap
 // templates without touching the user's entered data.
 //
-// Structured like every other template — labeled sections in the
-// customer's chosen order, each with its own heading — not a single flat
-// stream of mixed card types. A pure masonry board (all card types
-// interleaved together) read as random, not curated, because nothing told
-// the eye what it was looking at. Within each section, cards lay out in a
-// centered flex-wrap grid, and every card gets one consistent signature
-// treatment: an organically torn paper edge on all sides (an SVG filter,
-// see TornPaperFilters below), the one motif applied everywhere instead
-// of a different decorative idea per section.
+// The design is one bound, tabbed notebook lying on a desk. Every section
+// is a punched sheet in that binder, and every sheet carries a different
+// real paper object rather than a recolored copy of one card: experience
+// is a run of index cards on a stitched rail, projects are prints held by
+// photo corners, skills are a die-cut sticker sheet, achievements are
+// perforated ticket stubs, education is a library checkout card, coding
+// profiles are punched hang tags. That per-section artifact is what makes
+// the page readable at a glance, and it is also the fix for the previous
+// version, which applied one torn-paper edge to every card in every
+// section and so read as a pile rather than a book.
+//
+// Navigation is part of the concept, not bolted on: the sheets carry
+// staggered divider tabs, a sticky index rail tracks whichever sheet is in
+// view (ScrapbookTabs), and the cover opens with a real table of contents.
 /* eslint-disable @next/next/no-img-element */
 
-import { Fraunces, Inter, Caveat } from "next/font/google";
+import { Bodoni_Moda, Newsreader, Courier_Prime, Caveat } from "next/font/google";
 import { SCRAPBOOK_PALETTES, getPalette } from "@/lib/palettes";
 import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, initials, stripProtocol, computeYearsOfExperience, tint, shade, hexToRgb } from "./shared";
 import CursorGlow from "./CursorGlow";
 import RevealOnScroll from "./RevealOnScroll";
-import FlipPolaroid from "./FlipPolaroid";
+import ScrapbookTabs from "./ScrapbookTabs";
 
-// Fraunces is a soft, editorial display serif — carries names, headlines
-// and card titles. Inter keeps body copy clean and readable. Caveat is
-// used in exactly two spots (the header eyebrow and the contact card) as a
-// single handwritten accent, not the primary voice of the whole page.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"] });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
-const caveat = Caveat({ subsets: ["latin"], weight: ["600", "700"] });
+// Bodoni Moda is a true didone: it only works large, so it is confined to
+// the cover name and the sheet headings, where its contrast reads as a
+// pressed title plate. Newsreader carries every paragraph the visitor
+// actually reads. Courier Prime is the typewriter voice of the whole
+// binder: labels, dates, page numbers, stamps, captions, tags. Caveat is
+// the one handwritten accent and appears in exactly three places, so it
+// stays a margin annotation instead of becoming the template's voice.
+const bodoni = Bodoni_Moda({ subsets: ["latin"], weight: ["500", "700", "900"], style: ["normal", "italic"] });
+const newsreader = Newsreader({ subsets: ["latin"], weight: ["400", "500"], style: ["normal", "italic"] });
+const courier = Courier_Prime({ subsets: ["latin"], weight: ["400", "700"] });
+const caveat = Caveat({ subsets: ["latin"], weight: ["600"] });
 
-// Four torn-edge SVG filters, rendered once and referenced by every card
-// via CSS (see .scrapbook-torn in globals.css) — an organically torn,
-// raking-lit paper surface on all four sides, instead of a fixed zigzag
-// clip-path that could only ever cut straight segments. Ported directly
-// from happy358/TornPaper (MIT) as inline markup rather than pulling in
-// its runtime script — this codebase's decorative pieces are all
-// hand-rolled with no external dependency, and the technique is just an
-// SVG filter graph: fractal noise displaces + erodes the element's own
-// alpha edges into an irregular tear, and a second noise pass lit from a
-// raking angle (feDiffuseLighting) gives the paper surface real texture,
-// multiplied over the actual card content. Four fixed seeds (not
-// Math.random()) so each card's tear is a little different but stays
-// identical between server and client renders.
-const TORN_PAPER_VARIANTS = [
-  { id: "scrapbook-torn-1", seed: 7 },
-  { id: "scrapbook-torn-2", seed: 23 },
-  { id: "scrapbook-torn-3", seed: 41 },
-  { id: "scrapbook-torn-4", seed: 58 },
-];
+// Real paper stays paper whatever the theme is: a photo print's border and
+// a stuck-on address label are white in every palette, the same way they
+// would be in a physical album, so these two are deliberately not palette
+// colors. Everything else on the page derives from the palette.
+const LABEL_PAPER = "#fbf7ee";
+const LABEL_INK = "#2a2118";
 
-function TornPaperFilters() {
-  return (
-    <svg width="0" height="0" className="absolute" aria-hidden>
-      <defs>
-        {TORN_PAPER_VARIANTS.map(({ id, seed }) => (
-          <filter key={id} id={id} x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="10" seed={seed} result="paper_noise" />
-            <feDiffuseLighting in="paper_noise" lightingColor="white" surfaceScale="3" result="paper">
-              <feDistantLight azimuth="45" elevation="60" />
-            </feDiffuseLighting>
-            <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="10" seed={seed} result="edge_noise" />
-            <feGaussianBlur stdDeviation="0.5" in="SourceGraphic" />
-            <feMorphology operator="erode" radius="5" />
-            <feOffset dx="-2" dy="-2" />
-            <feDisplacementMap scale="10" xChannelSelector="B" yChannelSelector="G" in2="edge_noise" result="edge" />
-            <feComposite in="paper" in2="edge" operator="atop" result="result_rough" />
-            <feComposite in="SourceGraphic" in2="edge" operator="atop" result="result_sg" />
-            <feBlend mode="multiply" in="result_rough" in2="result_sg" />
-          </filter>
-        ))}
-      </defs>
-    </svg>
-  );
+// An opaque mix of `color` into `base`, for the sheet's own surfaces. tint()
+// mixes toward transparent, which is right for a wash laid over something
+// but wrong for a card that then needs its own opaque cutouts punched out
+// of it (a ticket's perforation notches, a binding hole). Those have to be
+// painted in the color of whatever sits behind, which only works if the
+// surface itself is a known solid color.
+function blend(color, base, percent) {
+  return `color-mix(in srgb, ${color} ${percent}%, ${base})`;
 }
 
-function WashiTape({ className = "", color, rotation = -6 }) {
+// Perceived brightness of a "#rrggbb" palette color, 0 to 255. Only ever
+// called on palette hex values, never on a dotColor() result (which can be
+// an hsl() string).
+function brightness(hex) {
+  const [r, g, b] = hexToRgb(hex).split(", ").map(Number);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+// Legible text/ink to sit directly on a solid `hex` fill: the divider tabs
+// and the label-maker strip, whose backgrounds are palette colors ranging
+// from near-black ink to bright gold.
+function inkOn(hex) {
+  return brightness(hex) > 165 ? "#1b1206" : "#fffaf0";
+}
+
+// The palette accents are picked to work as fills, and several of them
+// (gold, lime, coral) sit around 3:1 against pale paper, which is fine for
+// a rule or a tab but short of AA for the small type this template sets in
+// accent color. So accent *text* gets darkened on light paper and lightened on
+// the dark palette, while fills, rules and tabs keep the raw accent, which
+// is what preserves each section's color identity.
+function accentInk(color, darkPaper) {
+  return darkPaper ? `color-mix(in srgb, ${color}, white 34%)` : shade(color, 50);
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+// A tiny run of tape holding something down. Translucent rather than a
+// printed washi pattern, with the short ends cut on a slight angle, which
+// is what reads as tape instead of as a colored rectangle.
+function Tape({ className = "", color, rotation = -7 }) {
   return (
-    <div
-      className={`pointer-events-none absolute h-5 w-20 rounded-[1px] opacity-90 ${className}`}
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute h-6 w-24 ${className}`}
       style={{
-        background: `repeating-linear-gradient(45deg, ${color}, ${color} 6px, ${tint(color, 60)} 6px, ${tint(color, 60)} 12px)`,
+        background: `linear-gradient(160deg, ${tint(color, 62)}, ${tint(color, 40)} 55%, ${tint(color, 58)})`,
+        clipPath: "polygon(3% 0, 97% 4%, 100% 96%, 2% 100%)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.14)",
         transform: `rotate(${rotation}deg)`,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
       }}
     />
   );
 }
 
-// A little metal tack pinning each card to the board — grounded with its
-// own tiny shadow ellipse so it reads as sitting slightly proud of the
-// paper, not printed on it. Idles with a sway (per-card delay comes from
-// the --pin-delay custom property set on the grid wrapper) and "presses
-// in" on hover/focus, in sync with the card lifting off the board — see
-// .scrapbook-card / .scrapbook-pin in globals.css. An SVG drawing, not an
-// emoji pushpin, so it stays crisp and consistent across platforms.
-function CorkPin({ color }) {
+// A rubber-stamped box: the one motif that recurs across sheets (date
+// ranges, project tags, contact links), so the binder reads as one
+// document stamped by one person.
+function Stamp({ children, color, ink, className = "", rotation = -2.5 }) {
   return (
-    <span aria-hidden className="scrapbook-pin pointer-events-none absolute left-1/2 top-0 z-10">
-      <svg width="26" height="28" viewBox="0 0 26 28" fill="none">
-        <ellipse cx="13" cy="24.5" rx="4" ry="1.6" fill="rgba(0,0,0,0.18)" />
-        <path d="M13 15 L13 22" stroke={shade(color, 35)} strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx="13" cy="9" r="7.5" fill={shade(color, 12)} />
-        <circle cx="10.5" cy="6.5" r="2.6" fill="rgba(255,255,255,0.6)" />
-        <circle cx="10" cy="6" r="1.1" fill="rgba(255,255,255,0.9)" />
-      </svg>
+    <span
+      className={`${courier.className} inline-block shrink-0 whitespace-nowrap rounded-[2px] border-[1.5px] px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.16em] ${className}`}
+      style={{ borderColor: tint(color, 55), color: ink, transform: `rotate(${rotation}deg)` }}
+    >
+      {children}
     </span>
   );
 }
 
-// Every card in every section shares this shell — the one signature
-// treatment applied everywhere instead of a different decorative idea per
-// section, built up in real layers: a second sheet (.scrapbook-paper-peek),
-// tinted a shade darker, sits behind the main sheet and offset a few px so
-// it peeks out past the torn edge — the classic "there's another page
-// under this one" scrapbook tell. Both sheets get their tear + texture
-// from .scrapbook-torn (a shared class; which of the four TornPaperFilters
-// variants each card gets is chosen by nth-child position on the grid
-// wrapper, in globals.css — see .scrapbook-board there). No border or
-// clip-path anymore — the SVG filter draws the entire torn silhouette
-// itself, so a straight CSS border would just cut a rectangle across an
-// organic shape. `.scrapbook-card`'s own drop-shadow (globals.css) still
-// lifts the whole stack together and follows whatever the filter painted,
-// since drop-shadow shadows the element's actual rendered pixels.
-function Pin({ children, accent, colors, className = "" }) {
-  return (
-    <div className={`scrapbook-card ${className}`}>
-      <CorkPin color={accent} />
-      <div aria-hidden className="scrapbook-torn scrapbook-paper-peek pointer-events-none absolute inset-0" style={{ backgroundColor: shade(colors.CARD, 10) }} />
-      <div className="scrapbook-torn relative" style={{ backgroundColor: colors.CARD }}>
-        {children}
-        <div className="h-4" aria-hidden />
-      </div>
-    </div>
-  );
-}
+const PHOTO_CORNERS = [
+  { pos: "left-0 top-0", clip: "polygon(0 0, 100% 0, 0 100%)" },
+  { pos: "right-0 top-0", clip: "polygon(0 0, 100% 0, 100% 100%)" },
+  { pos: "left-0 bottom-0", clip: "polygon(0 0, 0 100%, 100% 100%)" },
+  { pos: "right-0 bottom-0", clip: "polygon(100% 0, 100% 100%, 0 100%)" },
+];
 
-function AccentBar({ color }) {
-  return <div className="h-[5px] w-full" style={{ background: `linear-gradient(90deg, ${color}, ${tint(color, 45)})` }} />;
-}
-
-function SectionHeading({ children, accent }) {
+// A photo as it is actually mounted in an album: a print with a thick
+// paper border, held at all four corners by slip-in photo corners. The
+// corners are straight-cut triangles, and they are what replaced the torn
+// paper edge as this template's photo treatment.
+function PhotoPrint({ src, alt, monogram, accent, caption, className = "", tilt = -1.6 }) {
   return (
-    <div className="mb-7 flex items-center gap-3">
-      <span className="h-px flex-1" style={{ backgroundColor: tint(accent, 30) }} />
-      <h2 className={`${fraunces.className} shrink-0 text-2xl font-medium italic`} style={{ color: accent }}>
-        {children}
-      </h2>
-      <span className="h-px flex-1" style={{ backgroundColor: tint(accent, 30) }} />
-    </div>
-  );
-}
-
-function ProjectCard({ project, accent, colors }) {
-  // The back only gets content — and the photo only becomes flippable —
-  // when there's a real highlight or description to show; flipping to a
-  // blank card would be a dead end. See FlipPolaroid.
-  const note = project.highlights?.[0] || project.description || "";
-  return (
-    <Pin accent={accent} colors={colors}>
-      <FlipPolaroid
-        label={project.name || "this project"}
-        front={
-          // An actual polaroid — thick warm-white paper border (always
-          // this off-white, regardless of the section's accent, the way a
-          // real photo's paper border ignores whatever it's stuck next
-          // to), tucked into the card with its own slight independent
-          // tilt so it reads as a photo someone placed there, not a
-          // banner image the card was born with.
-          <div className="flex h-full w-full flex-col items-center justify-center p-3">
-            <div className="scrapbook-polaroid flex h-full w-full flex-col p-2 pb-5" style={{ backgroundColor: "#fbf9f4" }}>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {project.image ? (
-                  <img src={project.image} alt={project.name || "Project"} className="h-full w-full object-cover" />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center text-3xl font-semibold text-white"
-                    style={{ background: `linear-gradient(135deg, ${accent}, ${shade(accent, 30)})` }}
-                  >
-                    {(project.name || "?")[0]?.toUpperCase()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        }
-        back={
-          note && (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-3 text-center" style={{ backgroundColor: tint(accent, 14) }}>
-              <span className={`${caveat.className} break-words text-lg leading-snug`} style={{ color: colors.INK }}>
-                &ldquo;{note}&rdquo;
-              </span>
-            </div>
-          )
-        }
-      />
-      <div className="p-5 pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={`${fraunces.className} min-w-0 break-words text-lg font-medium`} style={{ color: colors.INK }}>
-            {project.name || "Untitled project"}
-          </p>
-          {project.status && (
+    <span className={`scrapbook-print relative block ${className}`} style={{ transform: `rotate(${tilt}deg)` }}>
+      <span
+        className={`block p-2 ${caption ? "pb-3" : "pb-6"}`}
+        style={{ backgroundColor: LABEL_PAPER, boxShadow: "0 2px 6px rgba(0,0,0,0.22), 0 12px 24px rgba(0,0,0,0.16)" }}
+      >
+        <span className="relative block aspect-[4/3] overflow-hidden">
+          {src ? (
+            <img src={src} alt={alt} className="h-full w-full object-cover" />
+          ) : (
             <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-              style={{ backgroundColor: tint(accent, 18), color: accent }}
+              className={`${bodoni.className} flex h-full w-full items-center justify-center text-5xl font-medium`}
+              style={{
+                backgroundColor: blend(accent, LABEL_PAPER, 18),
+                backgroundImage: `repeating-linear-gradient(45deg, ${tint(accent, 13)} 0 7px, transparent 7px 14px)`,
+                color: shade(accent, 48),
+              }}
             >
-              {project.status}
+              {monogram}
             </span>
           )}
-        </div>
-        {project.description && (
-          <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed" style={{ color: colors.INK_SOFT }}>
-            {project.description}
-          </p>
-        )}
-        {project.tags?.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {project.tags.map((tag) => (
-              <span key={tag} className="break-words rounded-full px-2.5 py-0.5 text-[11px]" style={{ backgroundColor: tint(colors.INK, 6), color: colors.INK_SOFT }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-        {(project.link || project.demo) && (
-          <div className="mt-3 flex flex-wrap gap-4 border-t pt-3 text-xs font-semibold" style={{ borderColor: tint(accent, 20) }}>
-            {project.link && (
-              <a href={`https://${stripProtocol(project.link)}`} style={{ color: accent }}>
-                Source
-              </a>
-            )}
-            {project.demo && (
-              <a href={`https://${stripProtocol(project.demo)}`} style={{ color: accent }}>
-                Live demo
-              </a>
-            )}
-          </div>
-        )}
-      </div>
-    </Pin>
-  );
-}
-
-function JobCard({ job, accent, colors }) {
-  return (
-    <Pin accent={accent} colors={colors}>
-      <AccentBar color={accent} />
-      <div className="p-5 pb-2">
-        <p className={`${fraunces.className} break-words text-base font-medium`} style={{ color: colors.INK }}>
-          {job.role || "Role"}
-        </p>
-        <p className="break-words text-sm" style={{ color: colors.MUTED }}>
-          {job.company || "Company"} · {job.start} – {job.end}
-        </p>
-        {job.bullets?.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
-            {job.bullets.map((line, j) => (
-              <li key={j} className="flex gap-2 text-sm leading-relaxed" style={{ color: colors.INK_SOFT }}>
-                <span className="shrink-0" style={{ color: accent }}>
-                  ·
-                </span>
-                <span className="min-w-0 whitespace-pre-line break-words">{line}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Pin>
-  );
-}
-
-function EduCard({ edu, accent, colors }) {
-  return (
-    <Pin accent={accent} colors={colors}>
-      <AccentBar color={accent} />
-      <div className="p-5 pb-2">
-        <p className={`${fraunces.className} break-words text-base font-medium`} style={{ color: colors.INK }}>
-          {edu.degree || "Degree"}
-        </p>
-        <p className="break-words text-sm" style={{ color: colors.MUTED }}>
-          {edu.school || "School"} · {edu.start} – {edu.end}
-        </p>
-      </div>
-    </Pin>
-  );
-}
-
-function SkillsCard({ skills, accent, colors }) {
-  return (
-    <Pin accent={accent} colors={colors}>
-      <AccentBar color={accent} />
-      <div className="p-5 pb-2">
-        <div className="flex flex-wrap gap-2">
-          {skills.map((skill) => (
+          {/* Photo corners, drawn as four right triangles slipped over the
+              image's corners. aria-hidden: they are mounting hardware. */}
+          {PHOTO_CORNERS.map((corner) => (
             <span
-              key={skill}
-              className="flex min-w-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-              style={{ backgroundColor: tint(colors.INK, 6), color: colors.INK_SOFT }}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
-              <span className="break-words">{skill}</span>
-            </span>
+              key={corner.pos}
+              aria-hidden
+              className={`pointer-events-none absolute h-6 w-6 ${corner.pos}`}
+              style={{ clipPath: corner.clip, background: "linear-gradient(135deg, rgba(0,0,0,0.42), rgba(0,0,0,0.18))" }}
+            />
           ))}
-        </div>
-      </div>
-    </Pin>
-  );
-}
-
-function CodingCard({ profiles, accent, colors }) {
-  return (
-    <Pin accent={accent} colors={colors}>
-      <AccentBar color={accent} />
-      <div className="p-5 pb-2">
-        <div className="space-y-1">
-          {profiles.map((profile, i) => (
-            <a
-              key={i}
-              href={`https://${stripProtocol(profile.url)}`}
-              className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-black/[0.04]"
-            >
-              <span className="min-w-0 truncate font-medium" style={{ color: colors.INK }}>
-                {profile.platform}
-              </span>
-              <span className="shrink-0 truncate text-xs" style={{ color: accent }}>
-                {stripProtocol(profile.url)}
-              </span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </Pin>
-  );
-}
-
-function AchievementCard({ text, accent, colors }) {
-  return (
-    <Pin accent={accent} colors={colors}>
-      <div className="flex items-start gap-3 p-5 pb-2">
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
-          style={{ backgroundColor: tint(accent, 18), color: accent }}
-        >
-          ★
         </span>
-        <p className="min-w-0 whitespace-pre-line break-words text-sm leading-relaxed" style={{ color: colors.INK_SOFT }}>
-          {text}
-        </p>
-      </div>
-    </Pin>
+        {/* The caption lives inside the print so it tilts with it, the way
+            a name written on the paper border would. */}
+        {caption && (
+          <span
+            className={`${courier.className} mt-2 block truncate text-center text-[10px] font-bold uppercase tracking-[0.16em]`}
+            style={{ color: LABEL_INK }}
+          >
+            {caption}
+          </span>
+        )}
+      </span>
+    </span>
   );
 }
 
-// flex-wrap + justify-center, not CSS-columns masonry (which balances
-// total height across columns and scatters cards at mismatched vertical
-// offsets once heights vary — that's what looked "misaligned") and not
-// CSS Grid either (a grid can't self-center a partial last row — a lone
-// leftover card stays pinned to column 1 with an empty gap beside it).
-// Flexbox with explicit per-card widths gets both: every row's cards start
-// at the same top edge, and an incomplete last row centers itself instead
-// of hugging the left edge. A section with exactly one card (Toolkit,
-// Coding Profiles) just centers that one card instead of stretching it
-// across empty columns.
-// Cards flutter in and settle into their resting tilt the first time a
-// section scrolls into view, instead of the whole board landing at once.
-// `.scrapbook-board` is what the per-card tilt (--rest-rot) and stagger
-// delays in globals.css key off of; the extra wrapper div even in the
-// single-card case keeps that targeting consistent (and keeps the
-// flutter's own transform off the card's element, which owns its resting
-// rotation and hover-lift transform separately).
-function CardGrid({ items }) {
-  if (items.length === 1) {
-    return (
-      <RevealOnScroll arrivedClassName="scrapbook-flutter-arrive" threshold={0.2} rootMargin="0px 0px -60px 0px">
-        <div className="scrapbook-board mx-auto max-w-md">
-          <div>{items[0]}</div>
-        </div>
-      </RevealOnScroll>
-    );
-  }
+// The sheet: one punched page of the binder. Three layers deep (two
+// under-sheets peeking out down-right past straight cut edges, then the
+// page itself), so the stack has real thickness without any torn-edge
+// filter. The divider tab sits proud of the top edge, and each sheet's tab
+// is nudged to a different x position so scrolling past the binder shows a
+// staggered index rather than tabs stacked in one column.
+function Sheet({ id, page, total, head, tab, tabColor, tabX, rot, c, children }) {
   return (
-    <RevealOnScroll arrivedClassName="scrapbook-flutter-arrive" threshold={0.15} rootMargin="0px 0px -60px 0px">
-      <div className="scrapbook-board flex flex-wrap justify-center gap-6">
-        {items.map((item, i) => (
-          <div key={i} className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
-            {item}
+    <RevealOnScroll arrivedClassName="scrapbook-sheet-arrive" threshold={0.06} rootMargin="0px 0px -70px 0px">
+      <div className="scrapbook-sheet relative" style={{ "--sheet-rot": `${rot}deg` }}>
+        <div
+          aria-hidden
+          className="absolute inset-0 translate-x-[7px] translate-y-[9px] rounded-[2px]"
+          style={{ backgroundColor: shade(c.CARD, 20), boxShadow: "0 14px 28px rgba(0,0,0,0.22)" }}
+        />
+        <div aria-hidden className="absolute inset-0 translate-x-[3px] translate-y-[4px] rounded-[2px]" style={{ backgroundColor: shade(c.CARD, 9) }} />
+        <section
+          id={id}
+          aria-labelledby={`${id}-title`}
+          className="relative scroll-mt-10 rounded-[2px]"
+          style={{ backgroundColor: c.CARD, boxShadow: `inset 0 1px 0 ${tint("#ffffff", 45)}` }}
+        >
+          {tab && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-[1.6rem] z-10 max-w-[46%] -translate-x-1/2 rounded-t-[3px] px-3 pb-1.5 pt-[7px]"
+              style={{ left: tabX, backgroundColor: tabColor, color: inkOn(tabColor), boxShadow: "0 -3px 7px rgba(0,0,0,0.2)" }}
+            >
+              <span className={`${courier.className} block truncate text-[10px] font-bold uppercase tracking-[0.18em]`}>{tab}</span>
+            </span>
+          )}
+          {/* The binding: three punched holes painted in the desk color so
+              the page reads as actually pierced, plus the margin rule every
+              ruled notebook has. Hidden below sm, where the sheet needs the
+              full width for content. */}
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 hidden w-16 sm:block">
+            {["14%", "50%", "86%"].map((top) => (
+              <span
+                key={top}
+                className="absolute left-[1.1rem] h-3.5 w-3.5 -translate-y-1/2 rounded-full"
+                style={{ top, backgroundColor: c.DESK, boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)" }}
+              />
+            ))}
+            <span className="absolute inset-y-5 left-[3.6rem] w-px" style={{ backgroundColor: blend(c.POP, c.CARD, 55) }} />
           </div>
-        ))}
+          <div className="px-5 pb-9 pt-4 sm:pl-[4.8rem] sm:pr-9">
+            <div className="mb-6 flex items-baseline justify-between gap-4 border-b pb-2" style={{ borderColor: tint(c.INK, 16) }}>
+              <span className={`${courier.className} truncate text-[10px] font-bold uppercase tracking-[0.3em]`} style={{ color: c.INK_SOFT }}>
+                {head}
+              </span>
+              <span className={`${courier.className} shrink-0 text-[10px] uppercase tracking-[0.2em]`} style={{ color: c.INK_SOFT }}>
+                pg. {pad(page)} / {pad(total)}
+              </span>
+            </div>
+            {children}
+          </div>
+        </section>
       </div>
     </RevealOnScroll>
   );
 }
 
-// A handwritten eyebrow line with an ink underline that draws itself the
-// first time it scrolls into view — `pathLength="1"` normalizes the SVG
-// path so the draw-on keyframe (globals.css) can animate stroke-dashoffset
-// 1 → 0 without measuring the path's real length. Stays fully drawn
-// (dashoffset 0) by default per RevealOnScroll's contract, so a visitor
-// without JS, or a crawler, never sees a missing/half-drawn line.
-function InkEyebrow({ children, color }) {
+// The warm phrase above each sheet's content. The running head already
+// gives the formal section name, so this one is allowed to be the voice of
+// the person whose binder this is.
+function SheetTitle({ id, children, accent, ink }) {
+  return (
+    <div className="mb-6">
+      <h2 id={id} className={`${bodoni.className} break-words text-[1.7rem] font-medium leading-tight sm:text-4xl`} style={{ color: ink }}>
+        {children}
+      </h2>
+      <span aria-hidden className="mt-2 block h-[3px] w-16 rounded-full" style={{ backgroundColor: accent }} />
+    </div>
+  );
+}
+
+// A handwritten line with an ink underline that draws itself the first
+// time it scrolls into view. `pathLength="1"` normalizes the path so the
+// keyframe can animate stroke-dashoffset 1 to 0 without measuring it.
+// Stays fully drawn by default per RevealOnScroll's contract, so a visitor
+// without JS never sees a half-drawn line.
+function InkNote({ children, color }) {
   return (
     <RevealOnScroll arrivedClassName="scrapbook-ink-arrive" threshold={0.6} rootMargin="0px">
-      <span className="inline-flex flex-col items-center">
-        <span className={`${caveat.className} text-lg`} style={{ color }}>
+      <span className="inline-flex flex-col items-start">
+        <span className={`${caveat.className} text-xl leading-tight`} style={{ color }}>
           {children}
         </span>
-        <svg width="150" height="12" viewBox="0 0 150 12" className="scrapbook-ink -mt-1" aria-hidden focusable="false">
-          <path d="M2,8 Q37,2 75,7 T148,5" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" pathLength="1" style={{ strokeDasharray: 1, strokeDashoffset: 0 }} />
+        <svg width="132" height="10" viewBox="0 0 132 10" className="scrapbook-ink" aria-hidden focusable="false">
+          <path
+            d="M2,7 Q34,2 66,6 T130,4"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+            pathLength="1"
+            style={{ strokeDasharray: 1, strokeDashoffset: 0 }}
+          />
         </svg>
       </span>
     </RevealOnScroll>
   );
 }
 
-const SECTION_LABELS = {
-  experience: "Where I’ve worked",
-  education: "Where I studied",
-  projects: "Things I’ve made",
-  achievements: "Little wins",
+// Experience: index cards strung down a stitched rail. Each card gets the
+// red top rule and faint ruling of a real 5x3 card, and its dates as a
+// rubber stamp in the top corner.
+function ExperienceSheet({ experience, accent, ink, c }) {
+  return (
+    <ol className="scrapbook-stack relative space-y-5 border-l border-dashed pl-6 sm:pl-8" style={{ borderColor: tint(accent, 50) }}>
+      {experience.map((job, i) => (
+        <li key={i} className="relative">
+          <span
+            aria-hidden
+            className="absolute top-7 hidden h-2.5 w-2.5 rounded-full border-2 sm:block"
+            style={{ left: "-2.3rem", borderColor: accent, backgroundColor: c.CARD }}
+          />
+          <article
+            className="scrapbook-lift relative overflow-hidden rounded-[2px]"
+            style={{
+              "--rest-rot": `${i % 2 === 0 ? -0.35 : 0.3}deg`,
+              backgroundColor: blend(c.POP, c.CARD, 5),
+              border: `1px solid ${tint(c.INK, 15)}`,
+              boxShadow: "0 6px 14px rgba(0,0,0,0.14)",
+            }}
+          >
+            <span aria-hidden className="block h-[3px]" style={{ backgroundColor: blend(c.POP, c.CARD, 70) }} />
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-4">
+              <div className="min-w-0">
+                <h3 className={`${bodoni.className} break-words text-xl font-medium leading-snug`} style={{ color: c.INK }}>
+                  {job.role || "Role"}
+                </h3>
+                <p className={`${courier.className} mt-1 break-words text-[11px] font-bold uppercase tracking-[0.18em]`} style={{ color: c.INK_SOFT }}>
+                  {job.company || "Company"}
+                </p>
+              </div>
+              {(job.start || job.end) && (
+                <Stamp color={accent} ink={ink} rotation={2}>
+                  {[job.start, job.end].filter(Boolean).join("-")}
+                </Stamp>
+              )}
+            </div>
+            {job.bullets?.length > 0 && (
+              <ul className={`${newsreader.className} scrapbook-ruled mt-3 px-5 pb-5 text-[0.95rem] leading-7`} style={{ color: c.INK_SOFT }}>
+                {job.bullets.map((line, j) => (
+                  <li key={j} className="flex gap-2.5">
+                    <span aria-hidden className="mt-[0.85rem] h-1 w-1 shrink-0 rounded-[1px]" style={{ backgroundColor: accent }} />
+                    <span className="min-w-0 whitespace-pre-line break-words">{line}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// Projects: album mounts. The print sits on a panel with its highlights on
+// a slip of paper tucked in behind it: visible, not hidden behind a flip,
+// because the highlights are the part a hiring manager actually came to
+// read. The mount tilts in real perspective on hover and the print lifts
+// toward the viewer (see .scrapbook-mount in globals.css).
+//
+// A mount is laid out landscape when it is full width and portrait when it
+// shares the row, which is what keeps the sheet from ever showing an empty
+// column: an odd project count promotes the first project to a full-width
+// lead mount so the remaining even number pairs up exactly. A plain
+// two-column grid left a lonely half-width card next to dead space whenever
+// the count was odd, and with a single project that dead space was half the
+// page.
+//
+// The landscape split only kicks in from md up: below that the sheet is
+// narrow enough that a fixed 17rem print column would squeeze the copy and
+// the notes slip into an unreadable gutter, so the print stacks above the
+// text as it does in a half-width mount.
+function ProjectMount({ project, accent, ink, c, tilt, wide }) {
+  const print = (
+    <PhotoPrint
+      src={project.image}
+      alt={project.name ? `${project.name} screenshot` : "Project screenshot"}
+      monogram={(project.name || "?")[0]?.toUpperCase()}
+      accent={accent}
+      tilt={tilt}
+    />
+  );
+  const body = (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className={`${bodoni.className} min-w-0 break-words text-2xl font-medium leading-tight`} style={{ color: c.INK }}>
+          {project.name || "Untitled project"}
+        </h3>
+        <span className={`${courier.className} shrink-0 text-[10px] font-bold uppercase tracking-[0.18em]`} style={{ color: c.INK_SOFT }}>
+          {[project.version && `v${project.version}`, project.status].filter(Boolean).join(" · ")}
+        </span>
+      </div>
+      {project.description && (
+        <p className={`${newsreader.className} mt-2 whitespace-pre-line break-words text-[0.95rem] leading-7`} style={{ color: c.INK_SOFT }}>
+          {project.description}
+        </p>
+      )}
+      {project.highlights?.length > 0 && (
+        <div
+          className="mt-4 rounded-[2px] px-4 py-3"
+          style={{
+            backgroundColor: blend(c.INK, c.CARD, 9),
+            border: `1px solid ${tint(c.INK, 16)}`,
+            boxShadow: "0 4px 11px rgba(0,0,0,0.12)",
+            transform: "rotate(-0.8deg)",
+          }}
+        >
+          <span className={`${caveat.className} block text-lg leading-none`} style={{ color: ink }}>
+            notes on the back
+          </span>
+          <ul className={`${newsreader.className} mt-2 space-y-1.5 text-[0.9rem] leading-6`} style={{ color: c.INK_SOFT }}>
+            {project.highlights.map((line, j) => (
+              <li key={j} className="flex gap-2.5">
+                <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-[1px]" style={{ backgroundColor: accent }} />
+                <span className="min-w-0 break-words">{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {project.tags?.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {project.tags.map((tag) => (
+            <Stamp key={tag} color={dotColor(tag)} ink={c.INK_SOFT} rotation={0}>
+              {tag}
+            </Stamp>
+          ))}
+        </div>
+      )}
+      {(project.link || project.demo) && (
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-3" style={{ borderColor: tint(c.INK, 14) }}>
+          {project.link && <PaperLink href={`https://${stripProtocol(project.link)}`} color={ink}>Source</PaperLink>}
+          {project.demo && <PaperLink href={`https://${stripProtocol(project.demo)}`} color={ink}>Live demo</PaperLink>}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <article
+      className="scrapbook-mount-inner relative rounded-[2px] p-4 pb-5"
+      style={{
+        backgroundColor: blend(accent, c.CARD, 11),
+        border: `1px solid ${tint(c.INK, 14)}`,
+        boxShadow: "0 8px 18px rgba(0,0,0,0.15)",
+      }}
+    >
+      {wide ? (
+        <div className="gap-6 md:grid md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] md:items-start">
+          <div className="mb-5 md:mb-0">{print}</div>
+          {body}
+        </div>
+      ) : (
+        <>
+          {print}
+          <div className="mt-5">{body}</div>
+        </>
+      )}
+    </article>
+  );
+}
+
+function ProjectsSheet({ projects, accent, ink, c }) {
+  const lead = projects.length % 2 === 1 ? projects[0] : null;
+  const paired = lead ? projects.slice(1) : projects;
+  return (
+    <ul className="scrapbook-stack grid gap-7 lg:grid-cols-2">
+      {lead && (
+        <li className="scrapbook-mount lg:col-span-2">
+          <ProjectMount project={lead} accent={accent} ink={ink} c={c} tilt={-1.5} wide />
+        </li>
+      )}
+      {paired.map((project, i) => (
+        <li key={i} className="scrapbook-mount">
+          <ProjectMount project={project} accent={accent} ink={ink} c={c} tilt={i % 2 === 0 ? 1.3 : -1.4} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// A typed footnote link: the underline thickens on hover and focus rather
+// than appearing from nothing, so the affordance is there before the
+// pointer is.
+function PaperLink({ href, color, children }) {
+  return (
+    <a
+      href={href}
+      className={`${courier.className} scrapbook-underline text-[11px] font-bold uppercase tracking-[0.16em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+      style={{ color, "--rule": color, outlineColor: color }}
+    >
+      {children}
+    </a>
+  );
+}
+
+// Skills: a sheet of die-cut stickers on its perforated backing card. Each
+// sticker takes the deterministic color of its own label (dotColor), gets
+// the thick paper edge a real die cut leaves, and peels up at the corner
+// on hover. This is the page's signature object.
+function SkillsSheet({ skills, accent, c }) {
+  return (
+    <div
+      className="rounded-[3px] border border-dashed p-4 sm:p-5"
+      style={{ borderColor: tint(c.INK, 30), backgroundColor: blend(c.INK, c.CARD, 9) }}
+    >
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <span className={`${courier.className} text-[10px] font-bold uppercase tracking-[0.28em]`} style={{ color: c.INK_SOFT }}>
+          Sticker sheet
+        </span>
+        <span className={`${courier.className} shrink-0 text-[10px] uppercase tracking-[0.2em]`} style={{ color: c.INK_SOFT }}>
+          {skills.length} {skills.length === 1 ? "sticker" : "stickers"}
+        </span>
+      </div>
+      <ul className="scrapbook-stack flex flex-wrap gap-x-3 gap-y-4">
+        {skills.map((skill, i) => (
+          <li key={skill} className="scrapbook-sticker-slot">
+            <span
+              className="scrapbook-sticker relative inline-flex items-center gap-2 rounded-full px-3.5 py-[7px]"
+              style={{
+                "--sticker-rot": `${[-2.6, 1.9, -1.2, 2.7, -3.1, 1.3][i % 6]}deg`,
+                backgroundColor: blend(dotColor(skill), c.CARD, 34),
+                border: `3px solid ${LABEL_PAPER}`,
+                boxShadow: "0 2px 5px rgba(0,0,0,0.22)",
+                color: c.INK,
+              }}
+            >
+              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: dotColor(skill) }} />
+              <span className={`${courier.className} text-[11px] font-bold uppercase tracking-[0.12em]`}>{skill}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className={`${caveat.className} mt-4 text-lg leading-none`} style={{ color: accentInk(accent, c.DARK) }}>
+        collected, not claimed
+      </p>
+    </div>
+  );
+}
+
+// Achievements: ticket stubs. The perforation is a dashed rule with two
+// notches punched out of it, painted in the sheet color behind the ticket
+// which is exactly why the ticket's own fill has to be opaque (blend()).
+function AchievementsSheet({ achievements, accent, ink, c }) {
+  return (
+    <ul className="scrapbook-stack space-y-4">
+      {achievements.map((text, i) => (
+        <li key={i}>
+          <div
+            className="scrapbook-ticket relative grid grid-cols-[4.6rem_minmax(0,1fr)] overflow-hidden rounded-[2px] sm:grid-cols-[5.6rem_minmax(0,1fr)]"
+            style={{
+              "--rest-rot": `${i % 2 === 0 ? -0.4 : 0.35}deg`,
+              backgroundColor: blend(accent, c.CARD, 9),
+              border: `1px solid ${tint(c.INK, 15)}`,
+              boxShadow: "0 6px 14px rgba(0,0,0,0.14)",
+            }}
+          >
+            <div className="scrapbook-ticket-stub flex flex-col items-center justify-center gap-1 py-4" style={{ backgroundColor: blend(accent, c.CARD, 22) }}>
+              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill={accent}>
+                <path d="M12 2.5l2.7 6.1 6.6.6-5 4.4 1.5 6.5L12 16.7l-5.8 3.4 1.5-6.5-5-4.4 6.6-.6L12 2.5z" />
+              </svg>
+              <span className={`${courier.className} text-[10px] font-bold uppercase tracking-[0.16em]`} style={{ color: ink }}>
+                No. {pad(i + 1)}
+              </span>
+            </div>
+            <p className={`${newsreader.className} min-w-0 whitespace-pre-line break-words py-4 pl-5 pr-5 text-[0.95rem] leading-7`} style={{ color: c.INK_SOFT }}>
+              {text}
+            </p>
+            <span aria-hidden className="absolute inset-y-0 left-[4.6rem] w-0 border-l border-dashed sm:left-[5.6rem]" style={{ borderColor: tint(c.INK, 45) }} />
+            <span aria-hidden className="absolute -top-2 left-[4.6rem] h-4 w-4 -translate-x-1/2 rounded-full sm:left-[5.6rem]" style={{ backgroundColor: c.CARD }} />
+            <span aria-hidden className="absolute -bottom-2 left-[4.6rem] h-4 w-4 -translate-x-1/2 rounded-full sm:left-[5.6rem]" style={{ backgroundColor: c.CARD }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Education: the checkout card from the back of a library book. Ruled
+// rows, a red margin rule, and the years stamped in the right-hand column
+// where the due date would go. Reads as a card with one row just as well
+// as with four, which is the sparse case this section usually is.
+function EducationSheet({ education, accent, ink, c }) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-[2px]"
+      style={{ backgroundColor: blend(c.POP, c.CARD, 5), border: `1px solid ${tint(c.INK, 15)}`, boxShadow: "0 6px 14px rgba(0,0,0,0.14)" }}
+    >
+      <div className="flex items-baseline justify-between gap-3 border-b-[3px] px-5 py-3" style={{ borderColor: blend(c.POP, c.CARD, 60) }}>
+        <span className={`${courier.className} text-[10px] font-bold uppercase tracking-[0.26em]`} style={{ color: c.INK_SOFT }}>
+          Institution / programme
+        </span>
+        <span className={`${courier.className} shrink-0 text-[10px] font-bold uppercase tracking-[0.2em]`} style={{ color: c.INK_SOFT }}>
+          Years
+        </span>
+      </div>
+      <ul className="scrapbook-stack">
+        {education.map((edu, i) => (
+          <li
+            key={i}
+            className="flex flex-col gap-2 border-b border-dashed px-5 py-4 last:border-b-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+            style={{ borderColor: tint(c.INK, 18) }}
+          >
+            <div className="min-w-0">
+              <h3 className={`${bodoni.className} break-words text-xl font-medium leading-snug`} style={{ color: c.INK }}>
+                {edu.school || "School"}
+              </h3>
+              {edu.degree && (
+                <p className={`${newsreader.className} mt-0.5 break-words text-[0.95rem] leading-6`} style={{ color: c.INK_SOFT }}>
+                  {edu.degree}
+                </p>
+              )}
+            </div>
+            {(edu.start || edu.end) && (
+              <Stamp color={accent} ink={ink} rotation={-2}>
+                {[edu.start, edu.end].filter(Boolean).join("-")}
+              </Stamp>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Coding profiles: punched hang tags, cut to the classic luggage-tag
+// pentagon with the hole in the point. The whole tag is the link, and it
+// swings from the hole on hover and keyboard focus.
+//
+// The tag shape lives on an inner layer, not on the link itself, because
+// clip-path clips an element's focus ring along with its background: put
+// the pentagon on the <a> and the keyboard focus outline gets cut away
+// entirely, leaving the tags with no visible focus state at all.
+function CodingSheet({ profiles, accent, ink, c }) {
+  return (
+    <ul className="scrapbook-stack flex flex-wrap gap-4">
+      {profiles.map((profile, i) => (
+        <li key={i}>
+          <a
+            href={`https://${stripProtocol(profile.url)}`}
+            className="scrapbook-tag relative block min-w-[14rem] max-w-full py-4 pl-12 pr-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ "--tag-rot": `${i % 2 === 0 ? -2.2 : 1.6}deg`, outlineColor: accent }}
+          >
+            <span
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                backgroundColor: blend(accent, c.CARD, 20),
+                clipPath: "polygon(0 50%, 1.4rem 0, 100% 0, 100% 100%, 1.4rem 100%)",
+                boxShadow: "0 6px 14px rgba(0,0,0,0.16)",
+              }}
+            />
+            <span aria-hidden className="absolute left-[1.05rem] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full" style={{ backgroundColor: c.CARD, boxShadow: "inset 0 2px 3px rgba(0,0,0,0.5)" }} />
+            <span className={`${bodoni.className} relative block truncate text-lg font-medium leading-tight`} style={{ color: c.INK }}>
+              {profile.platform}
+            </span>
+            <span className={`${courier.className} relative mt-0.5 block truncate text-[11px] tracking-[0.08em]`} style={{ color: ink }}>
+              {stripProtocol(profile.url)}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const SECTION_HEADS = {
+  experience: "Experience",
+  education: "Education",
+  projects: "Projects",
+  achievements: "Achievements",
   skills: "Toolkit",
+  codingProfiles: "Profiles",
+};
+
+const SECTION_TITLES = {
+  experience: "Where I\u2019ve worked",
+  education: "Where I studied",
+  projects: "Things I\u2019ve made",
+  achievements: "Little wins, kept",
+  skills: "What\u2019s in the kit",
   codingProfiles: "Where I compete",
 };
+
+// Singular and plural of the unit each section is counted in, for the
+// contents page. Counting what the customer typed is derivation, not a
+// fabricated stat. Nothing here invents a number.
+const SECTION_UNITS = {
+  experience: ["role", "roles"],
+  education: ["school", "schools"],
+  projects: ["project", "projects"],
+  achievements: ["entry", "entries"],
+  skills: ["tool", "tools"],
+  codingProfiles: ["profile", "profiles"],
+};
+
+// Where each sheet's divider tab sits along its top edge. Cycled by sheet
+// order so consecutive tabs never overlap and the binder reads as indexed.
+const TAB_POSITIONS = ["58%", "37%", "74%", "27%", "85%", "47%"];
+const SHEET_ROTATIONS = [-0.3, 0.25, -0.15, 0.32, -0.28, 0.18];
 
 export default function ScrapbookTemplate({ data }) {
   const { name, role, bio, email, links, photoUrl, skills, codingProfiles, experience, education, achievements, projects, sectionOrder } = data;
 
   const palette = getPalette("scrapbook", data.paletteId) || SCRAPBOOK_PALETTES[0];
-  const colors = palette.colors;
-  const { PAPER, INK, INK_SOFT, MUTED, ACCENT, PALETTE, CARD } = colors;
+  const { PAPER, INK, INK_SOFT, MUTED, ACCENT, POP, CARD, PALETTE } = palette.colors;
+
+  // Everything below reads colors off one object, so the desk color (which
+  // the punched holes have to be painted in) travels with the palette
+  // instead of being recomputed per component.
+  const darkPaper = brightness(PAPER) < 128;
+  // The dark palette's desk is mixed down further than the light ones
+  // because the paper texture laid over it (below) can only ever lighten a
+  // near-black ground: measured against the sheets, overlaying the texture
+  // on the old value closed the desk-to-sheet gap from 16 to 8 and the page
+  // went flat. Starting 60% down instead of 34% pays for the lift and lands
+  // back at a gap of 14.
+  const desk = shade(PAPER, darkPaper ? 60 : 26);
+  const c = { PAPER, INK, INK_SOFT, MUTED, ACCENT, POP, CARD, DESK: desk, DARK: darkPaper };
 
   const yearsXp = computeYearsOfExperience(experience);
 
-  // Every card within a section shares that section's one accent color —
-  // the section, not the individual card, is the unit of color identity,
-  // which is what makes "this whole cluster is Projects" legible at a
-  // glance instead of every card competing for attention on its own.
-  const sectionCards = {
-    experience: (experience || []).length > 0 ? (accent) => experience.map((job, i) => <JobCard key={i} job={job} accent={accent} colors={colors} />) : null,
-    education: (education || []).length > 0 ? (accent) => education.map((edu, i) => <EduCard key={i} edu={edu} accent={accent} colors={colors} />) : null,
-    projects: (projects || []).length > 0 ? (accent) => projects.map((project, i) => <ProjectCard key={i} project={project} accent={accent} colors={colors} />) : null,
-    achievements:
-      (achievements || []).length > 0 ? (accent) => achievements.map((text, i) => <AchievementCard key={i} text={text} accent={accent} colors={colors} />) : null,
-    skills: (skills || []).length > 0 ? (accent) => [<SkillsCard key="skills" skills={skills} accent={accent} colors={colors} />] : null,
-    codingProfiles: (codingProfiles || []).length > 0 ? (accent) => [<CodingCard key="coding" profiles={codingProfiles} accent={accent} colors={colors} />] : null,
+  const counts = {
+    experience: (experience || []).length,
+    education: (education || []).length,
+    projects: (projects || []).length,
+    achievements: (achievements || []).length,
+    skills: (skills || []).length,
+    codingProfiles: (codingProfiles || []).length,
   };
-  const orderedIds = (sectionOrder || []).filter((id) => sectionCards[id]);
+  const orderedIds = (sectionOrder || []).filter((id) => counts[id] > 0);
+
+  // Page 01 is the cover and the last page is the back cover, so a section
+  // in position i is page i + 2. The contents page, the running heads and
+  // the index rail all number off this one arithmetic.
+  const totalPages = orderedIds.length + 2;
+  const pageOf = (id) => orderedIds.indexOf(id) + 2;
+
+  // Every sheet in a section shares that section's accent: the section, not
+  // the individual card, is the unit of color identity, which is what makes
+  // "this whole sheet is Projects" legible from the tab alone.
+  const accentOf = (id) => PALETTE[orderedIds.indexOf(id) % PALETTE.length];
+
+  const sectionBody = {
+    experience: (accent, ink) => <ExperienceSheet experience={experience} accent={accent} ink={ink} c={c} />,
+    education: (accent, ink) => <EducationSheet education={education} accent={accent} ink={ink} c={c} />,
+    projects: (accent, ink) => <ProjectsSheet projects={projects} accent={accent} ink={ink} c={c} />,
+    achievements: (accent, ink) => <AchievementsSheet achievements={achievements} accent={accent} ink={ink} c={c} />,
+    skills: (accent) => <SkillsSheet skills={skills} accent={accent} c={c} />,
+    codingProfiles: (accent, ink) => <CodingSheet profiles={codingProfiles} accent={accent} ink={ink} c={c} />,
+  };
+
+  // `textOn` travels with each tab because only this file knows how to read
+  // a palette color's brightness, and the rail needs legible type against
+  // whichever accent the active tab is filled with.
+  const tabItems = [
+    { id: "cover", label: "Cover", color: ACCENT, textOn: inkOn(ACCENT), page: 1 },
+    ...orderedIds.map((id) => {
+      const accent = accentOf(id);
+      return { id, label: SECTION_HEADS[id], color: accent, textOn: inkOn(accent), page: pageOf(id) };
+    }),
+    { id: "colophon", label: "Contact", color: POP, textOn: inkOn(POP), page: totalPages },
+  ];
 
   return (
-    <div className={`relative min-h-dvh ${inter.className}`} style={{ backgroundColor: PAPER, color: INK }}>
-      <TornPaperFilters />
-      {/* One shared wallpaper texture across every palette, `fixed` so it
-          stays pinned to the viewport as the page scrolls instead of
-          scrolling with the content — a translucent wash of the palette's
-          own PAPER color sits on top so each theme still reads as
-          distinct, rather than every palette looking like a flat recolor
-          of the same photo. Plain `position: fixed`, no containing-block
-          trick here — this template is written as if it's always a full
-          page (matching the actual deployed site and the standalone
-          /preview route); the editor's constrained live-preview pane
-          takes care of scoping `fixed` to itself on its own end
-          (PortfolioEditor.js), so this component doesn't need to know or
-          care which context it's rendered in.
-          A <picture> with a media-query <source>, not next/image — this is
-          art direction (a genuinely different photo per breakpoint, not
-          just a resized variant of the same one), so the browser needs to
-          pick a source before fetching, or both images would end up
-          downloaded on every device. */}
-      <div className="pointer-events-none fixed inset-0">
-        <picture>
-          <source media="(min-width: 640px)" srcSet="/scrapbook-wallpaper-for-desktop.png" />
-          <img src="/scrapbook-wallpaper-for-mobile.png" alt="" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
-        </picture>
-        <div className="absolute inset-0" style={{ backgroundColor: tint(PAPER, 55) }} />
-      </div>
-      <CursorGlow colorRgb={hexToRgb(ACCENT)} size={550} />
+    <div className={`scrapbook-root relative min-h-dvh ${newsreader.className}`} style={{ backgroundColor: desk, color: INK }}>
+      {/* The desk the binder sits on: one big sheet of wrinkled paper (a
+          71KB webp) laid under the whole page, blended with the palette's
+          own desk color rather than dropped in as a photo, so each theme
+          still reads as its own paper stock instead of the same picture with
+          a wash over it. It replaced a pair of 5.7MB wallpaper PNGs that
+          every customer's clone used to inherit.
+          `cover`, not a tile: the texture has no seamless repeat, and
+          stretched across the viewport its creases become the large soft
+          folds of a single sheet, which is what a binder should be lying on.
+          The blend has to differ by theme because a near-white texture can
+          only ever darken a pale desk and only ever lighten a dark one.
+          Multiply lets the creases sink into the light palettes, where the
+          texture does most of its work. The dark palette takes overlay held
+          back to just over half strength (`opacity` composites the blended
+          result back over the identical desk color underneath, which is the
+          interpolation knob), and there the texture is close to
+          imperceptible by necessity: measured, it can modulate a near-black
+          ground by about 2 levels of luminance before the desk starts
+          reading as lighter than the sheets lying on it, so the sheets keep
+          the contrast and the desk keeps only a hint of grain.
+          `fixed` with no containing-block trick: this template is written
+          as if it always owns a full page (the deployed site and the
+          standalone /preview route both do), and the editor's constrained
+          preview pane scopes `fixed` to itself on its own end
+          (PortfolioEditor.js), so this component never needs to know which
+          context it is rendered in. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          backgroundColor: desk,
+          backgroundImage: "url(/scrapbook-desk-paper.webp)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundBlendMode: darkPaper ? "overlay" : "multiply",
+          opacity: darkPaper ? 0.55 : 1,
+        }}
+      />
+      {/* A warm pool of light from above and a vignette that darkens the
+          corners, so the sheets read as objects lit from the front. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          backgroundImage: [
+            `radial-gradient(120% 80% at 50% -10%, ${tint(POP, 16)}, transparent 62%)`,
+            "radial-gradient(125% 95% at 50% 26%, transparent 42%, rgba(0,0,0,0.3) 100%)",
+          ].join(", "),
+        }}
+      />
+      <CursorGlow colorRgb={hexToRgb(POP)} size={620} />
 
-      <div className="relative mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
-        {/* Header */}
-        <header className="mx-auto mb-16 flex max-w-2xl flex-col items-center gap-5 text-center sm:mb-24">
-          <div className="relative">
-            <WashiTape className="-left-5 -top-3 z-10" color={tint(ACCENT, 30)} rotation={-10} />
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={name || "Portrait"}
-                className="h-32 w-32 rounded-full object-cover shadow-lg ring-4"
-                style={{ "--tw-ring-color": CARD }}
-              />
-            ) : (
-              <div
-                className="flex h-32 w-32 items-center justify-center rounded-full text-3xl font-semibold shadow-lg ring-4"
-                style={{ backgroundColor: tint(ACCENT, 16), color: ACCENT, "--tw-ring-color": CARD }}
-              >
-                {initials(name)}
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-16">
+        <div className="lg:grid lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-10">
+          <ScrapbookTabs items={tabItems} mono={courier.className} card={CARD} ink={INK} inkSoft={INK_SOFT} rule={tint(INK, 18)} />
+
+          <div className="space-y-11 sm:space-y-14">
+            {/* Cover: the front of the binder. Portrait taped in, name
+                pressed large, role on a label-maker strip, and a real
+                table of contents that doubles as the only navigation
+                small screens get (the index rail is desktop-only). */}
+            <Sheet id="cover" page={1} total={totalPages} head={name || "Portfolio"} rot={-0.25} c={c}>
+              <div className="grid gap-7 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] md:items-start md:gap-9">
+                <div className="relative mx-auto w-full max-w-[13rem] pt-3 md:mx-0">
+                  <Tape className="-left-4 -top-1 z-10" color={ACCENT} rotation={-8} />
+                  <Tape className="-right-5 bottom-2 z-10" color={POP} rotation={-6} />
+                  <PhotoPrint
+                    src={photoUrl}
+                    alt={name ? `${name}, portrait` : "Portrait"}
+                    monogram={initials(name)}
+                    accent={ACCENT}
+                    caption={name || "Your Name"}
+                    tilt={-2.2}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <InkNote color={accentInk(ACCENT, darkPaper)}>this one&rsquo;s mine</InkNote>
+                  <h1
+                    id="cover-title"
+                    className={`${bodoni.className} mt-2 break-words text-[2.6rem] font-black leading-[0.95] tracking-tight sm:text-6xl`}
+                    style={{ color: INK }}
+                  >
+                    {name || "Your Name"}
+                  </h1>
+                  <span
+                    className={`${courier.className} mt-4 inline-block max-w-full truncate rounded-[3px] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em]`}
+                    style={{ backgroundColor: INK, color: inkOn(INK) }}
+                  >
+                    {role || "Your Role"}
+                  </span>
+                  {bio && (
+                    <p
+                      className={`${newsreader.className} scrapbook-ruled mt-5 whitespace-pre-line break-words text-[1.05rem] italic leading-7`}
+                      style={{ color: INK_SOFT }}
+                    >
+                      {bio}
+                    </p>
+                  )}
+                  {yearsXp > 0 && (
+                    <p className={`${courier.className} mt-5 text-[10px] font-bold uppercase tracking-[0.24em]`} style={{ color: INK_SOFT }}>
+                      {yearsXp} year{yearsXp === 1 ? "" : "s"} of it so far
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          <div>
-            <InkEyebrow color={ACCENT}>welcome to my board</InkEyebrow>
-            <h1 className={`${fraunces.className} mt-1 break-words text-5xl font-medium tracking-tight sm:text-6xl`} style={{ color: INK }}>
-              {name || "Your Name"}
-            </h1>
-            <p className="mt-2 break-words text-lg" style={{ color: MUTED }}>
-              {role || "Your Role"}
-            </p>
-          </div>
-          {bio && (
-            <p className={`${fraunces.className} max-w-lg whitespace-pre-line break-words text-xl italic leading-relaxed`} style={{ color: INK_SOFT }}>
-              &ldquo;{bio}&rdquo;
-            </p>
-          )}
-          {yearsXp > 0 && (
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: MUTED }}>
-              {yearsXp} year{yearsXp === 1 ? "" : "s"} in the making
-            </p>
-          )}
-        </header>
 
-        {/* Sections, in the customer's chosen order — each its own labeled
-            cluster instead of one undifferentiated stream of cards. */}
-        {orderedIds.map((id, sectionIndex) => {
-          const accent = PALETTE[sectionIndex % PALETTE.length];
-          return (
-            <section key={id} className="mb-16 sm:mb-20">
-              <SectionHeading accent={accent}>{SECTION_LABELS[id]}</SectionHeading>
-              <CardGrid items={sectionCards[id](accent)} />
-            </section>
-          );
-        })}
+              {orderedIds.length > 0 && (
+                <nav aria-label="Contents" className="mt-8 rounded-[2px] border border-dashed p-4 sm:p-5" style={{ borderColor: tint(INK, 26) }}>
+                  <p className={`${courier.className} mb-3 text-[10px] font-bold uppercase tracking-[0.28em]`} style={{ color: INK_SOFT }}>
+                    Contents
+                  </p>
+                  <ol className="space-y-1">
+                    {orderedIds.map((id, i) => {
+                      const [one, many] = SECTION_UNITS[id];
+                      return (
+                        <li key={id}>
+                          <a
+                            href={`#${id}`}
+                            className="scrapbook-contents-row flex items-baseline gap-2 rounded-[2px] px-1.5 py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+                            style={{ outlineColor: accentOf(id) }}
+                          >
+                            <span className={`${courier.className} w-6 shrink-0 text-[11px] tabular-nums`} style={{ color: INK_SOFT }}>
+                              {pad(i + 1)}
+                            </span>
+                            <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-[1px]" style={{ backgroundColor: accentOf(id) }} />
+                            <span className={`${bodoni.className} min-w-0 truncate text-lg font-medium leading-tight`} style={{ color: INK }}>
+                              {SECTION_HEADS[id]}
+                            </span>
+                            <span aria-hidden className="min-w-3 flex-1 border-b border-dotted" style={{ borderColor: tint(INK, 34) }} />
+                            {/* The item count is the first thing to go on a
+                                phone: the row still has to fit the label and
+                                the page number, and those two are what the
+                                contents page is for. */}
+                            <span className={`${courier.className} hidden w-24 shrink-0 text-right text-[11px] tracking-[0.08em] sm:inline-block`} style={{ color: INK_SOFT }}>
+                              {counts[id]} {counts[id] === 1 ? one : many}
+                            </span>
+                            <span className={`${courier.className} w-12 shrink-0 text-right text-[11px] tabular-nums`} style={{ color: INK_SOFT }}>
+                              pg. {pad(pageOf(id))}
+                            </span>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </nav>
+              )}
+            </Sheet>
 
-        {/* Contact — the same torn-paper card, not a different decorative
-            idea, so it reads as part of the same set instead of a bolt-on. */}
-        <section className="mx-auto mt-4 max-w-xl">
-          <Pin accent={ACCENT} colors={colors}>
-            <AccentBar color={ACCENT} />
-            <div className="p-8 pb-4 text-center">
-              <InkEyebrow color={ACCENT}>always open to a chat</InkEyebrow>
-              <p className={`${fraunces.className} mt-1 break-words text-3xl font-medium`} style={{ color: INK }}>
-                Let&rsquo;s connect
-              </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-3">
+            {/* The sections, in the customer's chosen order. Each is its own
+                tabbed sheet carrying its own kind of paper object. */}
+            {orderedIds.map((id, i) => {
+              const accent = accentOf(id);
+              const ink = accentInk(accent, darkPaper);
+              return (
+                <Sheet
+                  key={id}
+                  id={id}
+                  page={pageOf(id)}
+                  total={totalPages}
+                  head={SECTION_HEADS[id]}
+                  tab={SECTION_HEADS[id]}
+                  tabColor={accent}
+                  tabX={TAB_POSITIONS[i % TAB_POSITIONS.length]}
+                  rot={SHEET_ROTATIONS[i % SHEET_ROTATIONS.length]}
+                  c={c}
+                >
+                  <SheetTitle id={`${id}-title`} accent={accent} ink={INK}>
+                    {SECTION_TITLES[id]}
+                  </SheetTitle>
+                  {sectionBody[id](accent, ink)}
+                </Sheet>
+              );
+            })}
+
+            {/* Back cover: the address label and the stamps, the way the
+                inside back of a notebook carries whose it is. */}
+            <Sheet
+              id="colophon"
+              page={totalPages}
+              total={totalPages}
+              head="Contact"
+              tab="Contact"
+              tabColor={POP}
+              tabX="40%"
+              rot={0.22}
+              c={c}
+            >
+              <SheetTitle id="colophon-title" accent={POP} ink={INK}>
+                Last page
+              </SheetTitle>
+              <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
                 {email && (
-                  <a
-                    href={`mailto:${email}`}
-                    className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white"
-                    style={{ backgroundColor: ACCENT }}
-                  >
-                    <IconMail className="h-4 w-4" /> Say hello
-                  </a>
+                  <div className="relative">
+                    <Tape className="-right-3 -top-2 z-10" color={POP} rotation={7} />
+                    <div
+                      className="rounded-[2px] border border-dashed p-4"
+                      style={{ backgroundColor: LABEL_PAPER, borderColor: "rgba(42,33,24,0.35)", boxShadow: "0 6px 14px rgba(0,0,0,0.16)", transform: "rotate(-0.8deg)" }}
+                    >
+                      <p className={`${courier.className} text-[10px] font-bold uppercase tracking-[0.28em]`} style={{ color: LABEL_INK }}>
+                        Reply to
+                      </p>
+                      <a
+                        href={`mailto:${email}`}
+                        className={`${bodoni.className} scrapbook-underline mt-1.5 block break-words text-xl font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+                        style={{ color: LABEL_INK, "--rule": LABEL_INK, outlineColor: LABEL_INK }}
+                      >
+                        {email}
+                      </a>
+                    </div>
+                  </div>
                 )}
-                {links?.github && (
-                  <a
-                    href={`https://${stripProtocol(links.github)}`}
-                    className="flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                    style={{ borderColor: tint(ACCENT, 30), color: INK_SOFT }}
-                  >
-                    <IconGithub className="h-4 w-4" /> GitHub
-                  </a>
-                )}
-                {links?.linkedin && (
-                  <a
-                    href={`https://${stripProtocol(links.linkedin)}`}
-                    className="flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                    style={{ borderColor: tint(ACCENT, 30), color: INK_SOFT }}
-                  >
-                    <IconLinkedin className="h-4 w-4" /> LinkedIn
-                  </a>
-                )}
-                {links?.website && (
-                  <a
-                    href={`https://${stripProtocol(links.website)}`}
-                    className="flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                    style={{ borderColor: tint(ACCENT, 30), color: INK_SOFT }}
-                  >
-                    <IconLink className="h-4 w-4" /> Website
-                  </a>
-                )}
+                <div>
+                  <InkNote color={accentInk(POP, darkPaper)}>drop me a line</InkNote>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {email && (
+                      <StampLink href={`mailto:${email}`} color={POP} ink={accentInk(POP, darkPaper)} c={c} rotation={-1.5}>
+                        <IconMail className="h-3.5 w-3.5" /> Email
+                      </StampLink>
+                    )}
+                    {links?.github && (
+                      <StampLink href={`https://${stripProtocol(links.github)}`} color={PALETTE[0]} ink={accentInk(PALETTE[0], darkPaper)} c={c} rotation={1.8}>
+                        <IconGithub className="h-3.5 w-3.5" /> GitHub
+                      </StampLink>
+                    )}
+                    {links?.linkedin && (
+                      <StampLink href={`https://${stripProtocol(links.linkedin)}`} color={PALETTE[1]} ink={accentInk(PALETTE[1], darkPaper)} c={c} rotation={-2.2}>
+                        <IconLinkedin className="h-3.5 w-3.5" /> LinkedIn
+                      </StampLink>
+                    )}
+                    {links?.website && (
+                      <StampLink href={`https://${stripProtocol(links.website)}`} color={PALETTE[2]} ink={accentInk(PALETTE[2], darkPaper)} c={c} rotation={1.2}>
+                        <IconLink className="h-3.5 w-3.5" /> Website
+                      </StampLink>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </Pin>
-        </section>
-
-        <footer className="mt-10 text-center text-xs" style={{ color: MUTED }}>
-          © {new Date().getFullYear()} {name || "Your Name"} · Made with Dev Portfolio Builder
-        </footer>
+              <p className={`${courier.className} mt-8 border-t pt-4 text-[10px] uppercase tracking-[0.2em]`} style={{ borderColor: tint(INK, 14), color: INK_SOFT }}>
+                © {new Date().getFullYear()} {name || "Your Name"} · Made with Dev Portfolio Builder
+              </p>
+            </Sheet>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+// The contact links as stamped chips: a real link, sized for touch, that
+// straightens out of its tilt when you reach for it.
+function StampLink({ href, color, ink, c, rotation, children }) {
+  return (
+    <a
+      href={href}
+      className={`${courier.className} scrapbook-stamp-link inline-flex min-h-11 items-center gap-2 rounded-[2px] border-[1.5px] px-4 text-[11px] font-bold uppercase tracking-[0.16em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+      style={{
+        "--stamp-rot": `${rotation}deg`,
+        borderColor: tint(color, 55),
+        backgroundColor: blend(color, c.CARD, 8),
+        color: ink,
+        outlineColor: color,
+      }}
+    >
+      {children}
+    </a>
   );
 }

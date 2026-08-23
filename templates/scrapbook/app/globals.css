@@ -17,151 +17,268 @@ body {
   color: var(--foreground);
 }
 
-/* Scrapbook template flourishes — classes prefixed so they can't collide
-   with another template's decorations sharing this stylesheet. */
-@keyframes scrapbook-flutter {
-  0% {
+/* Scrapbook template flourishes, prefixed so they can't collide
+   with another template's decorations sharing this stylesheet. The template
+   is a bound notebook: sheets tip up off the desk as they arrive, the paper
+   objects on each sheet respond to hover and focus, and every one of those
+   is a transform or opacity change so none of it can trigger layout. */
+
+/* The whole page is one scrolling document with an index rail and a table of
+   contents that both link to sheet anchors, so those jumps get eased. Scoped
+   with :has() so this stylesheet, which twelve templates and the editor all
+   load, can't change scroll behavior for any other surface. */
+html:has(.scrapbook-root) {
+  scroll-behavior: smooth;
+}
+
+/* Sheets arrive tipping up off the desk, which is what sells the binder as
+   a stack of physical pages rather than a column of divs. RevealOnScroll
+   adds .scrapbook-sheet-arrive to its wrapper once the sheet is actually in
+   view, so the animation only ever runs once per sheet. Each sheet's resting
+   tilt lives in --sheet-rot and is repeated in both keyframes: an animation
+   with `both` fill wins the transform property outright, so a rotation left
+   only on the base rule would be dropped the moment the sheet landed. */
+.scrapbook-sheet {
+  transform: rotate(var(--sheet-rot, 0deg));
+}
+@keyframes scrapbook-sheet-in {
+  from {
     opacity: 0;
-    transform: translateY(28px) rotate(9deg) scale(0.9);
+    transform: perspective(1400px) translateY(30px) rotateX(7deg) rotate(var(--sheet-rot, 0deg));
   }
-  55% {
+  to {
     opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) rotate(0deg) scale(1);
+    transform: perspective(1400px) translateY(0) rotateX(0deg) rotate(var(--sheet-rot, 0deg));
   }
 }
-.scrapbook-flutter-arrive .scrapbook-board > * {
-  animation: scrapbook-flutter 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.scrapbook-flutter-arrive .scrapbook-board > *:nth-child(2) {
-  animation-delay: 70ms;
-}
-.scrapbook-flutter-arrive .scrapbook-board > *:nth-child(3) {
-  animation-delay: 140ms;
-}
-.scrapbook-flutter-arrive .scrapbook-board > *:nth-child(4) {
-  animation-delay: 210ms;
-}
-.scrapbook-flutter-arrive .scrapbook-board > *:nth-child(5) {
-  animation-delay: 280ms;
-}
-.scrapbook-flutter-arrive .scrapbook-board > *:nth-child(6) {
-  animation-delay: 350ms;
+.scrapbook-sheet-arrive > .scrapbook-sheet {
+  animation: scrapbook-sheet-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* A real resting tilt plus a small vertical stagger (repeating every 6
-   cards) is what makes the board read as a corkboard someone actually
-   pinned things to, not a grid with decoration bolted on. The vertical
-   offset is intentionally kept well inside the grid's own gap-6 (24px)
-   spacing — it shifts where a card sits, never its box size, so it can't
-   collide with a neighbor no matter how long that neighbor's user-entered
-   text runs. Set as custom properties on the grid wrapper so
-   .scrapbook-card (rotation/offset) and .scrapbook-pin (sway delay) below
-   can each read the one they need — custom properties inherit through
-   descendants without any extra plumbing. */
-.scrapbook-board > *:nth-child(6n + 1) {
-  --rest-rot: -3deg;
-  --rest-y: -7px;
-  --pin-delay: 0s;
+/* Within an arrived sheet, the objects on it settle one after another, so
+   the eye is walked down the page instead of being handed all of it at
+   once. Anything past the sixth item shares the last delay: a long skills
+   list should finish arriving, not keep going. */
+@keyframes scrapbook-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.scrapbook-board > *:nth-child(6n + 2) {
-  --rest-rot: 2.6deg;
-  --rest-y: 8px;
-  --pin-delay: -0.6s;
+.scrapbook-sheet-arrive .scrapbook-stack > * {
+  animation: scrapbook-item-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.scrapbook-board > *:nth-child(6n + 3) {
-  --rest-rot: -2.2deg;
-  --rest-y: -4px;
-  --pin-delay: -1.3s;
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(1) {
+  animation-delay: 130ms;
 }
-.scrapbook-board > *:nth-child(6n + 4) {
-  --rest-rot: 3.4deg;
-  --rest-y: 6px;
-  --pin-delay: -2s;
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(2) {
+  animation-delay: 190ms;
 }
-.scrapbook-board > *:nth-child(6n + 5) {
-  --rest-rot: -3.6deg;
-  --rest-y: -8px;
-  --pin-delay: -2.7s;
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(3) {
+  animation-delay: 250ms;
 }
-.scrapbook-board > *:nth-child(6n + 6) {
-  --rest-rot: 1.8deg;
-  --rest-y: 5px;
-  --pin-delay: -3.4s;
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(4) {
+  animation-delay: 310ms;
+}
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(5) {
+  animation-delay: 370ms;
+}
+.scrapbook-sheet-arrive .scrapbook-stack > *:nth-child(n + 6) {
+  animation-delay: 430ms;
 }
 
-.scrapbook-card {
-  position: relative;
-  transform: translateY(var(--rest-y, 0px)) rotate(var(--rest-rot, 0deg));
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
+/* Faint ruling behind body copy set at leading-7 (1.75rem). currentColor
+   keeps it palette-free: the rules are always a wash of whatever ink the
+   text is already using, so they read correctly on cream paper and on the
+   dark palette without either being special-cased. The negative offset
+   drops each rule just under its line's baseline instead of striking
+   through the middle of the text. */
+.scrapbook-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.75rem - 1px),
+    color-mix(in srgb, currentColor 13%, transparent) calc(1.75rem - 1px),
+    color-mix(in srgb, currentColor 13%, transparent) 1.75rem
+  );
+  background-position: 0 -0.44rem;
+}
+
+/* The generic "this is a loose object on the page" hover: index cards and
+   anything else that should straighten up and lift toward the reader. */
+.scrapbook-lift {
+  transform: rotate(var(--rest-rot, 0deg));
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms ease-out;
+}
+.scrapbook-lift:hover,
+.scrapbook-lift:focus-within {
+  transform: rotate(0deg) translateY(-4px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.14),
+    0 16px 30px rgba(0, 0, 0, 0.22);
+}
+
+/* Project mounts get real perspective rather than a scale: the mount tips
+   back a degree or two and the print inside travels toward the viewer on
+   the z axis, so the print visibly sits proud of the album page it's stuck
+   to. preserve-3d on the mount's inner element is what lets the print's
+   own translateZ resolve against the mount's perspective. */
+.scrapbook-mount {
+  perspective: 900px;
+}
+.scrapbook-mount-inner {
+  transform-style: preserve-3d;
   transition:
     transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    filter 320ms ease-out;
+    box-shadow 320ms ease-out;
 }
-.scrapbook-card:hover,
-.scrapbook-card:focus-within {
-  transform: translateY(calc(var(--rest-y, 0px) - 12px)) rotate(0deg) scale(1.03);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12)) drop-shadow(0 26px 38px rgba(0, 0, 0, 0.26));
+.scrapbook-print {
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-/* The second "sheet" peeking out from behind the torn edge — offset a few
-   px down-right from the main sheet it's stacked under. Both are children
-   of .scrapbook-card so they lift and rotate together as one object. */
-.scrapbook-paper-peek {
-  transform: translate(4px, 6px);
+.scrapbook-mount:hover .scrapbook-mount-inner,
+.scrapbook-mount:focus-within .scrapbook-mount-inner {
+  transform: translate3d(0, -5px, 16px) rotateX(2deg);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.16),
+    0 20px 36px rgba(0, 0, 0, 0.24);
 }
-
-/* Which of the four TornPaperFilters (ScrapbookTemplate.js) a card's paper
-   gets — chosen by nth-child position on the grid wrapper so tears vary
-   card to card without needing per-card React state. The peek layer and
-   the main paper share the same variant (both carry .scrapbook-torn), so
-   the two "sheets" of one card look torn from the same batch rather than
-   unrelated randomness. Base rule covers anything outside .scrapbook-board
-   (the contact card) with variant 1. */
-.scrapbook-torn {
-  filter: url(#scrapbook-torn-1);
-}
-.scrapbook-board > *:nth-child(4n + 2) .scrapbook-torn {
-  filter: url(#scrapbook-torn-2);
-}
-.scrapbook-board > *:nth-child(4n + 3) .scrapbook-torn {
-  filter: url(#scrapbook-torn-3);
-}
-.scrapbook-board > *:nth-child(4n) .scrapbook-torn {
-  filter: url(#scrapbook-torn-4);
+.scrapbook-mount:hover .scrapbook-print,
+.scrapbook-mount:focus-within .scrapbook-print {
+  transform: translateZ(26px) rotate(0deg);
 }
 
-/* The polaroid itself gets a small independent tilt and its own contact
-   shadow, separate from the card's — a photo someone dropped onto the
-   page, not a banner baked into the card. */
-.scrapbook-polaroid {
-  transform: rotate(-1.4deg);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+/* Skill stickers: each sits at its own die-cut angle and peels up when
+   reached for, with the backing sheet showing through at the lifted
+   corner. The corner is a triangle in the sticker's own ink rather than a
+   fixed grey, so it works on every palette. */
+.scrapbook-sticker {
+  transform: rotate(var(--sticker-rot, 0deg));
+  transition:
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 220ms ease-out;
+}
+.scrapbook-sticker::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 11px 11px;
+  border-color: transparent transparent color-mix(in srgb, currentColor 26%, transparent) transparent;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.scrapbook-sticker:hover {
+  transform: rotate(0deg) translateY(-3px) scale(1.06);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    0 10px 18px rgba(0, 0, 0, 0.18);
+}
+.scrapbook-sticker:hover::after {
+  opacity: 1;
 }
 
-@keyframes scrapbook-pin-sway {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) rotate(-8deg);
-  }
-  50% {
-    transform: translate(-50%, -50%) rotate(8deg);
-  }
+/* Hang tags swing from their punched hole, so the transform origin is the
+   hole itself, not the tag's center. */
+.scrapbook-tag {
+  transform-origin: 1.05rem 50%;
+  transform: rotate(var(--tag-rot, -2deg));
+  transition:
+    transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 300ms ease-out;
 }
-.scrapbook-pin {
-  transform-origin: center;
-  animation: scrapbook-pin-sway 3.8s ease-in-out infinite;
-  animation-delay: var(--pin-delay, 0s);
+.scrapbook-tag:hover,
+.scrapbook-tag:focus-visible {
+  transform: rotate(3.5deg);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.24);
+}
+
+/* Ticket stubs: the stub end shifts away from its perforation, the way a
+   half-torn ticket does, while the ticket body stays put. */
+.scrapbook-ticket {
+  transform: rotate(var(--rest-rot, 0deg));
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms ease-out;
+}
+.scrapbook-ticket-stub {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scrapbook-ticket:hover,
+.scrapbook-ticket:focus-within {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.14),
+    0 14px 26px rgba(0, 0, 0, 0.2);
+}
+.scrapbook-ticket:hover .scrapbook-ticket-stub,
+.scrapbook-ticket:focus-within .scrapbook-ticket-stub {
+  transform: translateX(-4px) rotate(-1.2deg);
+}
+
+/* Contact stamps straighten when reached for, the same gesture as the
+   index cards, so hover means one thing across the whole binder. */
+.scrapbook-stamp-link {
+  transform: rotate(var(--stamp-rot, 0deg));
   transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.scrapbook-card:hover .scrapbook-pin,
-.scrapbook-card:focus-within .scrapbook-pin {
-  animation: none;
-  transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
+.scrapbook-stamp-link:hover,
+.scrapbook-stamp-link:focus-visible {
+  transform: rotate(0deg) translateY(-2px);
 }
 
+/* Typed footnote links (a project's Source/Live demo, the contact email):
+   the rule under them thickens rather than appearing from nothing, so the
+   affordance is present before the pointer is. --rule carries the link's
+   own color, set inline from the palette. */
+.scrapbook-underline {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--rule, currentColor) 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    text-decoration-color 180ms ease-out,
+    text-decoration-thickness 180ms ease-out;
+}
+.scrapbook-underline:hover {
+  text-decoration-color: var(--rule, currentColor);
+  text-decoration-thickness: 2px;
+}
+
+/* Contents rows on the cover: a whole row is the target, so it takes the
+   tint rather than just the label taking an underline. */
+.scrapbook-contents-row {
+  transition: background-color 180ms ease-out;
+}
+.scrapbook-contents-row:hover {
+  background-color: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+/* Index rail tabs slide out of the spine as they become current, which is
+   the same motion as thumbing a divider forward in a real binder. */
+.scrapbook-tab {
+  transform: translateX(0);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms ease-out,
+    box-shadow 220ms ease-out;
+}
+.scrapbook-tab:hover {
+  transform: translateX(4px);
+}
+.scrapbook-tab[aria-current="true"] {
+  transform: translateX(9px);
+}
+
+/* The handwritten note's underline draws itself once on arrival. */
 @keyframes scrapbook-ink-draw {
   from {
     stroke-dashoffset: 1;
@@ -174,66 +291,58 @@ body {
   animation: scrapbook-ink-draw 700ms ease-out both;
 }
 
-.scrapbook-flip-card {
-  perspective: 1000px;
-}
-.scrapbook-flip-inner {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 11rem;
-  transform-style: preserve-3d;
-  transition: transform 550ms cubic-bezier(0.4, 0.2, 0.2, 1);
-}
-.scrapbook-flipped {
-  transform: rotateY(180deg);
-}
-.scrapbook-flip-face {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.scrapbook-flip-back {
-  transform: rotateY(180deg);
-}
-
-/* A folded page-corner in the bottom-right of every flippable photo —
-   always visible (not hover-only, since touch devices have no hover) so
-   the flip interaction is discoverable without having to stumble into it. */
-.scrapbook-flip-hint {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 0 22px 22px;
-  border-color: transparent transparent rgba(0, 0, 0, 0.22) transparent;
-  transition: transform 200ms ease-out;
-}
-.scrapbook-flip-card:hover .scrapbook-flip-hint,
-.scrapbook-flip-card:focus-visible .scrapbook-flip-hint {
-  transform: scale(1.2);
-}
-
+/* Reduced motion keeps every state change and every arrival, just without
+   the travel: sheets and objects appear in place, the current tab is still
+   the filled one, and the peel/swing/tear all still register as a state,
+   so nothing this template communicates through motion is lost. */
 @media (prefers-reduced-motion: reduce) {
-  .scrapbook-flutter-arrive .scrapbook-board > * {
-    animation: none;
+  html:has(.scrapbook-root) {
+    scroll-behavior: auto;
   }
-  .scrapbook-card {
-    transition: none;
-  }
-  .scrapbook-pin {
-    animation: none;
-    transition: none;
-  }
+  .scrapbook-sheet-arrive > .scrapbook-sheet,
+  .scrapbook-sheet-arrive .scrapbook-stack > *,
   .scrapbook-ink-arrive .scrapbook-ink path {
     animation: none;
   }
-  .scrapbook-flip-inner,
-  .scrapbook-flip-hint {
+  .scrapbook-lift,
+  .scrapbook-mount-inner,
+  .scrapbook-print,
+  .scrapbook-sticker,
+  .scrapbook-sticker::after,
+  .scrapbook-tag,
+  .scrapbook-ticket,
+  .scrapbook-ticket-stub,
+  .scrapbook-stamp-link,
+  .scrapbook-underline,
+  .scrapbook-contents-row,
+  .scrapbook-tab {
     transition: none;
+  }
+  .scrapbook-mount:hover .scrapbook-mount-inner,
+  .scrapbook-mount:focus-within .scrapbook-mount-inner,
+  .scrapbook-mount:hover .scrapbook-print,
+  .scrapbook-mount:focus-within .scrapbook-print,
+  .scrapbook-ticket:hover .scrapbook-ticket-stub,
+  .scrapbook-ticket:focus-within .scrapbook-ticket-stub {
+    transform: none;
+  }
+  .scrapbook-lift:hover,
+  .scrapbook-lift:focus-within,
+  .scrapbook-ticket:hover,
+  .scrapbook-ticket:focus-within,
+  .scrapbook-stamp-link:hover,
+  .scrapbook-stamp-link:focus-visible {
+    transform: rotate(0deg);
+  }
+  .scrapbook-sticker:hover {
+    transform: rotate(0deg) scale(1.04);
+  }
+  .scrapbook-tag:hover,
+  .scrapbook-tag:focus-visible {
+    transform: rotate(0deg);
+  }
+  .scrapbook-tab:hover,
+  .scrapbook-tab[aria-current="true"] {
+    transform: translateX(0);
   }
 }
