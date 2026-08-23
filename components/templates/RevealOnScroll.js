@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 // only added once the browser confirms the element has actually arrived,
 // so each template can supply its own on-arrival animation (a gentle
 // fade-up, a snappy pop, etc.) without this component knowing which.
-export default function RevealOnScroll({ children, arrivedClassName = "warm-arrive", threshold = 0.2, rootMargin = "0px 0px -80px 0px" }) {
+export default function RevealOnScroll({ children, arrivedClassName = "", threshold = 0.2, rootMargin = "0px 0px -80px 0px" }) {
   const ref = useRef(null);
   const [arrived, setArrived] = useState(false);
 

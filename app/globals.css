@@ -263,110 +263,662 @@ body {
   }
 }
 
-/* Warm template flourishes — classes prefixed so they can't collide
-   with another template's decorations sharing this stylesheet. */
-@keyframes warm-wave {
-  0%,
-  50%,
-  100% {
-    transform: rotate(0deg);
-  }
-  10% {
-    transform: rotate(14deg);
-  }
-  20% {
-    transform: rotate(-8deg);
-  }
-  30% {
-    transform: rotate(14deg);
-  }
-  40% {
-    transform: rotate(-4deg);
-  }
-}
-.warm-wave {
-  display: inline-block;
-  transform-origin: 70% 70%;
-  animation: warm-wave 2.5s ease-in-out infinite;
-  animation-delay: 1s;
+/* Warm & Personal: one room, one sun.
+   ---------------------------------------------------------------------------
+   The whole template is a physical room lit by a single light source, and
+   every rule below serves that one fiction. Two consequences shape the code:
+
+   1. There is exactly one light, so there is exactly one shadow direction.
+      `--warm-sh-x` / `--warm-sh-y` hold it, every raised object reads them,
+      and nothing hardcodes an offset. Change the light and the whole room
+      agrees, which is what makes the surfaces read as objects instead of
+      cards with a drop shadow on them.
+   2. The light has an hour. `[data-light]` on the room re-aims the sun, the
+      shadows, the sky and the spill in one attribute swap (HourDial.js sets
+      it from the visitor's own clock, then from their choice), so no
+      per-frame JavaScript is ever involved in re-lighting the page.
+
+   Classes are `warm-` prefixed so they can't collide with another template's
+   decorations sharing this stylesheet. */
+
+.warm-room {
+  --warm-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* One curve for the light, one for objects being reached for. The light is
+     slower on purpose: a room changing hour should feel like weather, while a
+     thing you point at should answer immediately. */
+  --warm-light-ms: 760ms;
 }
 
-@keyframes warm-float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(14px, -18px) scale(1.06);
-  }
-}
-.warm-float {
-  animation: warm-float 9s ease-in-out infinite;
-}
-
-@keyframes warm-twinkle {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1.1);
-  }
-}
-.warm-twinkle {
-  animation: warm-twinkle 3s ease-in-out infinite;
+/* Sun low and to the left, everything throwing a long shadow to the right.
+   Coolest sky of the four: the warmth in the palette hasn't arrived yet. */
+.warm-room[data-light="dawn"] {
+  --warm-sun-x: 24%;
+  --warm-sun-y: 63%;
+  --warm-sun-scale: 1.42;
+  --warm-halo-a: 0.55;
+  --warm-sun-col: color-mix(in srgb, var(--warm-sun) 62%, white);
+  --warm-sky-1: color-mix(in srgb, var(--warm-sky-hi) 74%, white);
+  --warm-sky-2: color-mix(in srgb, var(--warm-sky-lo) 50%, white);
+  --warm-sky-3: color-mix(in srgb, var(--warm-sun) 62%, white);
+  --warm-sh-x: 15;
+  --warm-sh-y: 19;
+  --warm-sh-col: color-mix(in srgb, var(--warm-ink) 15%, transparent);
+  --warm-lit: 0.52;
+  --warm-shaft-a: 0.1;
+  --warm-shaft-skew: -17deg;
+  --warm-lamp: 0.3;
 }
 
-@keyframes warm-arrive {
+/* Overhead. Shadows tuck in tight under everything, the sky is at its
+   clearest, and specular highlights are at their strongest. */
+.warm-room[data-light="day"] {
+  --warm-sun-x: 63%;
+  --warm-sun-y: 17%;
+  --warm-sun-scale: 0.92;
+  --warm-halo-a: 0.42;
+  --warm-sun-col: color-mix(in srgb, var(--warm-sun) 34%, white);
+  --warm-sky-1: var(--warm-sky-hi);
+  --warm-sky-2: color-mix(in srgb, var(--warm-sky-hi) 52%, var(--warm-sky-lo));
+  --warm-sky-3: color-mix(in srgb, var(--warm-sky-lo) 58%, white);
+  --warm-sh-x: 5;
+  --warm-sh-y: 13;
+  --warm-sh-col: color-mix(in srgb, var(--warm-ink) 19%, transparent);
+  --warm-lit: 0.64;
+  --warm-shaft-a: 0.07;
+  --warm-shaft-skew: -4deg;
+  --warm-lamp: 0.35;
+}
+
+/* The template's namesake and its server-rendered default, so a visitor
+   whose JavaScript never runs still lands on the best-looking hour. Sun low
+   and right, longest warmest shadows, sky fully committed to the palette. */
+.warm-room[data-light="golden"] {
+  --warm-sun-x: 74%;
+  --warm-sun-y: 57%;
+  --warm-sun-scale: 1.58;
+  --warm-halo-a: 0.8;
+  --warm-sun-col: var(--warm-sun);
+  --warm-sky-1: color-mix(in srgb, var(--warm-sky-hi) 86%, var(--warm-ink));
+  --warm-sky-2: color-mix(in srgb, var(--warm-sky-lo) 62%, var(--warm-sun));
+  --warm-sky-3: color-mix(in srgb, var(--warm-sun) 88%, var(--warm-sky-lo));
+  --warm-sh-x: -17;
+  --warm-sh-y: 21;
+  --warm-sh-col: color-mix(in srgb, var(--warm-ink) 21%, transparent);
+  --warm-lit: 0.56;
+  --warm-shaft-a: 0.14;
+  --warm-shaft-skew: 15deg;
+  --warm-lamp: 0.7;
+}
+
+/* Sun gone. A moon instead of a sun (same element, smaller and paler), one
+   last ember at the horizon, and the short soft shadows of a lamp in the
+   room rather than a light in the sky. */
+.warm-room[data-light="lamp"] {
+  --warm-sun-x: 31%;
+  --warm-sun-y: 21%;
+  --warm-sun-scale: 0.57;
+  --warm-halo-a: 0.3;
+  --warm-sun-col: color-mix(in srgb, var(--warm-paper) 78%, var(--warm-sky-hi));
+  --warm-sky-1: color-mix(in srgb, var(--warm-sky-hi) 46%, #0b0713);
+  --warm-sky-2: color-mix(in srgb, var(--warm-sky-hi) 22%, #0b0713);
+  --warm-sky-3: color-mix(in srgb, var(--warm-sun) 26%, #0b0713);
+  --warm-sh-x: -5;
+  --warm-sh-y: 9;
+  --warm-sh-col: color-mix(in srgb, var(--warm-ink) 26%, transparent);
+  --warm-lit: 0.34;
+  --warm-shaft-a: 0.05;
+  --warm-shaft-skew: 9deg;
+  --warm-lamp: 1;
+}
+
+/* One focus treatment for the whole room, in the palette's own accent rather
+   than the browser default, since the default blue lands badly on cream. */
+.warm-room :focus-visible {
+  outline: 2px solid var(--warm-pop);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ---- Type ------------------------------------------------------------- */
+
+/* Fraunces' own axes do the work here. SOFT rounds the terminals, WONK swaps
+   in the wonky alternates, and opsz is pinned per role because these sizes
+   are far from the face's 14pt default: the name wants display proportions,
+   a heading wants text proportions at scale, and the spoken lines want the
+   softest, wonkiest cut of the three, since that is where the voice is. */
+.warm-display {
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 120;
+}
+.warm-head {
+  font-variation-settings: "SOFT" 70, "WONK" 0, "opsz" 40;
+}
+.warm-voice {
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 20;
+}
+
+/* ---- The room itself -------------------------------------------------- */
+
+/* Plaster tooth. Two near-invisible gradients at right angles read as a
+   surface with a grain rather than a flat fill, which is the difference
+   between "wall" and "background-color". */
+.warm-wall {
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      color-mix(in srgb, var(--warm-ink) 2.2%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      178deg,
+      color-mix(in srgb, var(--warm-ink) 1.6%, transparent) 0 1px,
+      transparent 1px 5px
+    );
+}
+
+/* Corners of a real room are never as bright as its middle. */
+.warm-vignette {
+  background:
+    radial-gradient(120% 80% at 50% 0%, transparent 55%, color-mix(in srgb, var(--warm-ink) 7%, transparent) 100%),
+    radial-gradient(100% 60% at 50% 100%, color-mix(in srgb, var(--warm-ink) calc(9% * var(--warm-lamp)), transparent), transparent 70%);
+}
+
+/* The window's light landing on the wall: one skewed quad whose lean and
+   opacity come from the hour. This is the layer that makes the page feel lit
+   from somewhere rather than evenly bright. Alpha stays low enough that body
+   copy underneath keeps its contrast ratio in every state. */
+.warm-shaft {
+  transform: skewX(var(--warm-shaft-skew));
+  opacity: var(--warm-shaft-a);
+  background: radial-gradient(
+    58% 72% at 46% -6%,
+    color-mix(in srgb, var(--warm-sun) 72%, white),
+    color-mix(in srgb, var(--warm-sun) 26%, transparent) 44%,
+    transparent 76%
+  );
+  transition:
+    transform var(--warm-light-ms) var(--warm-ease),
+    opacity var(--warm-light-ms) var(--warm-ease);
+}
+
+/* Dust only exists where light is. Slow, few, and tiny: the point is that
+   the air in the room is visible, not that anything is moving. */
+@keyframes warm-mote {
   0% {
-    transform: translateY(10px);
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.75;
+  }
+  82% {
     opacity: 0.6;
   }
-  60% {
-    transform: translateY(-2px);
-    opacity: 1;
-  }
   100% {
-    transform: translateY(0);
-    opacity: 1;
+    transform: translate3d(-26px, -180px, 0);
+    opacity: 0;
   }
 }
-.warm-arrive {
-  animation: warm-arrive 600ms ease-out;
+.warm-mote {
+  animation: warm-mote var(--warm-mote-dur, 19s) linear infinite;
+  animation-delay: var(--warm-mote-delay, 0s);
 }
 
-@keyframes warm-heartbeat {
+/* ---- The window ------------------------------------------------------- */
+
+/* Casing: lit along the top-left edge, in shadow along the bottom-right,
+   built from insets so the frame has thickness without extra elements. */
+.warm-window {
+  background: color-mix(in srgb, var(--warm-paper) 70%, var(--warm-ink));
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, calc(var(--warm-lit) * 0.7)),
+    inset -2px -2px 0 var(--warm-sh-col),
+    calc(var(--warm-sh-x) * 1.1px) calc(var(--warm-sh-y) * 1.1px) 42px -18px var(--warm-sh-col);
+  transition: box-shadow var(--warm-light-ms) var(--warm-ease);
+}
+
+.warm-sky {
+  background: linear-gradient(180deg, var(--warm-sky-1) 0%, var(--warm-sky-2) 56%, var(--warm-sky-3) 100%);
+  transition: background var(--warm-light-ms) var(--warm-ease);
+}
+
+/* Haze thickens toward the horizon, and the horizon itself sits low in the
+   pane so the sky reads as depth rather than as a gradient swatch. */
+.warm-haze {
+  background: linear-gradient(
+    180deg,
+    transparent 46%,
+    color-mix(in srgb, var(--warm-sun) 26%, transparent) 82%,
+    color-mix(in srgb, var(--warm-sun) 46%, transparent) 100%
+  );
+}
+
+/* The sun is the one element allowed to animate its `left`/`top`: it is
+   absolutely positioned inside the pane with no siblings depending on its
+   box, and the change is a one-off, user-initiated 760ms move rather than
+   anything driven per frame, so there is no layout work in a loop here. Its
+   size rides on `scale` for the same reason the rest of this file avoids
+   width/height: that part is free on the compositor. */
+.warm-sun {
+  left: var(--warm-sun-x);
+  top: var(--warm-sun-y);
+  width: 6rem;
+  height: 6rem;
+  transform: translate(-50%, -50%) scale(var(--warm-sun-scale));
+  background: radial-gradient(
+    circle at 44% 40%,
+    color-mix(in srgb, white 82%, var(--warm-sun-col)) 0%,
+    var(--warm-sun-col) 26%,
+    color-mix(in srgb, var(--warm-sun-col) 62%, transparent) 58%,
+    color-mix(in srgb, var(--warm-sun-col) 18%, transparent) 76%,
+    transparent 88%
+  );
+  transition:
+    left var(--warm-light-ms) var(--warm-ease),
+    top var(--warm-light-ms) var(--warm-ease),
+    transform var(--warm-light-ms) var(--warm-ease),
+    background var(--warm-light-ms) var(--warm-ease);
+}
+
+/* Bloom around the disc, breathing slowly. Light is the subject of this
+   template, so this is the one ambient animation that earns its place. The
+   halo keeps one size across all four hours and only changes strength: it is
+   a wide soft blur, so nobody misses it growing, and a scale that snapped
+   mid-move while the sun glided would be the one thing they did notice. */
+@keyframes warm-bloom {
   0%,
   100% {
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
-  25% {
-    transform: scale(1.3);
-  }
-  40% {
-    transform: scale(1);
-  }
-  55% {
-    transform: scale(1.2);
-  }
-  70% {
-    transform: scale(1);
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
   }
 }
-.warm-heartbeat {
-  display: inline-block;
-  animation: warm-heartbeat 2.2s ease-in-out infinite;
+.warm-halo {
+  left: var(--warm-sun-x);
+  top: var(--warm-sun-y);
+  width: 21rem;
+  height: 21rem;
+  opacity: var(--warm-halo-a);
+  background: radial-gradient(circle, color-mix(in srgb, var(--warm-sun-col) 42%, transparent), transparent 62%);
+  animation: warm-bloom 11s ease-in-out infinite;
+  transition:
+    left var(--warm-light-ms) var(--warm-ease),
+    top var(--warm-light-ms) var(--warm-ease),
+    opacity var(--warm-light-ms) var(--warm-ease);
 }
 
+/* Glazing bars, lit on the same side as the casing. */
+.warm-mullion {
+  background: color-mix(in srgb, var(--warm-paper) 78%, var(--warm-ink));
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, calc(var(--warm-lit) * 0.6)),
+    0 0 10px var(--warm-sh-col);
+}
+
+/* One sheet of glass over all four panes, so the reflection crosses the
+   glazing bars instead of restarting inside each pane. */
+.warm-glass {
+  background: linear-gradient(
+    118deg,
+    rgba(255, 255, 255, calc(var(--warm-lit) * 0.3)) 0%,
+    transparent 38%,
+    transparent 62%,
+    rgba(255, 255, 255, calc(var(--warm-lit) * 0.16)) 100%
+  );
+}
+
+/* The sill: a lit top face, a dark under-edge, and enough overhang to throw
+   a shadow of its own down the wall. */
+.warm-sill {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warm-paper) 96%, white) 0%,
+    color-mix(in srgb, var(--warm-paper) 74%, var(--warm-ink)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    0 calc(var(--warm-sh-y) * 0.8px) 24px -10px var(--warm-sh-col);
+  transition: box-shadow var(--warm-light-ms) var(--warm-ease);
+}
+
+/* The photo frame standing on the sill, and the shadow it casts along it.
+   The shadow is a separate blurred ellipse rather than a box-shadow so it
+   can lie flat on the sill's plane while the frame stands up off it, which
+   is the whole reason the frame reads as standing rather than pasted. */
+.warm-stand {
+  transform: rotate(var(--warm-stand-rot, -1.6deg));
+  transition:
+    transform 300ms var(--warm-ease),
+    box-shadow 420ms ease-out;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--warm-lit) * 0.8)),
+    calc(var(--warm-sh-x) * 0.5px) calc(var(--warm-sh-y) * 0.4px) 18px -6px var(--warm-sh-col);
+}
+.warm-stand-shadow {
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--warm-ink) 34%, transparent), transparent 72%);
+  transform: translateX(calc(var(--warm-sh-x) * -0.9px)) scaleX(calc(1 + var(--warm-sh-y) / 90));
+  transition: transform var(--warm-light-ms) var(--warm-ease);
+}
+
+/* ---- The hour dial --------------------------------------------------- */
+
+.warm-dial-btn {
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out,
+    transform 200ms var(--warm-ease);
+}
+.warm-dial-btn:hover {
+  transform: translateY(-1px);
+}
+.warm-dial-btn[aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--warm-pop) 16%, transparent);
+  color: color-mix(in srgb, var(--warm-pop) 72%, var(--warm-ink));
+}
+
+/* ---- Lit surfaces ---------------------------------------------------- */
+
+/* The one primitive every panel, plaque and card is built from: lit along
+   the top-left, shadowed down the current light direction. */
+.warm-surface {
+  background: color-mix(in srgb, var(--warm-paper) 90%, white);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--warm-ink) 7%, transparent),
+    inset 1px 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    calc(var(--warm-sh-x) * 1px) calc(var(--warm-sh-y) * 1px) 34px -12px var(--warm-sh-col);
+  transition:
+    transform 260ms var(--warm-ease),
+    box-shadow 420ms ease-out;
+}
+
+/* Reaching for something lifts it toward you, and lifting a thing shortens
+   its shadow. That second half is the detail that sells the light. */
+.warm-lift:hover,
+.warm-lift:focus-within {
+  transform: translate3d(0, -3px, 0);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--warm-ink) 7%, transparent),
+    inset 1px 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    calc(var(--warm-sh-x) * 0.6px) calc(var(--warm-sh-y) * 0.7px) 22px -8px var(--warm-sh-col);
+}
+
+/* Small objects resting on a surface: a pill with its own little ellipse of
+   shade underneath, which shrinks as the object is picked up. */
+.warm-token {
+  transform: translate3d(0, 0, 0);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warm-paper) 92%, white) 0%,
+    color-mix(in srgb, var(--warm-paper) 88%, var(--warm-ink)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    calc(var(--warm-sh-x) * 0.4px) calc(var(--warm-sh-y) * 0.45px) 12px -6px var(--warm-sh-col);
+  transition:
+    transform 220ms var(--warm-ease),
+    box-shadow 420ms ease-out;
+}
+.warm-token:hover,
+.warm-token:focus-visible {
+  transform: translate3d(0, -2px, 0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    calc(var(--warm-sh-x) * 0.22px) calc(var(--warm-sh-y) * 0.28px) 8px -5px var(--warm-sh-col);
+}
+
+/* The ledge the tokens stand on. */
+.warm-ledge {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warm-paper) 99%, var(--warm-ink)) 0%,
+    color-mix(in srgb, var(--warm-paper) 93%, var(--warm-ink)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, var(--warm-lit)),
+    inset 0 -1px 0 var(--warm-sh-col);
+}
+
+/* ---- The rail through the working history ---------------------------- */
+
+/* One segment per role rather than a single rail down the whole list: a
+   `view()` range on an element taller than the scrollport never completes,
+   so per-segment segments are what let the light actually arrive as each
+   role is read. Consecutive segments meet, so it reads as one line. */
+.warm-rail {
+  background: color-mix(in srgb, var(--warm-ink) 18%, transparent);
+}
+.warm-rail-fill {
+  transform-origin: top;
+  background: linear-gradient(180deg, var(--warm-pop), color-mix(in srgb, var(--warm-pop) 30%, transparent));
+}
+@keyframes warm-rail-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+/* The drawn-from-nothing state lives inside @supports so that where
+   scroll-driven animations are unsupported the rail is simply already lit,
+   rather than stuck empty waiting for a feature that never arrives. */
+@supports (animation-timeline: view()) {
+  .warm-rail-fill {
+    transform: scaleY(0);
+    animation: warm-rail-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 14% entry 86%;
+  }
+}
+
+/* Stations wear the wall's own color so the rail appears to pass behind
+   them, and hold a ring of light that tightens when their role is reached
+   for. */
+.warm-station {
+  background: color-mix(in srgb, currentColor 20%, color-mix(in srgb, var(--warm-paper) 94%, white));
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, currentColor 52%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--warm-paper) 96%, white);
+  transition:
+    box-shadow 300ms ease-out,
+    transform 300ms var(--warm-ease);
+}
+.warm-role:hover .warm-station,
+.warm-role:focus-within .warm-station {
+  transform: scale(1.14);
+  box-shadow:
+    0 0 0 1px currentColor,
+    0 0 0 6px color-mix(in srgb, var(--warm-paper) 96%, white),
+    0 0 18px 2px color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* The line fades out after the last role rather than stopping dead, because
+   a career is still going and a hard end cap would say otherwise. */
+.warm-role:last-child .warm-rail {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warm-ink) 18%, transparent), transparent);
+}
+.warm-role:last-child .warm-rail-fill {
+  background: linear-gradient(180deg, var(--warm-pop), transparent 92%);
+}
+
+/* ---- The wall of prints ---------------------------------------------- */
+
+.warm-frame {
+  perspective: 1100px;
+}
+/* Molding, mat and print are separate planes on purpose: preserve-3d here is
+   what lets the print travel toward the viewer on its own z while the
+   molding tips, so a hovered piece reads as a framed object turning rather
+   than a rectangle scaling up. */
+.warm-frame-inner {
+  transform-style: preserve-3d;
+  background: linear-gradient(
+    142deg,
+    color-mix(in srgb, var(--warm-paper) 70%, var(--warm-ink)) 0%,
+    color-mix(in srgb, var(--warm-paper) 88%, var(--warm-ink)) 46%,
+    color-mix(in srgb, var(--warm-paper) 58%, var(--warm-ink)) 100%
+  );
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, calc(var(--warm-lit) * 0.85)),
+    inset -1px -1px 0 color-mix(in srgb, var(--warm-ink) 22%, transparent),
+    calc(var(--warm-sh-x) * 1.2px) calc(var(--warm-sh-y) * 1.2px) 40px -16px var(--warm-sh-col);
+  transition:
+    transform 420ms var(--warm-ease),
+    box-shadow 420ms ease-out;
+}
+.warm-frame:hover .warm-frame-inner,
+.warm-frame:focus-within .warm-frame-inner {
+  transform: translate3d(0, -5px, 0) rotateX(1.8deg);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, calc(var(--warm-lit) * 0.85)),
+    inset -1px -1px 0 color-mix(in srgb, var(--warm-ink) 22%, transparent),
+    calc(var(--warm-sh-x) * 1.8px) calc(var(--warm-sh-y) * 1.9px) 60px -18px var(--warm-sh-col);
+}
+/* The mat stays in the frame's 3D context so the print inside can keep its
+   own z. Anything that clips (the glass overlay) is a leaf, never an
+   ancestor of the print, since a non-visible overflow flattens the subtree. */
+.warm-mat {
+  transform-style: preserve-3d;
+}
+.warm-print {
+  transition: transform 420ms var(--warm-ease);
+}
+.warm-frame:hover .warm-print,
+.warm-frame:focus-within .warm-print {
+  transform: translateZ(30px);
+}
+
+/* Light glancing off the glass as the piece turns. A bar of white travelling
+   across, not an opacity fade, because a reflection moves. */
+.warm-sheen {
+  background: linear-gradient(
+    104deg,
+    transparent 34%,
+    rgba(255, 255, 255, calc(var(--warm-lit) * 0.5)) 50%,
+    transparent 66%
+  );
+  transform: translate3d(-130%, 0, 0);
+}
+.warm-frame:hover .warm-sheen,
+.warm-frame:focus-within .warm-sheen {
+  transform: translate3d(130%, 0, 0);
+  transition: transform 950ms cubic-bezier(0.32, 0.72, 0.35, 1);
+}
+
+/* A print with no image of its own is set type on mat board, never a stock
+   glyph: the piece's own initial, large, lit from the same corner. */
+.warm-monogram {
+  background:
+    radial-gradient(120% 100% at 22% 8%, rgba(255, 255, 255, 0.22), transparent 60%),
+    linear-gradient(150deg, var(--warm-mono-a), var(--warm-mono-b));
+}
+
+/* ---- The lamp at the end of the day ---------------------------------- */
+
+/* The one panel that inverts: ink ground, paper text. Both come from the
+   palette's own vetted pair, so contrast holds on the light palettes and on
+   the dark one, where this becomes the brightest thing on the page. */
+.warm-lamp-panel {
+  background: color-mix(in srgb, var(--warm-ink) 94%, black);
+}
+.warm-lamp-glow {
+  background: radial-gradient(
+    90% 120% at 50% -10%,
+    color-mix(in srgb, var(--warm-sun) calc(52% * var(--warm-lamp)), transparent),
+    transparent 68%
+  );
+  transition: background var(--warm-light-ms) var(--warm-ease);
+}
+
+/* ---- Rules, links, arrival ------------------------------------------ */
+
+/* Section rules fade out rather than stopping, so a heading looks lit from
+   the left instead of underlined. */
+.warm-rule {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--warm-ink) 22%, transparent), transparent);
+}
+
+/* The underline is already there before the pointer is; hovering thickens it
+   rather than conjuring it, so the affordance never has to be discovered. */
+.warm-link {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    text-decoration-color 180ms ease-out,
+    text-decoration-thickness 180ms ease-out;
+}
+.warm-link:hover {
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+
+/* Content rises into the light as it is scrolled to, on a view() timeline:
+   no scroll handler, no observer, nothing on the main thread. The hidden
+   state is inside @supports so that where scroll-driven animations are
+   unsupported the content is simply already there. */
+@keyframes warm-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  .warm-reveal {
+    animation: warm-rise linear both;
+    animation-timeline: view();
+    animation-range: entry calc(4% + var(--warm-stagger, 0%)) entry 54%;
+  }
+}
+
+/* Reduced motion keeps every relationship the motion carried: the rail is
+   lit, the content is in place, objects still answer a pointer and the room
+   still changes hour. Only the travelling parts stop. */
 @media (prefers-reduced-motion: reduce) {
-  .warm-wave,
-  .warm-float,
-  .warm-twinkle,
-  .warm-arrive,
-  .warm-heartbeat {
+  .warm-room {
+    --warm-light-ms: 1ms;
+  }
+  .warm-halo,
+  .warm-mote {
     animation: none;
+  }
+  .warm-mote {
+    opacity: 0.5;
+  }
+  .warm-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .warm-rail-fill {
+    animation: none;
+    transform: scaleY(1);
+  }
+  .warm-frame:hover .warm-frame-inner,
+  .warm-frame:focus-within .warm-frame-inner {
+    transform: translate3d(0, -3px, 0);
+  }
+  .warm-frame:hover .warm-print,
+  .warm-frame:focus-within .warm-print {
+    transform: none;
+  }
+  .warm-sheen,
+  .warm-frame:hover .warm-sheen,
+  .warm-frame:focus-within .warm-sheen {
+    transform: translate3d(-130%, 0, 0);
+    transition: none;
+  }
+  .warm-surface,
+  .warm-token,
+  .warm-frame-inner,
+  .warm-stand,
+  .warm-station {
+    transition-duration: 1ms;
   }
 }
 

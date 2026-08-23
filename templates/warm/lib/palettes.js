@@ -132,98 +132,124 @@ export const EDITORIAL_PALETTES = [
   },
 ];
 
-// Warm & Personal's own palette set — cozy, earthy hue families rather than
+// Warm & Personal's own palette set: cozy, earthy hue families rather than
 // Editorial's bold/graphic ones, but the same PAPER/INK/.../PALETTE shape,
 // so it works with the same ThemeSwitcher and getPalette() unmodified.
+//
+// Three extra roles on top of that shape, because this template's whole
+// design is a room lit by one sun: SKY_HI and SKY_LO are the sky seen
+// through its window (high and at the horizon), and SUN is the light's own
+// color. The template derives all four times of day from those three by
+// mixing them toward white or toward night in CSS, so a palette never has
+// to spell out four skies, and PAPER/INK stay untouched across every hour,
+// which is what keeps text contrast identical whatever the light is doing.
 export const WARM_PALETTES = [
   {
     id: "terracotta",
     label: "Terracotta",
-    description: "Warm cream with terracotta, sage and honey — cozy and earthy.",
+    description: "Warm cream with terracotta, sage and honey: cozy and earthy.",
     colors: {
       PAPER: "#fdf5ec",
       INK: "#3d2c22",
       INK_SOFT: "#5c4636",
-      MUTED: "#8a7a6d",
+      MUTED: "#7d6d60",
       ACCENT: "#c1704a",
       POP: "#c1704a",
       PALETTE: ["#c1704a", "#7c8a6e", "#c9a15a", "#a8687a"],
+      SKY_HI: "#7fa8c9",
+      SKY_LO: "#e8bd93",
+      SUN: "#f0a35c",
     },
   },
   {
     id: "sage",
     label: "Sage & Cream",
-    description: "Soft botanical green on cream — calm and grounded.",
+    description: "Soft botanical green on cream: calm and grounded.",
     colors: {
       PAPER: "#f6f4ec",
       INK: "#2e3b2e",
       INK_SOFT: "#445544",
-      MUTED: "#7c8a78",
+      MUTED: "#657262",
       ACCENT: "#5c7a52",
       POP: "#5c7a52",
       PALETTE: ["#5c7a52", "#c9a15a", "#a8687a", "#c1704a"],
+      SKY_HI: "#8fb7c9",
+      SKY_LO: "#dfe3c2",
+      SUN: "#e8c579",
     },
   },
   {
     id: "honey",
     label: "Honey Gold",
-    description: "Warm golden accents on soft cream — bright and inviting.",
+    description: "Warm golden accents on soft cream: bright and inviting.",
     colors: {
       PAPER: "#fdf8ec",
       INK: "#3d2f14",
       INK_SOFT: "#5c4a24",
-      MUTED: "#8a7a52",
+      MUTED: "#7f7049",
       ACCENT: "#c9922a",
       POP: "#c9922a",
       PALETTE: ["#c9922a", "#c1704a", "#5c7a52", "#a8687a"],
+      SKY_HI: "#9dc0d6",
+      SKY_LO: "#f2d9a0",
+      SUN: "#f5b74f",
     },
   },
   {
     id: "blush",
     label: "Soft Blush",
-    description: "Dusty rose on warm white — gentle and personal.",
+    description: "Dusty rose on warm white: gentle and personal.",
     colors: {
       PAPER: "#fdf1ee",
       INK: "#3d2529",
       INK_SOFT: "#5c3a40",
-      MUTED: "#8a7378",
+      MUTED: "#7f686d",
       ACCENT: "#c1607a",
       POP: "#c1607a",
       PALETTE: ["#c1607a", "#c9922a", "#5c7a52", "#8a6ba8"],
+      SKY_HI: "#b6a6c9",
+      SKY_LO: "#f2c7c7",
+      SUN: "#f2a882",
     },
   },
   {
     id: "clay",
     label: "Clay & Rust",
-    description: "Deep clay and rust on warm sand — earthy and grounded.",
+    description: "Deep clay and rust on warm sand: earthy and grounded.",
     colors: {
       PAPER: "#f7ece3",
       INK: "#341c14",
       INK_SOFT: "#4d2c1f",
-      MUTED: "#8a6b5a",
+      MUTED: "#826454",
       ACCENT: "#a8492e",
       POP: "#a8492e",
       PALETTE: ["#a8492e", "#c9922a", "#6b5238", "#7c8a6e"],
+      SKY_HI: "#8f9ec2",
+      SKY_LO: "#e0b394",
+      SUN: "#e8834a",
     },
   },
   {
     id: "lagoon",
     label: "Warm Lagoon",
-    description: "Teal with a warm coral pop — fresh, a little unexpected.",
+    description: "Teal with a warm coral pop: fresh, a little unexpected.",
     colors: {
       PAPER: "#f2f7f4",
       INK: "#1c3733",
       INK_SOFT: "#2f4d47",
-      MUTED: "#6c8580",
+      MUTED: "#5b7570",
       ACCENT: "#2e8577",
       POP: "#e0763f",
       PALETTE: ["#2e8577", "#e0763f", "#c9922a", "#4a6b8a"],
+      SKY_HI: "#7fc0c2",
+      SKY_LO: "#d9e8dd",
+      SUN: "#f09055",
     },
   },
   {
     id: "cocoa",
     label: "Cocoa",
-    description: "Deep cocoa brown with warm amber — a cozy dark mode.",
+    description: "Deep cocoa brown with warm amber: a cozy dark mode.",
     colors: {
       PAPER: "#241a14",
       INK: "#f5ecdf",
@@ -232,6 +258,9 @@ export const WARM_PALETTES = [
       ACCENT: "#e0a05a",
       POP: "#e0a05a",
       PALETTE: ["#e0a05a", "#c1704a", "#8a9a6e", "#c98a9e"],
+      SKY_HI: "#4a3f63",
+      SKY_LO: "#7a5a52",
+      SUN: "#e0a05a",
     },
   },
 ];
