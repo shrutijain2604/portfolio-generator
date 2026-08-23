@@ -1,404 +1,1285 @@
-// Pure presentational component: renders portfolio `data` only, no state of
-// its own — same contract every template here follows (see
-// EditorialTemplate.js's header comment for why).
-//
-// The look: blurred, slowly-drifting gradient blobs (colors from the active
-// palette's PALETTE[4]) behind frosted-glass cards for every section — the
-// "premium SaaS landing page" treatment applied to a portfolio. Deliberately
-// a conventional hero + flowing card grid layout rather than a new
-// structural metaphor, so the gradient/glass treatment itself carries the
-// design.
+"use client";
 
+// Pure presentational component: renders portfolio `data`, holding no state
+// beyond which band is currently in view: the same contract every template
+// here follows (see EditorialTemplate.js's header comment for why).
+//
+// The look: an optical bench. One beam of light enters a glass prism in the
+// hero and disperses, and every section below is one band of the resulting
+// spectrum, tapped off a spectral rail that runs down the page. The hue and
+// wavelength a band sits at come from its position in the customer's own
+// `sectionOrder`, so reordering sections re-tunes the whole page. Skills
+// render as a real emission spectrum: each line sits at the true spectral
+// position of the color shared.js already derives from that skill's name, so
+// the plate is a readout of the entered stack rather than decoration.
+//
+// Deliberately not the previous "drifting aurora blobs behind frosted glass"
+// build: that was a generic premium-landing-page wash any template could
+// have worn, carrying no idea of its own. Here the optics are the structure,
+// and the only two light sources are static and directional, because a bench
+// has a lamp, not weather.
+//
+// No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
+// EditForm.js's TEMPLATES_WITH_PHOTOS), so the previous build's <img> could
+// only ever resolve to the seeded /default-photo.jpg, which does not exist in
+// this template's standalone app and 404'd on every deployed copy. The
+// aperture monogram is built from the name instead, so it is always present
+// and always right.
+
+import { useEffect, useId, useRef, useState } from "react";
+import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { PRISM_PALETTES, getPalette } from "@/lib/palettes";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";
-import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, tint, hexToRgb, initials, stripProtocol } from "./shared";
-import CursorGlow from "./CursorGlow";
+import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, shade, tint, initials, stripProtocol } from "./shared";
+
+// Space Grotesk for anything structural: a geometric grotesque with wide
+// apertures and a faintly technical skeleton, which is the voice of
+// instrument labelling rather than of a marketing page. IBM Plex Mono (not
+// the JetBrains Mono two other templates already use) carries every readout,
+// wavelength, and year, so numbers stay in one clearly mechanical register.
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--pr-display",
+});
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--pr-mono",
+});
 
 const SECTION_LABELS = Object.fromEntries(SECTION_DEFINITIONS.map((s) => [s.id, s.label]));
 
-// Only ever called on this template's own palette colors (always "#rrggbb"),
-// not on an arbitrary dotColor() result (which can be an hsl() string) — so
-// a plain hex-channel luminance check is enough, unlike shared.js's helpers,
-// which have to handle both formats.
-function isDarkColor(hex) {
+// What one entry in each section is called, so a band can state its own real
+// size ("3 roles") without inventing a metric. Both forms are spelled out
+// rather than suffixed with an "s", which turns "entry" into "entrys".
+const SECTION_UNITS = {
+  experience: ["role", "roles"],
+  projects: ["project", "projects"],
+  education: ["degree", "degrees"],
+  achievements: ["entry", "entries"],
+  skills: ["skill", "skills"],
+  codingProfiles: ["profile", "profiles"],
+};
+
+// Palette colors are always "#rrggbb" (see lib/palettes.js), so plain hex
+// parsing is enough for these, unlike shared.js's helpers, which also have
+// to cope with the hsl() strings dotColor() returns for unknown labels.
+function hexChannels(hex) {
   const clean = hex.replace("#", "");
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
+  return [parseInt(clean.slice(0, 2), 16), parseInt(clean.slice(2, 4), 16), parseInt(clean.slice(4, 6), 16)];
+}
+
+function isDarkColor(hex) {
+  const [r, g, b] = hexChannels(hex);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
 }
 
-// Four large, heavily blurred radial blobs — one per palette color, one
-// per page corner — positioned once and drifting slowly via CSS
-// keyframes — no JS animation loop needed. Wrapped in `@media
-// (prefers-reduced-motion: no-preference)` so a reduced-motion preference
-// simply never matches the animation rule at all, rather than requiring a
-// JS media-query check to conditionally disable it. Sized in `vw` so they
-// scale with viewport width and keep covering a wide desktop canvas rather
-// than leaving flat, empty background at the edges.
-//
-// `mix-blend-screen` is load-bearing, not decorative: four ~50vw circles
-// at partial opacity inevitably overlap across most of the page, and with
-// the default blend (normal alpha compositing) that overlap averages
-// toward a single muddy, undifferentiated color — exactly what happened
-// before this was added. `screen` blends additively instead (screening any
-// color with black — this template's dark PAPER — returns that color
-// unchanged, and overlapping two screened colors brightens toward each
-// hue rather than muddying), which is what keeps overlapping blobs
-// reading as distinct glowing colors instead of a flat wash.
-function AuroraBlobs({ colors }) {
-  const [c1, c2, c3, c4] = colors;
+function channelHex(value) {
+  return Math.round(Math.min(255, Math.max(0, value)))
+    .toString(16)
+    .padStart(2, "0");
+}
+
+function mixHex(a, b, t) {
+  const [ar, ag, ab] = hexChannels(a);
+  const [br, bg, bb] = hexChannels(b);
+  return `#${channelHex(ar + (br - ar) * t)}${channelHex(ag + (bg - ag) * t)}${channelHex(ab + (bb - ab) * t)}`;
+}
+
+// A continuous dispersion ramp across the palette's four PALETTE stops, so
+// each band draws its hue from the customer's chosen theme instead of a
+// hardcoded rainbow: Sunset Blush disperses pink into gold, Cosmic Noir
+// slate into ice blue. A palette whose stops repeat (there are a few) simply
+// reads as a tighter spectrum rather than breaking.
+function rampAt(stops, t) {
+  const clamped = Math.min(1, Math.max(0, t));
+  const scaled = clamped * (stops.length - 1);
+  const index = Math.min(stops.length - 2, Math.floor(scaled));
+  return mixHex(stops[index], stops[index + 1], scaled - index);
+}
+
+// A lighter version of a color, the counterpart to shared.js's shade().
+// color-mix() rather than hex maths because this also has to accept the
+// hsl() strings dotColor() returns.
+function lift(color, percent = 32) {
+  return `color-mix(in srgb, ${color}, white ${percent}%)`;
+}
+
+// Small colored text has to clear WCAG AA against the palette's own PAPER,
+// and a few PALETTE entries land just under 4.5:1 raw (Cosmic Noir's slate
+// on near-black is about 4.3:1). Every hue used as *text* goes through here
+// first; hues used as a rule, a swatch, or a glow do not need it.
+function inkOn(color, isDark) {
+  return isDark ? lift(color, 34) : shade(color, 48);
+}
+
+// dotColor() returns "#rrggbb" for a known language and "hsl(h, 65%, 60%)"
+// otherwise, so both forms have to reduce to a hue before a skill can be
+// placed on the spectrograph plate.
+function hueOf(color) {
+  const hsl = color.match(/^hsl\(\s*(-?\d+(?:\.\d+)?)/);
+  if (hsl) return ((parseFloat(hsl[1]) % 360) + 360) % 360;
+  const [r, g, b] = hexChannels(color).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta === 0) return 0;
+  let h;
+  if (max === r) h = (g - b) / delta;
+  else if (max === g) h = (b - r) / delta + 2;
+  else h = (r - g) / delta + 4;
+  return (((h * 60) % 360) + 360) % 360;
+}
+
+// Where a color falls on a real visible spectrum: 0 at the violet end, 1 at
+// the red end. Hue runs backwards through the spectrum, so magenta (above
+// 300 degrees, which has no single wavelength) collapses onto the violet end
+// and red sits at the far right. This is what makes the skills plate honest:
+// a line's position is a property of its color, which shared.js derives from
+// the skill's own name.
+function spectralPosition(color) {
+  const hue = hueOf(color);
+  return Math.min(1, Math.max(0, (300 - Math.min(hue, 300)) / 300));
+}
+
+function plural(count, [one, many]) {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function bandDomId(id) {
+  return `prism-band-${id}`;
+}
+
+// One `<style>` for the whole template, rendered once at the root: keyframes
+// plus the two font hooks (a pseudo-element cannot be handed a className, and
+// neither can an SVG child that needs the mono face). Every autoplaying
+// animation sits inside `prefers-reduced-motion: no-preference`, so a
+// reduced-motion preference never matches the rule at all and the
+// un-animated element is already the finished state: no JS media check, and
+// nothing left half-hidden.
+const TEMPLATE_CSS = `
+.pr-display { font-family: var(--pr-display), ui-sans-serif, system-ui, sans-serif; }
+.pr-mono { font-family: var(--pr-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pr-chroma-a { transform: translate3d(-1.4px, 0, 0); }
+.pr-chroma-b { transform: translate3d(1.4px, 0, 0); }
+@keyframes pr-focus-a {
+  0%, 100% { transform: translate3d(-1.5px, 0, 0); }
+  50% { transform: translate3d(-0.3px, 0, 0); }
+}
+@keyframes pr-focus-b {
+  0%, 100% { transform: translate3d(1.5px, 0, 0); }
+  50% { transform: translate3d(0.3px, 0, 0); }
+}
+@keyframes pr-beam-travel {
+  0% { transform: translateX(-70px); opacity: 0; }
+  14% { opacity: 1; }
+  86% { opacity: 1; }
+  100% { transform: translateX(200px); opacity: 0; }
+}
+@keyframes pr-emission-in {
+  from { opacity: 0; transform: scaleY(0.15); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pr-chroma-a { animation: pr-focus-a 8s ease-in-out infinite; }
+  .pr-chroma-b { animation: pr-focus-b 8s ease-in-out infinite; }
+  .pr-beam-pulse { animation: pr-beam-travel 5s linear infinite; }
+  .pr-emission { animation: pr-emission-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+`;
+
+function IconArrowOut(props) {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <style>{`
-        @keyframes prism-drift-1 { 0%, 100% { transform: translate(-8%, -10%) scale(1); } 50% { transform: translate(6%, 8%) scale(1.2); } }
-        @keyframes prism-drift-2 { 0%, 100% { transform: translate(10%, 6%) scale(1.1); } 50% { transform: translate(-6%, -8%) scale(1); } }
-        @keyframes prism-drift-3 { 0%, 100% { transform: translate(-4%, 12%) scale(1); } 50% { transform: translate(8%, -10%) scale(1.15); } }
-        @keyframes prism-drift-4 { 0%, 100% { transform: translate(6%, -8%) scale(1.05); } 50% { transform: translate(-8%, 10%) scale(1.2); } }
-        @media (prefers-reduced-motion: no-preference) {
-          .prism-blob-1 { animation: prism-drift-1 24s ease-in-out infinite; }
-          .prism-blob-2 { animation: prism-drift-2 28s ease-in-out infinite; }
-          .prism-blob-3 { animation: prism-drift-3 32s ease-in-out infinite; }
-          .prism-blob-4 { animation: prism-drift-4 26s ease-in-out infinite; }
-        }
-      `}</style>
-      <div className="prism-blob-1 absolute -left-[10%] -top-[15%] h-[55vw] w-[55vw] rounded-full mix-blend-screen blur-3xl" style={{ background: c1, opacity: 0.4 }} />
-      <div className="prism-blob-2 absolute -right-[15%] top-[8%] h-[50vw] w-[50vw] rounded-full mix-blend-screen blur-3xl" style={{ background: c2, opacity: 0.35 }} />
-      <div className="prism-blob-3 absolute -bottom-[20%] left-[15%] h-[60vw] w-[60vw] rounded-full mix-blend-screen blur-3xl" style={{ background: c3, opacity: 0.32 }} />
-      <div className="prism-blob-4 absolute -bottom-[15%] -right-[10%] h-[52vw] w-[52vw] rounded-full mix-blend-screen blur-3xl" style={{ background: c4, opacity: 0.3 }} />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 17 17 7" />
+      <path d="M9 7h8v8" />
+    </svg>
+  );
+}
+
+// The lamp and the bench: one static light source and one receding plane. A
+// flat canvas still needs filling on a wide viewport, but drifting blobs
+// would contradict the fixed geometry the rest of the page implies, so this
+// is a lamp at a fixed angle instead of weather. Only a radial pool, since
+// any gradient bounded on an axis terminates in a seam somewhere on screen.
+//
+// Fixed, and clipped by its own wrapper rather than by an ancestor, so it
+// stays under the viewport as the page scrolls and can never widen the
+// document. It sits outside the `@container` element on purpose: a container
+// context becomes the containing block for fixed descendants, which would
+// silently turn this back into a page-height absolute layer.
+function Bench({ colors, isDark }) {
+  const line = isDark ? "rgba(255,255,255,0.055)" : "rgba(15,15,35,0.05)";
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div
+        className="absolute -left-[12%] -top-[18%] h-[72vh] w-[78vw]"
+        style={{
+          background: `radial-gradient(closest-side, ${tint(colors.PALETTE[0], isDark ? 26 : 15)}, transparent)`,
+        }}
+      />
+      <div className="absolute inset-x-0 bottom-0 h-[46vh] overflow-hidden">
+        <div
+          className="absolute -inset-x-1/2 bottom-0 top-0"
+          style={{
+            transform: "perspective(520px) rotateX(74deg)",
+            transformOrigin: "bottom center",
+            backgroundImage: `repeating-linear-gradient(to right, ${line} 0 1px, transparent 1px 92px), repeating-linear-gradient(to bottom, ${line} 0 1px, transparent 1px 92px)`,
+            maskImage: "linear-gradient(to top, rgba(0,0,0,0.9), transparent 72%)",
+            WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.9), transparent 72%)",
+          }}
+        />
+      </div>
     </div>
   );
 }
 
-function GlassCard({ children, isDark, className = "" }) {
+// A chromatic split held just short of illegible: two offset colored copies
+// under a fully opaque copy in INK, so the text's contrast is exactly INK's
+// and the fringing reads as a lens not quite in focus. `screen` on a dark
+// theme and `multiply` on a light one, because either blend mode in the wrong
+// direction just disappears into the background.
+function ChromaticText({ children, colors, isDark }) {
+  const blendMode = isDark ? "screen" : "multiply";
+  return (
+    <span className="relative inline-block">
+      <span
+        aria-hidden
+        className="pr-chroma-a absolute inset-0"
+        style={{
+          color: colors.PALETTE[0],
+          mixBlendMode: blendMode,
+          opacity: 0.75,
+        }}
+      >
+        {children}
+      </span>
+      <span
+        aria-hidden
+        className="pr-chroma-b absolute inset-0"
+        style={{
+          color: colors.PALETTE[3],
+          mixBlendMode: blendMode,
+          opacity: 0.75,
+        }}
+      >
+        {children}
+      </span>
+      <span className="relative">{children}</span>
+    </span>
+  );
+}
+
+// Prism geometry, in the instrument SVG's own 420x300 user space: the beam
+// enters the left face at BEAM_IN, leaves the right face at EXIT, and the
+// fan spreads to FAN_X.
+const BEAM_IN_X = 163;
+const BEAM_Y = 150;
+const EXIT = { x: 239, y: 178 };
+const FAN_X = 436;
+
+// Where ray `i` of `count` lands on the SVG's right edge. The fan follows the
+// customer's own section order top to bottom, so it reads as the legend for
+// the readout list beneath it.
+function rayEndY(index, count) {
+  const t = count > 1 ? index / (count - 1) : 0.5;
+  return 116 + t * 154;
+}
+
+// The hero instrument: a beam entering a glass prism, one exit ray per
+// populated section, and the readout that names them. Both halves live in
+// this one component so hovering a readout row can brighten its own ray by
+// mutating that node's style directly, the same direct-DOM approach
+// CursorGlow.js established here, rather than putting pointer state into
+// React and re-rendering the template on every hover.
+function PrismInstrument({ bands, colors, isDark }) {
+  const uid = useId().replace(/:/g, "");
+  const rayRefs = useRef([]);
+  const glowRefs = useRef([]);
+  const count = bands.length;
+
+  function focusRay(index, on) {
+    const ray = rayRefs.current[index];
+    const glow = glowRefs.current[index];
+    if (ray) {
+      ray.style.strokeWidth = on ? "3.2" : "1.5";
+      ray.style.opacity = on ? "1" : "0.85";
+    }
+    if (glow) glow.style.opacity = on ? "0.38" : "0.12";
+  }
+
+  return (
+    <div className="min-w-0">
+      <svg aria-hidden viewBox="0 42 420 240" className="h-auto w-full">
+        <defs>
+          <linearGradient id={`${uid}-glass`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={colors.INK} stopOpacity="0.16" />
+            <stop offset="55%" stopColor={colors.INK} stopOpacity="0.05" />
+            <stop offset="100%" stopColor={colors.INK} stopOpacity="0.12" />
+          </linearGradient>
+          <linearGradient id={`${uid}-incident`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={colors.INK} stopOpacity="0.15" />
+            <stop offset="100%" stopColor={colors.INK} stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id={`${uid}-pulse`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={colors.INK} stopOpacity="0" />
+            <stop offset="50%" stopColor={colors.INK} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={colors.INK} stopOpacity="0" />
+          </linearGradient>
+          {count > 1 && (
+            <linearGradient id={`${uid}-fan`} gradientUnits="userSpaceOnUse" x1="0" y1={rayEndY(0, count)} x2="0" y2={rayEndY(count - 1, count)}>
+              {bands.map((band, i) => (
+                <stop key={band.id} offset={`${(i / (count - 1)) * 100}%`} stopColor={band.hue} />
+              ))}
+            </linearGradient>
+          )}
+        </defs>
+
+        {/* Incident beam: a wide faint pass for the glow, a hairline for the
+            beam itself, and one travelling segment so the bench reads as
+            switched on. */}
+        <line x1="0" y1={BEAM_Y} x2={BEAM_IN_X} y2={BEAM_Y} stroke={colors.INK} strokeOpacity="0.13" strokeWidth="7" />
+        <line x1="0" y1={BEAM_Y} x2={BEAM_IN_X} y2={BEAM_Y} stroke={`url(#${uid}-incident)`} strokeWidth="1.6" />
+        <g className="pr-beam-pulse">
+          <rect x="-18" y={BEAM_Y - 1.3} width="36" height="2.6" rx="1.3" fill={`url(#${uid}-pulse)`} />
+        </g>
+
+        {count > 1 && (
+          <polygon
+            points={`${EXIT.x},${EXIT.y} ${FAN_X},${rayEndY(0, count)} ${FAN_X},${rayEndY(count - 1, count)}`}
+            fill={`url(#${uid}-fan)`}
+            opacity="0.17"
+          />
+        )}
+
+        {bands.map((band, i) => (
+          <g key={band.id}>
+            <line
+              ref={(node) => {
+                glowRefs.current[i] = node;
+              }}
+              x1={EXIT.x}
+              y1={EXIT.y}
+              x2={FAN_X}
+              y2={rayEndY(i, count)}
+              stroke={band.hue}
+              strokeWidth="6"
+              opacity="0.12"
+              className="transition-opacity duration-200"
+            />
+            <line
+              ref={(node) => {
+                rayRefs.current[i] = node;
+              }}
+              x1={EXIT.x}
+              y1={EXIT.y}
+              x2={FAN_X}
+              y2={rayEndY(i, count)}
+              stroke={band.hue}
+              strokeWidth="1.5"
+              opacity="0.85"
+              className="transition-all duration-200"
+            />
+          </g>
+        ))}
+
+        {/* The prism last, so the glass sits over the beams it bends. */}
+        <polygon points="196,58 132,236 260,236" fill={`url(#${uid}-glass)`} stroke={colors.INK} strokeOpacity="0.28" strokeWidth="1.2" />
+        <polyline points="196,58 132,236" fill="none" stroke={colors.INK} strokeOpacity="0.6" strokeWidth="1.4" />
+        <line x1={BEAM_IN_X} y1={BEAM_Y} x2={EXIT.x} y2={EXIT.y} stroke={colors.INK} strokeOpacity="0.5" strokeWidth="1.2" />
+        <circle cx={BEAM_IN_X} cy={BEAM_Y} r="2.6" fill={colors.INK} fillOpacity="0.85" />
+        <circle cx={EXIT.x} cy={EXIT.y} r="2.6" fill={colors.INK} fillOpacity="0.85" />
+      </svg>
+
+      {count > 0 && (
+        <ol className="mt-5" style={{ borderBottom: `1px solid ${tint(colors.INK, 10)}` }}>
+          {bands.map((band, i) => (
+            <li key={band.id}>
+              <a
+                href={`#${bandDomId(band.id)}`}
+                onMouseEnter={() => focusRay(i, true)}
+                onMouseLeave={() => focusRay(i, false)}
+                onFocus={() => focusRay(i, true)}
+                onBlur={() => focusRay(i, false)}
+                className="group grid grid-cols-[1.8rem_minmax(0,1fr)_auto] items-center gap-3 py-2 outline-none focus-visible:ring-2"
+                style={{
+                  borderTop: `1px solid ${tint(colors.INK, 10)}`,
+                  "--tw-ring-color": band.hue,
+                }}
+              >
+                <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    aria-hidden
+                    className="h-2.5 w-2.5 shrink-0 rotate-45 transition-transform duration-200 group-hover:scale-125"
+                    style={{
+                      backgroundColor: band.hue,
+                      boxShadow: `0 0 10px ${band.hue}`,
+                    }}
+                  />
+                  <span className="pr-display truncate text-[13px] font-medium uppercase tracking-[0.14em]" style={{ color: colors.INK_SOFT }}>
+                    {band.label}
+                  </span>
+                </span>
+                <span className="pr-mono shrink-0 text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+                  {plural(band.count, band.unit)}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+// Vertical spectrum rail, sticky beside the content on a wide canvas. Every
+// tick is a real anchor, so this is keyboard-navigable section navigation
+// rather than a decorative scroll indicator. Labels stay in the DOM (so each
+// link keeps its accessible name) but only the active or hovered one is
+// visible: six vertical labels shown at once would collide on a short
+// viewport.
+function SpectrumRail({ bands, activeId, colors, isDark }) {
+  const count = bands.length;
+  const stops = bands.map((band, i) => `${band.hue} ${count > 1 ? (i / (count - 1)) * 100 : 50}%`).join(", ");
+  return (
+    // The nav is taken out of flow so a viewport-tall sticky rail cannot
+    // inflate the grid row it shares with the content: left in flow, `h-dvh`
+    // became the row's minimum height, and a portfolio shorter than one
+    // viewport ended up with a screen of dead space before its closing
+    // section. `max-h-full` then clamps the rail to the row for exactly that
+    // short-content case, where there is nothing to scroll past anyway.
+    <div className="relative hidden @4xl:block">
+      <nav aria-label="Sections" className="absolute inset-0">
+        <div className="sticky top-0 flex h-dvh max-h-full items-center">
+          <div className="relative h-[76%] w-full">
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-0 w-px"
+              style={{
+                background: count > 1 ? `linear-gradient(to bottom, ${stops})` : bands[0]?.hue,
+                boxShadow: `0 0 12px ${tint(bands[Math.floor(count / 2)]?.hue || colors.POP, 70)}`,
+              }}
+            />
+            <ul className="absolute inset-0">
+              {bands.map((band, i) => {
+                const active = band.id === activeId;
+                return (
+                  <li
+                    key={band.id}
+                    className="absolute left-0 -translate-y-1/2"
+                    style={{
+                      top: `${count > 1 ? (i / (count - 1)) * 100 : 50}%`,
+                    }}
+                  >
+                    <a
+                      href={`#${bandDomId(band.id)}`}
+                      aria-current={active ? "true" : undefined}
+                      className="group flex items-center gap-2.5 outline-none focus-visible:ring-2"
+                      style={{ "--tw-ring-color": band.hue }}
+                    >
+                      <span
+                        aria-hidden
+                        className="h-px w-[26px] origin-left transition-transform duration-300 ease-out"
+                        style={{
+                          backgroundColor: band.hue,
+                          transform: `scaleX(${active ? 1 : 0.45})`,
+                          boxShadow: active ? `0 0 10px ${band.hue}` : "none",
+                        }}
+                      />
+                      <span
+                        className={`pr-mono text-[10px] uppercase tracking-[0.18em] transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 ${
+                          active ? "opacity-100" : "opacity-0"
+                        }`}
+                        style={{
+                          writingMode: "vertical-rl",
+                          color: active ? inkOn(band.hue, isDark) : colors.MUTED,
+                        }}
+                      >
+                        {band.label}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+// The rail's narrow-canvas form: the same spectrum laid horizontally with a
+// travelling marker and the active band named in full. Sticky rather than
+// fixed so it can never cover the content it indexes.
+function SpectrumStrip({ bands, activeId, colors, isDark }) {
+  const count = bands.length;
+  const activeIndex = Math.max(
+    0,
+    bands.findIndex((band) => band.id === activeId),
+  );
+  const active = bands[activeIndex];
+  const stops = bands.map((band, i) => `${band.hue} ${count > 1 ? (i / (count - 1)) * 100 : 50}%`).join(", ");
   return (
     <div
-      className={`rounded-3xl border p-6 backdrop-blur-xl sm:p-8 ${className}`}
+      className="sticky top-0 z-30 -mx-5 mb-2 flex items-center gap-3 px-5 py-3 backdrop-blur-md @2xl:-mx-10 @2xl:px-10 @4xl:hidden"
       style={{
-        backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.55)",
-        borderColor: isDark ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.7)",
-        boxShadow: isDark ? "0 8px 40px rgba(0,0,0,0.35)" : "0 8px 40px rgba(15,15,35,0.08)",
+        backgroundColor: isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.72)",
+        borderBottom: `1px solid ${tint(colors.INK, 12)}`,
       }}
     >
-      {children}
+      <div
+        aria-hidden
+        className="relative h-px min-w-0 flex-1"
+        style={{
+          background: count > 1 ? `linear-gradient(to right, ${stops})` : bands[0]?.hue,
+        }}
+      >
+        <span
+          className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 transition-[left] duration-300 ease-out"
+          style={{
+            left: `${count > 1 ? (activeIndex / (count - 1)) * 100 : 50}%`,
+            backgroundColor: active?.hue,
+            boxShadow: `0 0 10px ${active?.hue}`,
+          }}
+        />
+      </div>
+      <span className="pr-mono shrink-0 text-[10px] uppercase tracking-[0.18em]" style={{ color: colors.INK_SOFT }}>
+        {active?.label}
+      </span>
     </div>
   );
 }
 
-function SectionHeading({ children, accent, colors }) {
+function Band({ band, index, colors, innerRef, children }) {
   return (
-    <div className="mb-5 flex items-center gap-2.5">
-      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: accent, boxShadow: `0 0 12px ${accent}` }} />
-      <h2 className="break-words text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: colors.MUTED }}>
-        {children}
-      </h2>
-    </div>
-  );
-}
-
-function ChipRow({ items, getKey, getLabel, getColor, href, isDark }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => {
-        const label = getLabel(item);
-        const color = getColor(item);
-        const chipClass = "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold backdrop-blur-sm";
-        const chipStyle = {
-          backgroundColor: tint(color, isDark ? 18 : 14),
-          borderColor: tint(color, isDark ? 35 : 30),
-          color: isDark ? "#fff" : "inherit",
-        };
-        const inner = (
-          <>
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className="break-words">{label}</span>
-          </>
-        );
-        return href ? (
-          <a key={getKey(item)} href={href(item)} className={chipClass} style={chipStyle}>
-            {inner}
-          </a>
-        ) : (
-          <span key={getKey(item)} className={chipClass} style={chipStyle}>
-            {inner}
+    <section id={bandDomId(band.id)} ref={innerRef} data-band-id={band.id} className="scroll-mt-16 pt-10 @4xl:scroll-mt-8">
+      <header className="mb-7">
+        <div
+          aria-hidden
+          className="h-px w-full"
+          style={{
+            background: `linear-gradient(to right, ${band.hue}, ${tint(band.hue, 22)} 34%, transparent 78%)`,
+          }}
+        />
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+            {String(index + 1).padStart(2, "0")}
           </span>
+          <h2 className="pr-display text-[clamp(1.35rem,3cqw,2.1rem)] font-semibold tracking-tight" style={{ color: colors.INK }}>
+            {band.label}
+          </h2>
+          <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+            {plural(band.count, band.unit)}
+          </span>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+// Registration marks, the way a real optic is mounted: two corner brackets
+// instead of a border radius. Cheap, and it keeps the silhouette square and
+// instrument-like rather than another rounded panel.
+function CornerMarks({ color }) {
+  return (
+    <>
+      <span aria-hidden className="pointer-events-none absolute left-0 top-0 h-3.5 w-px" style={{ backgroundColor: color }} />
+      <span aria-hidden className="pointer-events-none absolute left-0 top-0 h-px w-3.5" style={{ backgroundColor: color }} />
+      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-3.5 w-px" style={{ backgroundColor: color }} />
+      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-px w-3.5" style={{ backgroundColor: color }} />
+    </>
+  );
+}
+
+// A card that behaves like a piece of glass: it tilts under the cursor and
+// its edges split into two complementary fringes that lean with the pointer.
+// Pointer state is written straight onto the nodes through refs, never into
+// React, so moving the mouse across a grid of these never re-renders the
+// template. A reduced-motion preference skips the listener entirely and
+// keeps the static card, whose hover state still lights its top edge, so the
+// affordance survives.
+function RefractionCard({ children, hue, colors, isDark }) {
+  const cardRef = useRef(null);
+  const fringeARef = useRef(null);
+  const fringeBRef = useRef(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    const fringeA = fringeARef.current;
+    const fringeB = fringeBRef.current;
+    if (!card || !fringeA || !fringeB) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+
+    function handleMove(event) {
+      const rect = card.getBoundingClientRect();
+      const px = (event.clientX - rect.left) / rect.width;
+      const py = (event.clientY - rect.top) / rect.height;
+      card.style.transform = `perspective(1100px) rotateX(${(0.5 - py) * 7}deg) rotateY(${(px - 0.5) * 8}deg) translateZ(6px)`;
+      const shift = (px - 0.5) * 5;
+      fringeA.style.transform = `translate3d(${-shift - 1.2}px, 0, 0)`;
+      fringeB.style.transform = `translate3d(${shift + 1.2}px, 0, 0)`;
+      fringeA.style.opacity = "0.85";
+      fringeB.style.opacity = "0.85";
+    }
+    function handleLeave() {
+      card.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg) translateZ(0px)";
+      fringeA.style.opacity = "0";
+      fringeB.style.opacity = "0";
+    }
+
+    card.addEventListener("mousemove", handleMove);
+    card.addEventListener("mouseleave", handleLeave);
+    return () => {
+      card.removeEventListener("mousemove", handleMove);
+      card.removeEventListener("mouseleave", handleLeave);
+    };
+  }, []);
+
+  return (
+    <article
+      ref={cardRef}
+      className="group relative min-w-0 p-5 transition-transform duration-200 ease-out hover:will-change-transform @2xl:p-6"
+      style={{
+        backgroundColor: isDark ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.62)",
+        border: `1px solid ${tint(colors.INK, isDark ? 12 : 14)}`,
+        boxShadow: isDark ? "0 18px 50px rgba(0,0,0,0.4)" : "0 18px 50px rgba(15,15,35,0.07)",
+      }}
+    >
+      <CornerMarks color={tint(hue, 65)} />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-500 ease-out group-hover:scale-x-100"
+        style={{
+          background: `linear-gradient(to right, ${colors.PALETTE[0]}, ${colors.PALETTE[1]}, ${colors.POP}, ${colors.PALETTE[3]})`,
+        }}
+      />
+      <span
+        ref={fringeARef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+        style={{
+          border: `1px solid ${colors.PALETTE[0]}`,
+          mixBlendMode: isDark ? "screen" : "multiply",
+        }}
+      />
+      <span
+        ref={fringeBRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+        style={{
+          border: `1px solid ${colors.PALETTE[3]}`,
+          mixBlendMode: isDark ? "screen" : "multiply",
+        }}
+      />
+      <div className="relative">{children}</div>
+    </article>
+  );
+}
+
+// Experience as a beam path: one node per role on a single ray. Years read
+// vertically in mono, which keeps the column narrow and means the dates never
+// need a dash between them.
+function ExperienceBand({ experience, hue, colors }) {
+  return (
+    <ol className="space-y-9">
+      {experience.map((job, i) => (
+        <li
+          key={`${job.company}-${job.role}-${i}`}
+          className="grid grid-cols-[2.6rem_1.25rem_minmax(0,1fr)] gap-x-3 @2xl:grid-cols-[4.5rem_1.5rem_minmax(0,1fr)] @2xl:gap-x-5"
+        >
+          <div className="pr-mono pt-0.5 text-right text-[11px] tabular-nums leading-tight" style={{ color: colors.MUTED }}>
+            {job.end && <div style={{ color: colors.INK_SOFT }}>{job.end}</div>}
+            {job.end && job.start && <div aria-hidden className="my-1.5 ml-auto h-2.5 w-px" style={{ backgroundColor: tint(colors.INK, 25) }} />}
+            {job.start && <div>{job.start}</div>}
+          </div>
+          <div aria-hidden className="relative">
+            <span className="absolute left-1/2 top-1 h-2.5 w-2.5 -translate-x-1/2 rotate-45" style={{ backgroundColor: hue, boxShadow: `0 0 12px ${hue}` }} />
+            {i < experience.length - 1 && (
+              <span
+                className="absolute bottom-[-2.25rem] left-1/2 top-5 w-px -translate-x-1/2"
+                style={{
+                  background: `linear-gradient(to bottom, ${tint(hue, 70)}, ${tint(hue, 12)})`,
+                }}
+              />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="pr-display break-words text-[16.5px] font-semibold leading-snug" style={{ color: colors.INK }}>
+              {job.role || "Role"}
+            </h3>
+            {job.company && (
+              <p className="pr-mono mt-1 break-words text-[12px] uppercase tracking-[0.12em]" style={{ color: colors.MUTED }}>
+                {job.company}
+              </p>
+            )}
+            {job.bullets?.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {job.bullets.map((line, j) => (
+                  <li key={j} className="flex min-w-0 gap-3">
+                    <span aria-hidden className="mt-[0.7em] h-px w-3.5 shrink-0" style={{ backgroundColor: tint(hue, 70) }} />
+                    <span className="min-w-0 whitespace-pre-line break-words text-[14.5px] leading-relaxed" style={{ color: colors.INK_SOFT }}>
+                      {line}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ProjectsBand({ projects, hue, colors, isDark }) {
+  return (
+    <div className="grid gap-5 @3xl:grid-cols-2">
+      {projects.map((project, i) => (
+        <RefractionCard key={`${project.name}-${i}`} hue={hue} colors={colors} isDark={isDark}>
+          <div className="flex items-baseline gap-3">
+            <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3 className="pr-display min-w-0 flex-1 break-words text-[17px] font-semibold leading-snug" style={{ color: colors.INK }}>
+              {project.name || "Project"}
+            </h3>
+            {project.version && (
+              <span className="pr-mono shrink-0 text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+                v{project.version}
+              </span>
+            )}
+          </div>
+          {project.status && (
+            <p className="pr-mono mt-2 inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em]" style={{ color: inkOn(hue, isDark) }}>
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: hue }} />
+              {project.status}
+            </p>
+          )}
+          {project.description && (
+            <p className="mt-3 whitespace-pre-line break-words text-[14.5px] leading-relaxed" style={{ color: colors.INK_SOFT }}>
+              {project.description}
+            </p>
+          )}
+          {project.highlights?.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {project.highlights.map((line, j) => (
+                <li key={j} className="flex min-w-0 gap-3">
+                  <span aria-hidden className="mt-[0.7em] h-px w-3 shrink-0" style={{ backgroundColor: tint(hue, 70) }} />
+                  <span className="min-w-0 break-words text-[13.5px] leading-relaxed" style={{ color: colors.INK_SOFT }}>
+                    {line}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {project.tags?.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-1.5">
+              {project.tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="pr-mono px-2 py-1 text-[10.5px] uppercase tracking-[0.1em]"
+                  style={{
+                    backgroundColor: tint(dotColor(tag), isDark ? 16 : 12),
+                    color: inkOn(dotColor(tag), isDark),
+                  }}
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          )}
+          {(project.link || project.demo) && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+              {project.link && (
+                <a
+                  href={`https://${stripProtocol(project.link)}`}
+                  className="pr-mono inline-flex items-center gap-1.5 text-[11.5px] uppercase tracking-[0.14em] underline-offset-4 outline-none hover:underline focus-visible:underline"
+                  style={{ color: inkOn(hue, isDark) }}
+                >
+                  Source <IconArrowOut className="h-3 w-3 shrink-0" />
+                </a>
+              )}
+              {project.demo && (
+                <a
+                  href={`https://${stripProtocol(project.demo)}`}
+                  className="pr-mono inline-flex items-center gap-1.5 text-[11.5px] uppercase tracking-[0.14em] underline-offset-4 outline-none hover:underline focus-visible:underline"
+                  style={{ color: inkOn(hue, isDark) }}
+                >
+                  Live <IconArrowOut className="h-3 w-3 shrink-0" />
+                </a>
+              )}
+            </div>
+          )}
+        </RefractionCard>
+      ))}
+    </div>
+  );
+}
+
+// Skills as an emission spectrum. Each line's horizontal position is the true
+// spectral position of the color shared.js derives from that skill's name, so
+// the plate is a readout of what was actually entered rather than a
+// decorative gradient. The plate is aria-hidden and the list below carries
+// the same information as text, so nothing here is color-only. The plate
+// stays near-black on every palette, light ones included, because that is
+// what an emission spectrum is read off.
+// Two skills whose colors share a hue land on exactly the same line and one
+// silently hides the other (Python and PostgreSQL both sit near 210 degrees),
+// so positions are pushed apart by the smallest gap that keeps both legible.
+// Spectral order is preserved, and the list below the plate is the exact
+// readout either way.
+const MIN_LINE_GAP = 0.035;
+
+function SkillsBand({ skills, colors }) {
+  const lines = skills
+    .map((skill) => {
+      const color = dotColor(skill);
+      return { skill, color, position: spectralPosition(color) };
+    })
+    .sort((a, b) => a.position - b.position);
+  let previous = -1;
+  lines.forEach((line) => {
+    line.position = Math.min(1, Math.max(line.position, previous + MIN_LINE_GAP));
+    previous = line.position;
+  });
+
+  return (
+    <div>
+      <div
+        aria-hidden
+        className="relative h-24 overflow-hidden @2xl:h-32"
+        style={{
+          backgroundColor: "#04040b",
+          border: `1px solid ${tint(colors.INK, 14)}`,
+        }}
+      >
+        {/* Wavelength graticule, so an empty stretch of the plate reads as
+            "no lines here" rather than as a plate that failed to draw. */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-2.5"
+          style={{
+            backgroundImage: "repeating-linear-gradient(to right, rgba(255,255,255,0.3) 0 1px, transparent 1px 8.3333%)",
+            backgroundPosition: "2% 0",
+            backgroundSize: "96% 100%",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        {lines.map((line, i) => (
+          <span
+            key={line.skill}
+            className="pr-emission absolute inset-y-0"
+            style={{
+              left: `${2 + line.position * 96}%`,
+              animationDelay: `${i * 45}ms`,
+            }}
+          >
+            <span
+              className="absolute inset-y-0 left-1/2 w-[16px] -translate-x-1/2 blur-[7px]"
+              style={{
+                background: `linear-gradient(to bottom, transparent, ${line.color} 18%, ${line.color} 82%, transparent)`,
+                opacity: 0.4,
+              }}
+            />
+            <span
+              className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2"
+              style={{
+                background: `linear-gradient(to bottom, transparent, ${line.color} 12%, ${line.color} 88%, transparent)`,
+                boxShadow: `0 0 14px ${line.color}`,
+              }}
+            />
+          </span>
+        ))}
+      </div>
+      <div aria-hidden className="mt-1.5 flex justify-between">
+        {[400, 500, 600, 700].map((nm) => (
+          <span key={nm} className="pr-mono text-[10px] tabular-nums" style={{ color: colors.MUTED }}>
+            {nm}nm
+          </span>
+        ))}
+      </div>
+      <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2.5">
+        {lines.map((line) => (
+          <li key={line.skill} className="flex min-w-0 items-center gap-2">
+            <span
+              aria-hidden
+              className="h-3 w-px shrink-0"
+              style={{
+                backgroundColor: line.color,
+                boxShadow: `0 0 8px ${line.color}`,
+              }}
+            />
+            <span className="pr-display break-words text-[14px] font-medium" style={{ color: colors.INK_SOFT }}>
+              {line.skill}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EducationBand({ education, hue, colors }) {
+  return (
+    <ul>
+      {education.map((edu, i) => (
+        <li
+          key={`${edu.school}-${i}`}
+          className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-4 py-4"
+          style={{ borderTop: `1px solid ${tint(colors.INK, 12)}` }}
+        >
+          <p className="pr-mono pt-0.5 text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+            {[edu.start, edu.end].filter(Boolean).join(" / ")}
+          </p>
+          <div className="min-w-0">
+            <h3 className="pr-display break-words text-[15.5px] font-semibold leading-snug" style={{ color: colors.INK }}>
+              {edu.degree || "Degree"}
+            </h3>
+            {edu.school && (
+              <p className="mt-1 flex min-w-0 items-center gap-2 break-words text-[13.5px]" style={{ color: colors.INK_SOFT }}>
+                <span aria-hidden className="h-px w-3 shrink-0" style={{ backgroundColor: tint(hue, 70) }} />
+                {edu.school}
+              </p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AchievementsBand({ achievements, hue, colors }) {
+  return (
+    <ul className="space-y-4">
+      {achievements.map((item, i) => (
+        <li key={i} className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-4">
+          <span
+            aria-hidden
+            className="relative mt-[0.7em] block h-px w-full"
+            style={{
+              background: `linear-gradient(to right, transparent, ${hue})`,
+            }}
+          >
+            <span
+              className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+              style={{ backgroundColor: hue, boxShadow: `0 0 10px ${hue}` }}
+            />
+          </span>
+          <p className="min-w-0 break-words text-[14.5px] leading-relaxed" style={{ color: colors.INK_SOFT }}>
+            {item}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProfilesBand({ codingProfiles, colors, isDark }) {
+  return (
+    <ul>
+      {codingProfiles.map((profile, i) => {
+        const color = dotColor(profile.platform);
+        return (
+          <li key={`${profile.platform}-${i}`} style={{ borderTop: `1px solid ${tint(colors.INK, 12)}` }}>
+            <a
+              href={`https://${stripProtocol(profile.url)}`}
+              className="group flex min-w-0 items-center gap-3.5 py-3.5 outline-none focus-visible:ring-2"
+              style={{ "--tw-ring-color": color }}
+            >
+              <span
+                aria-hidden
+                className="h-3 w-3 shrink-0 rounded-full border-2 transition-transform duration-200 group-hover:scale-125"
+                style={{ borderColor: color }}
+              />
+              <span className="pr-display shrink-0 text-[14.5px] font-medium" style={{ color: colors.INK }}>
+                {profile.platform}
+              </span>
+              <span className="pr-mono min-w-0 flex-1 truncate text-[12px]" style={{ color: colors.MUTED }}>
+                {stripProtocol(profile.url)}
+              </span>
+              <IconArrowOut
+                className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                style={{ color: inkOn(color, isDark) }}
+              />
+            </a>
+          </li>
         );
       })}
-    </div>
+    </ul>
+  );
+}
+
+// The closing move is the prism run backwards: every band's ray converges
+// into one beam again, and the contact links sit at its output.
+function Recombination({ bands, colors, uid }) {
+  const hues = bands.length > 0 ? bands.map((band) => band.hue) : [colors.POP];
+  const count = hues.length;
+  const convergeX = 520;
+  const convergeY = 50;
+  return (
+    <svg aria-hidden viewBox="0 0 760 100" className="h-auto w-full">
+      <defs>
+        <linearGradient id={`${uid}-out`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={colors.INK} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={colors.INK} stopOpacity="0.12" />
+        </linearGradient>
+      </defs>
+      {hues.map((hue, i) => {
+        const y = count > 1 ? 8 + (i / (count - 1)) * 84 : convergeY;
+        return (
+          <g key={`${hue}-${i}`}>
+            <line x1="0" y1={y} x2={convergeX} y2={convergeY} stroke={hue} strokeWidth="5" opacity="0.1" />
+            <line x1="0" y1={y} x2={convergeX} y2={convergeY} stroke={hue} strokeWidth="1.3" opacity="0.8" />
+          </g>
+        );
+      })}
+      <line x1={convergeX} y1={convergeY} x2="760" y2={convergeY} stroke={colors.INK} strokeOpacity="0.16" strokeWidth="7" />
+      <line x1={convergeX} y1={convergeY} x2="760" y2={convergeY} stroke={`url(#${uid}-out)`} strokeWidth="1.8" />
+      <circle cx={convergeX} cy={convergeY} r="3.2" fill={colors.INK} fillOpacity="0.9" />
+    </svg>
   );
 }
 
 export default function PrismTemplate({ data }) {
-  const { name, role, bio, email, photoUrl, links, skills, codingProfiles, experience, education, achievements, projects, sectionOrder } = data;
+  const { name, role, bio, email, links, skills, codingProfiles, experience, education, achievements, projects, sectionOrder } = data;
 
   const palette = getPalette("prism", data.paletteId) || PRISM_PALETTES[0];
   const colors = palette.colors;
-  const { PAPER, INK, INK_SOFT, MUTED, ACCENT, POP, PALETTE } = colors;
+  const { PAPER, INK, INK_SOFT, MUTED, POP, PALETTE } = colors;
   const isDark = isDarkColor(PAPER);
+  const uid = useId().replace(/:/g, "");
 
-  // Friendly labels ("GitHub", not the raw URL) — this list only ever
-  // renders as the closing CTA's buttons, which read better as a short
-  // action name than a raw handle/URL (unlike a byline credit, which is
-  // the one place a raw URL text is the right call — no template here
-  // needs that second form, so there's only ever this one list).
-  const contactItems = [
-    email && { label: "Email", href: `mailto:${email}`, Icon: IconMail },
-    links?.github && { label: "GitHub", href: `https://${stripProtocol(links.github)}`, Icon: IconGithub },
-    links?.linkedin && { label: "LinkedIn", href: `https://${stripProtocol(links.linkedin)}`, Icon: IconLinkedin },
-    links?.website && { label: "Website", href: `https://${stripProtocol(links.website)}`, Icon: IconLink },
-  ].filter(Boolean);
+  const entries = {
+    experience: experience || [],
+    projects: projects || [],
+    education: education || [],
+    achievements: achievements || [],
+    skills: skills || [],
+    codingProfiles: codingProfiles || [],
+  };
 
-  // One card per entry, not one card per section — a section with several
-  // entries (e.g. 3 jobs' worth of bullets) used to render as a single
-  // GlassCard, which could end up dramatically taller than its masonry
-  // neighbors and dominate a whole column. Flattening to one card per
-  // entry (same fix already proven in HolographicTemplate.js's "deck")
-  // gives the masonry many medium-sized cards to distribute evenly
-  // instead of one oversized one.
-  const entryCards = [];
-  (sectionOrder || []).forEach((id, sectionIndex) => {
-    const accent = PALETTE[sectionIndex % PALETTE.length];
-
-    if (id === "experience" && experience?.length > 0) {
-      experience.forEach((job, i) =>
-        entryCards.push(
-          <GlassCard key={`experience-${i}`} isDark={isDark} className="mb-6 break-inside-avoid">
-            <SectionHeading accent={accent} colors={colors}>
-              {SECTION_LABELS.experience}
-            </SectionHeading>
-            <p className="break-words text-[15px] font-semibold" style={{ color: INK }}>
-              {job.role || "Role"}
-              {job.company && <span style={{ color: MUTED }}> · {job.company}</span>}
-            </p>
-            <p className="mt-0.5 text-xs" style={{ color: MUTED }}>
-              {job.start} — {job.end}
-            </p>
-            {job.bullets?.length > 0 && (
-              <div className="mt-3 space-y-1.5">
-                {job.bullets.map((line, j) => (
-                  <p key={j} className="flex min-w-0 gap-2.5 break-words text-[14.5px] leading-relaxed" style={{ color: INK_SOFT }}>
-                    <span className="shrink-0" style={{ color: accent }}>
-                      ✦
-                    </span>
-                    <span className="min-w-0 whitespace-pre-line break-words">{line}</span>
-                  </p>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-        )
-      );
-    }
-
-    if (id === "education" && education?.length > 0) {
-      education.forEach((edu, i) =>
-        entryCards.push(
-          <GlassCard key={`education-${i}`} isDark={isDark} className="mb-6 break-inside-avoid">
-            <SectionHeading accent={accent} colors={colors}>
-              {SECTION_LABELS.education}
-            </SectionHeading>
-            <p className="break-words text-[15px] font-semibold" style={{ color: INK }}>
-              {edu.degree || "Degree"}
-            </p>
-            <p className="mt-0.5 break-words text-[13px]" style={{ color: MUTED }}>
-              {edu.school} · {edu.start}–{edu.end}
-            </p>
-          </GlassCard>
-        )
-      );
-    }
-
-    if (id === "achievements" && achievements?.length > 0) {
-      achievements.forEach((item, i) =>
-        entryCards.push(
-          <GlassCard key={`achievement-${i}`} isDark={isDark} className="mb-6 break-inside-avoid">
-            <SectionHeading accent={accent} colors={colors}>
-              {SECTION_LABELS.achievements}
-            </SectionHeading>
-            <p className="flex min-w-0 gap-3 break-words text-[14.5px] leading-relaxed" style={{ color: INK_SOFT }}>
-              <span className="shrink-0" style={{ color: accent }}>
-                ✦
-              </span>
-              <span className="break-words">{item}</span>
-            </p>
-          </GlassCard>
-        )
-      );
-    }
-
-    if (id === "projects" && projects?.length > 0) {
-      projects.forEach((project, i) =>
-        entryCards.push(
-          <GlassCard key={`project-${i}`} isDark={isDark} className="mb-6 break-inside-avoid">
-            <SectionHeading accent={accent} colors={colors}>
-              {SECTION_LABELS.projects}
-            </SectionHeading>
-            <p className="break-words text-[15px] font-semibold" style={{ color: INK }}>
-              {project.name || "Project"}
-            </p>
-            {project.description && (
-              <p className="mt-1.5 whitespace-pre-line break-words text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>
-                {project.description}
-              </p>
-            )}
-            {project.tags?.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {project.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
-                    style={{ backgroundColor: tint(dotColor(tag), isDark ? 20 : 14), color: isDark ? "#fff" : dotColor(tag) }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            {(project.link || project.demo) && (
-              <p className="mt-2 text-sm">
-                {project.link && (
-                  <a href={`https://${stripProtocol(project.link)}`} className="underline underline-offset-4" style={{ color: accent }}>
-                    Source
-                  </a>
-                )}
-                {project.link && project.demo && <span className="mx-2" style={{ color: MUTED }}>·</span>}
-                {project.demo && (
-                  <a href={`https://${stripProtocol(project.demo)}`} className="underline underline-offset-4" style={{ color: accent }}>
-                    Live
-                  </a>
-                )}
-              </p>
-            )}
-          </GlassCard>
-        )
-      );
-    }
-
-    if (id === "skills" && skills?.length > 0) {
-      entryCards.push(
-        <GlassCard key="skills" isDark={isDark} className="mb-6 break-inside-avoid">
-          <SectionHeading accent={accent} colors={colors}>
-            {SECTION_LABELS.skills}
-          </SectionHeading>
-          <ChipRow items={skills} getKey={(s) => s} getLabel={(s) => s} getColor={dotColor} isDark={isDark} />
-        </GlassCard>
-      );
-    }
-
-    if (id === "codingProfiles" && codingProfiles?.length > 0) {
-      entryCards.push(
-        <GlassCard key="codingProfiles" isDark={isDark} className="mb-6 break-inside-avoid">
-          <SectionHeading accent={accent} colors={colors}>
-            {SECTION_LABELS.codingProfiles}
-          </SectionHeading>
-          <ChipRow
-            items={codingProfiles}
-            getKey={(p, i) => p.platform + i}
-            getLabel={(p) => p.platform}
-            getColor={(p) => dotColor(p.platform)}
-            href={(p) => `https://${stripProtocol(p.url)}`}
-            isDark={isDark}
-          />
-        </GlassCard>
-      );
-    }
+  // Only sections that actually have content become bands, and each band's
+  // hue is its own slot on the palette's dispersion ramp, so a customer with
+  // two sections gets two cleanly separated colors rather than two
+  // neighbours out of a fixed four.
+  const populated = (sectionOrder || []).filter((id) => entries[id]?.length > 0);
+  const bands = populated.map((id, i) => {
+    const hue = rampAt(PALETTE, populated.length > 1 ? i / (populated.length - 1) : 0.5);
+    return {
+      id,
+      label: SECTION_LABELS[id],
+      unit: SECTION_UNITS[id],
+      count: entries[id].length,
+      hue,
+    };
   });
 
+  const bandRefs = useRef([]);
+  const [activeId, setActiveId] = useState(bands[0]?.id || null);
+  const bandKey = populated.join(",");
+  // Falls back to the first band when the tracked one has since been removed
+  // (a section emptied in the editor), so neither rail can end up with
+  // nothing lit.
+  const currentId = bands.some((band) => band.id === activeId) ? activeId : bands[0]?.id;
+
+  // Which band is in view drives both rail forms. An IntersectionObserver
+  // watching a thin strip across the middle of the viewport is what makes
+  // this work identically on the deployed page and inside the builder's
+  // scrollable preview pane, where a window-scroll listener would be reading
+  // the wrong scroller entirely. The rects come from the entries, so nothing
+  // here forces a layout.
+  useEffect(() => {
+    const nodes = bandRefs.current.filter(Boolean);
+    if (nodes.length === 0) return undefined;
+    const observer = new IntersectionObserver(
+      (observed) => {
+        const visible = observed
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+        if (visible.length > 0) setActiveId(visible[0].target.dataset.bandId);
+      },
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [bandKey]);
+
+  // Friendly labels ("GitHub", not the raw URL): these only ever render as
+  // the closing section's buttons, which read better as a short action name
+  // than as a handle. Deliberately the page's only contact block: a second
+  // copy up in the hero is the duplication Front Page already had to lose.
+  const contactItems = [
+    email && { label: "Email", href: `mailto:${email}`, Icon: IconMail },
+    links?.github && {
+      label: "GitHub",
+      href: `https://${stripProtocol(links.github)}`,
+      Icon: IconGithub,
+    },
+    links?.linkedin && {
+      label: "LinkedIn",
+      href: `https://${stripProtocol(links.linkedin)}`,
+      Icon: IconLinkedin,
+    },
+    links?.website && {
+      label: "Website",
+      href: `https://${stripProtocol(links.website)}`,
+      Icon: IconLink,
+    },
+  ].filter(Boolean);
+
+  // The aperture ring is the page's own spectrum, bent into a circle: the
+  // band hues when there are enough of them, the raw palette otherwise, so
+  // an almost-empty portfolio still gets a full ring rather than one flat arc.
+  const ringStops = bands.length > 1 ? bands.map((band) => band.hue) : PALETTE;
+  const apertureRing = `conic-gradient(from 180deg, ${ringStops.join(", ")}, ${ringStops[0]})`;
+
+  function renderBandBody(band) {
+    if (band.id === "experience") return <ExperienceBand experience={experience} hue={band.hue} colors={colors} />;
+    if (band.id === "projects") return <ProjectsBand projects={projects} hue={band.hue} colors={colors} isDark={isDark} />;
+    if (band.id === "skills") return <SkillsBand skills={skills} colors={colors} />;
+    if (band.id === "education") return <EducationBand education={education} hue={band.hue} colors={colors} />;
+    if (band.id === "achievements") return <AchievementsBand achievements={achievements} hue={band.hue} colors={colors} />;
+    if (band.id === "codingProfiles") return <ProfilesBand codingProfiles={codingProfiles} colors={colors} isDark={isDark} />;
+    return null;
+  }
+
   return (
-    <div className="relative min-h-dvh overflow-hidden" style={{ backgroundColor: PAPER, color: INK }}>
-      <AuroraBlobs colors={PALETTE} />
-      <CursorGlow colorRgb={hexToRgb(POP)} size={550} />
+    // `overflow-x-clip`, not `overflow-hidden`: clip keeps the wide light
+    // sources from widening the page without turning this into a scroll
+    // container, which would break the rail's `position: sticky`.
+    <div className="relative min-h-dvh overflow-x-clip" style={{ backgroundColor: PAPER, color: INK }}>
+      <style>{TEMPLATE_CSS}</style>
+      <Bench colors={colors} isDark={isDark} />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-16 sm:px-10 sm:py-20 lg:px-16">
-        {/* Hero */}
-        <div className="flex flex-col items-center text-center">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt=""
-              className="h-24 w-24 rounded-full border object-cover shadow-lg"
-              style={{ borderColor: tint(POP, 40) }}
-            />
-          ) : (
-            <div
-              className="flex h-24 w-24 items-center justify-center rounded-full border text-2xl font-bold shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${PALETTE[0]}, ${PALETTE[2]})`, borderColor: tint(POP, 40), color: "#fff" }}
-            >
-              {initials(name)}
+      {/* The container context lives here rather than on the root so the
+          fixed bench above still resolves against the viewport, and so every
+          `cqw` type size and `@` breakpoint below measures the actual content
+          column, which is what lets this fit the builder's half-width
+          preview pane as well as a full page. The padding sits on the inner
+          wrapper because a query container cannot match a container query
+          against itself. */}
+      <div className={`${display.variable} ${mono.variable} @container relative mx-auto w-full max-w-[1440px]`}>
+        <div className="px-5 py-10 @2xl:px-10 @2xl:py-14 @5xl:px-16">
+          <header>
+            <div className="flex items-center gap-3 pb-10">
+              <span className="pr-mono text-[10.5px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
+                Optical profile
+              </span>
+              <span
+                aria-hidden
+                className="h-px flex-1"
+                style={{
+                  background: `linear-gradient(to right, ${tint(INK, 22)}, transparent)`,
+                }}
+              />
+              <span className="pr-mono text-[10.5px] uppercase tracking-[0.2em]" style={{ color: MUTED }}>
+                {palette.label}
+              </span>
             </div>
-          )}
-          <h1 className="mt-6 break-words text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl" style={{ color: INK }}>
-            {name || "Your Name"}
-          </h1>
-          <p
-            className="mt-2 break-words text-lg font-semibold lg:text-xl"
-            style={{
-              backgroundImage: `linear-gradient(90deg, ${POP}, ${PALETTE[1]})`,
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            {role || "Your Role"}
-          </p>
-          {bio && (
-            <p className="mt-5 max-w-2xl break-words whitespace-pre-line text-[15.5px] leading-relaxed lg:text-base" style={{ color: INK_SOFT }}>
-              {bio}
-            </p>
-          )}
-        </div>
 
-        {/* The deck of entry cards */}
-        {entryCards.length > 0 && (
-          <div className="mt-16 columns-1 sm:columns-2 sm:gap-6 lg:columns-3">
-            {/* CSS multi-column masonry, not a grid: a grid row forces every
-                card in it to match its tallest neighbor's height (that's
-                what stretched Education to match Skills' height and left a
-                large blank void inside it) — `columns` instead sizes each
-                card to its own content and lets it flow into whichever
-                column has room next. Every card flows as a regular
-                (non-spanning) column item, deliberately — `column-span:
-                all` was tried and dropped: mixing a full-width spanning
-                item into a multi-column flow is a known cross-browser
-                rendering quirk (Chromium reliably inserts a large,
-                unpredictable gap around the spanning element). */}
-            {entryCards}
-          </div>
-        )}
-
-        {/* Closing contact */}
-        {contactItems.length > 0 && (
-          <GlassCard isDark={isDark} className="mt-6 flex flex-col items-center text-center">
-            <p className="text-lg font-semibold" style={{ color: INK }}>
-              Let&rsquo;s connect
-            </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              {contactItems.map(({ label, href, Icon }, i) => (
-                <a
-                  key={href}
-                  href={href}
-                  className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-75"
-                  style={{
-                    color: isDark ? "#fff" : POP,
-                    borderColor: tint(POP, 45),
-                    backgroundColor: i === 0 ? tint(POP, 16) : "transparent",
-                  }}
+            <div className="grid items-center gap-12 @3xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] @3xl:gap-14">
+              <div className="min-w-0">
+                <div aria-hidden className="mb-7 flex h-14 w-14 items-center justify-center rounded-full p-[2px]" style={{ background: apertureRing }}>
+                  <span
+                    className="pr-display flex h-full w-full items-center justify-center rounded-full text-[15px] font-semibold tracking-wide"
+                    style={{ backgroundColor: PAPER, color: INK }}
+                  >
+                    {initials(name)}
+                  </span>
+                </div>
+                <h1
+                  className="pr-display break-words text-[clamp(2.3rem,7.6cqw,6.4rem)] font-bold leading-[0.94] tracking-[-0.03em]"
+                  style={{ color: INK, textWrap: "balance" }}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="break-words">{label}</span>
-                </a>
-              ))}
-            </div>
-          </GlassCard>
-        )}
+                  {name || "Your Name"}
+                </h1>
+                <p className="pr-display mt-5 break-words text-[clamp(1.1rem,2.3cqw,1.6rem)] font-medium tracking-tight">
+                  <ChromaticText colors={colors} isDark={isDark}>
+                    {role || "Your Role"}
+                  </ChromaticText>
+                </p>
+                {bio && (
+                  <p className="mt-6 max-w-[46ch] whitespace-pre-line break-words text-[15.5px] leading-relaxed" style={{ color: INK_SOFT }}>
+                    {bio}
+                  </p>
+                )}
+              </div>
 
-        <footer className="mt-10 text-center text-xs" style={{ color: MUTED }}>
-          <p>
-            © {new Date().getFullYear()} {name || "Your Name"}
-          </p>
-          <p className="mt-1 opacity-70">Made with Dev Portfolio Builder</p>
-        </footer>
+              <PrismInstrument bands={bands} colors={colors} isDark={isDark} />
+            </div>
+          </header>
+
+          {bands.length > 0 && (
+            <div className="mt-10 @4xl:grid @4xl:grid-cols-[7rem_minmax(0,1fr)] @4xl:gap-10">
+              <SpectrumRail bands={bands} activeId={currentId} colors={colors} isDark={isDark} />
+              <main className="min-w-0">
+                <SpectrumStrip bands={bands} activeId={currentId} colors={colors} isDark={isDark} />
+                {bands.map((band, i) => (
+                  <Band
+                    key={band.id}
+                    band={band}
+                    index={i}
+                    colors={colors}
+                    innerRef={(node) => {
+                      bandRefs.current[i] = node;
+                    }}
+                  >
+                    {renderBandBody(band)}
+                  </Band>
+                ))}
+              </main>
+            </div>
+          )}
+
+          {contactItems.length > 0 && (
+            <section className="mt-24">
+              <Recombination bands={bands} colors={colors} uid={uid} />
+              <div className="mt-6 flex flex-col gap-5 @2xl:flex-row @2xl:items-end @2xl:justify-between">
+                <div>
+                  <p className="pr-mono text-[10.5px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
+                    Output
+                  </p>
+                  <h2 className="pr-display mt-2 text-[clamp(1.6rem,4cqw,2.6rem)] font-semibold tracking-tight" style={{ color: INK }}>
+                    Get in touch
+                  </h2>
+                </div>
+                <ul className="flex flex-wrap items-center gap-2.5">
+                  {contactItems.map(({ label, href, Icon }, i) => (
+                    <li key={href}>
+                      <a
+                        href={href}
+                        className="pr-mono inline-flex items-center gap-2 px-4 py-2.5 text-[11.5px] uppercase tracking-[0.16em] outline-none transition-colors focus-visible:ring-2"
+                        style={{
+                          border: `1px solid ${i === 0 ? tint(POP, 60) : tint(INK, 20)}`,
+                          backgroundColor: i === 0 ? tint(POP, isDark ? 18 : 14) : "transparent",
+                          color: i === 0 ? inkOn(POP, isDark) : INK_SOFT,
+                          "--tw-ring-color": POP,
+                        }}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span>{label}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 pt-6" style={{ borderTop: `1px solid ${tint(INK, 12)}` }}>
+            <p className="pr-mono text-[10.5px] uppercase tracking-[0.2em]" style={{ color: MUTED }}>
+              © {new Date().getFullYear()} {name || "Your Name"}
+            </p>
+            <p className="pr-mono text-[10.5px] uppercase tracking-[0.2em]" style={{ color: MUTED, opacity: 0.7 }}>
+              Made with Dev Portfolio Builder
+            </p>
+          </footer>
+        </div>
       </div>
     </div>
   );
