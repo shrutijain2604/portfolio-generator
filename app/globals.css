@@ -1822,3 +1822,270 @@ html:has(.home-root) {
     transform: translate3d(0, -3px, 0);
   }
 }
+
+/* Retro Desktop: three real operating-system shells.
+   ---------------------------------------------------------------------------
+   The template draws its own window manager, so the pieces a browser normally
+   supplies (scrollbars, focus rings, the way a dock reacts to a pointer) have
+   to be drawn too, or the illusion breaks at exactly the details people
+   recognise. Classes are `desk-` prefixed so they cannot collide with another
+   template's decorations sharing this stylesheet.
+
+   Fonts are stacks, not webfonts: the shells are recreations of typefaces
+   most machines already have, and downloading a face to imitate Tahoma would
+   cost a request on every visit for a difference nobody can name. */
+
+/* Windows 95 drew its entire interface in 11px MS Sans Serif. This is that
+   face, packaged as a webfont by the 98.css project.
+   Smoothing is deliberately left on. Switching it off is more faithful to a
+   1995 CRT and looks it on a 1x display, but on the high-density screens
+   everyone actually reads this on it renders the stems thin and broken, and an
+   unreadable shell is a worse lie than a smoothed one. */
+@font-face {
+  font-family: "MS Sans Serif Web";
+  src: url("/retro-desktop/fonts/ms-sans-serif.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "MS Sans Serif Web";
+  src: url("/retro-desktop/fonts/ms-sans-serif-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.desk-font-95 {
+  font-family: "MS Sans Serif Web", "MS Sans Serif", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+/* The 16 and 32 pixel icons are bitmaps from 1995. Smooth scaling turns them
+   to mush, so they are drawn at their native size and, where they are drawn
+   larger, at whole multiples with the pixels kept square. */
+.desk-pixel {
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* The shell and its contents are set in different faces, on purpose.
+   Chrome keeps MS Sans Serif at 11px, which is exactly what Windows 95 drew
+   its menus, captions and taskbar in, and at that size, on short strings, the
+   bitmap face is crisp and unmistakable.
+   Content does not: MS Sans has no outlines, so a paragraph of it at reading
+   size is rough on any modern display, and the whole point of a portfolio is
+   that somebody reads it. Verdana takes over inside the window, which is not a
+   compromise but the other half of the same period: Microsoft drew it in 1996
+   precisely because screen text needed a face built for screens.
+   The descendant selectors are what let this beat the utility classes the
+   shared content components carry for the other two shells. */
+.desk-95-body,
+.desk-95-body p,
+.desk-95-body a,
+.desk-95-body li,
+.desk-95-body div,
+.desk-95-body span,
+.desk-95-body h1,
+.desk-95-body h2,
+.desk-95-body h3,
+.desk-95-body button,
+.desk-95-body label {
+  font-family: Verdana, Geneva, "DejaVu Sans", Tahoma, sans-serif;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* One step up, for the line a dialog leads with. Two classes, so it outranks
+   the single-class rule above rather than fighting it with !important. */
+.desk-95-body .desk-95-lead {
+  font-size: 15px;
+  line-height: 21px;
+}
+.desk-font-11 {
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+.desk-font-mac {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+}
+
+/* Windows 95 scrollbar: a dithered track, a raised thumb, and stepper
+   buttons at both ends. The dither is a 2px SVG checker rather than a flat
+   grey because the 50% white/silver weave is the part people remember. */
+/* No `scrollbar-color` here on purpose: setting the standard property makes
+   Chromium ignore every ::-webkit-scrollbar rule below it, and this shell
+   needs the 16px stepper-and-dither scrollbar, not a tinted modern one. */
+.desk-scroll-95::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+.desk-scroll-95::-webkit-scrollbar-track {
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='1' height='1' fill='%23c0c0c0'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23c0c0c0'/%3E%3C/svg%3E");
+}
+.desk-scroll-95::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #fff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+}
+.desk-scroll-95::-webkit-scrollbar-button:vertical:decrement,
+.desk-scroll-95::-webkit-scrollbar-button:vertical:increment,
+.desk-scroll-95::-webkit-scrollbar-button:horizontal:decrement,
+.desk-scroll-95::-webkit-scrollbar-button:horizontal:increment {
+  height: 16px;
+  width: 16px;
+  background-color: #c0c0c0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 7px 7px;
+  box-shadow: inset -1px -1px 0 #0a0a0a, inset 1px 1px 0 #fff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+}
+.desk-scroll-95::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1 7 6H1Z' fill='%23000'/%3E%3C/svg%3E");
+}
+.desk-scroll-95::-webkit-scrollbar-button:vertical:increment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 7 1 2h6Z' fill='%23000'/%3E%3C/svg%3E");
+}
+.desk-scroll-95::-webkit-scrollbar-button:horizontal:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4 6 1v6Z' fill='%23000'/%3E%3C/svg%3E");
+}
+.desk-scroll-95::-webkit-scrollbar-button:horizontal:increment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M7 4 2 7V1Z' fill='%23000'/%3E%3C/svg%3E");
+}
+/* Corner where the two bars meet, and the double-stepper pair Chrome adds at
+   the end of a long track: both default to white and read as a hole. */
+.desk-scroll-95::-webkit-scrollbar-corner {
+  background: #c0c0c0;
+}
+
+.desk-scroll-11 {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+}
+.desk-scroll-11::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.desk-scroll-11::-webkit-scrollbar-thumb {
+  border: 4px solid transparent;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  background-clip: content-box;
+}
+.desk-scroll-11::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.45);
+  background-clip: content-box;
+}
+
+.desk-scroll-mac {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}
+.desk-scroll-mac::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.desk-scroll-mac::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  background-clip: content-box;
+}
+
+/* Windows 95 drew keyboard focus as a dotted rectangle inside the control,
+   not as a ring around it. Keeping that shape means the shell can stay
+   accurate without dropping a visible focus indicator. */
+.desk-focus-95:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+/* A window arriving: brief, and from slightly under its resting size, which
+   is what every one of these shells does when an app opens. */
+@keyframes desk-window-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* `backwards`, never `forwards`: the from-state has to hold through the
+   stagger delay when the desk opens all its windows at once, but a filled
+   end-state would outrank the inline transform a drag writes and pin the
+   window in place. */
+.desk-window-in {
+  animation: desk-window-in 130ms ease-out backwards;
+}
+
+@keyframes desk-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.desk-menu-in {
+  animation: desk-menu-in 120ms ease-out;
+}
+
+/* The Dock's magnification is the single gesture people identify macOS by.
+   It is pure CSS: the hovered tile lifts and grows, its immediate neighbours
+   grow less, and the row keeps its baseline because every tile scales from
+   its bottom edge. */
+.desk-dock-item {
+  transform-origin: bottom center;
+  transition: transform 170ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.desk-dock-item:hover,
+.desk-dock-item:focus-visible {
+  transform: translateY(-9px) scale(1.32);
+}
+.desk-dock-item:has(+ .desk-dock-item:hover),
+.desk-dock-item:hover + .desk-dock-item {
+  transform: translateY(-4px) scale(1.15);
+}
+
+/* The bounce a Dock icon makes when its window opens, and the pulse the
+   Windows 11 taskbar plays for the same event. */
+@keyframes desk-dock-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+}
+.desk-dock-bounce {
+  animation: desk-dock-bounce 520ms ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-window-in,
+  .desk-menu-in,
+  .desk-dock-bounce {
+    animation: none;
+  }
+  /* Magnification is decoration, so it goes. The hover state still has to
+     answer the pointer, so the tile keeps a small, motionless lift. */
+  .desk-dock-item {
+    transition: none;
+  }
+  .desk-dock-item:hover,
+  .desk-dock-item:focus-visible,
+  .desk-dock-item:has(+ .desk-dock-item:hover),
+  .desk-dock-item:hover + .desk-dock-item {
+    transform: none;
+  }
+  .desk-dock-item:hover .desk-dock-tile,
+  .desk-dock-item:focus-visible .desk-dock-tile {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+  }
+}
