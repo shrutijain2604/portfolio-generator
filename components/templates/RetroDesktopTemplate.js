@@ -65,6 +65,7 @@ const THEME_TOKENS = {
     font: "desk-font-95",
     scroll: "desk-scroll-95",
     binLabel: "Recycle Bin",
+    computerLabel: "My Computer",
     taskbar: 34,
   },
   win11: {
@@ -74,6 +75,7 @@ const THEME_TOKENS = {
     font: "desk-font-11",
     scroll: "desk-scroll-11",
     binLabel: "Recycle Bin",
+    computerLabel: "This PC",
     taskbar: 48,
   },
   mac: {
@@ -83,13 +85,31 @@ const THEME_TOKENS = {
     font: "desk-font-mac",
     scroll: "desk-scroll-mac",
     binLabel: "Trash",
+    computerLabel: "Macintosh HD",
     taskbar: 0,
   },
 };
 
+// macOS paints its own controls in the system accent, and its selection blue is
+// not the blue a website reaches for. These are the values the shell actually
+// uses for a highlighted menu row, a selected sidebar item and window text.
+const MAC = {
+  accent: "#0071e3",
+  select: "rgba(0, 0, 0, 0.075)",
+  text: "rgba(0, 0, 0, 0.85)",
+  textSoft: "rgba(0, 0, 0, 0.55)",
+  textFaint: "rgba(0, 0, 0, 0.36)",
+  hairline: "rgba(0, 0, 0, 0.09)",
+  // Vibrancy: a translucent white that lets the wallpaper through and is then
+  // blurred, which is what every chrome surface in this system is made of.
+  chrome: "rgba(246, 246, 246, 0.72)",
+  sidebar: "rgba(246, 246, 246, 0.5)",
+};
+
 // The Dock floats over the desktop rather than pushing it up, so the stage
-// reserves this much room at the bottom to keep a maximised window clear of it.
-const DOCK_RESERVE = 84;
+// reserves this much room at the bottom to keep a maximised window clear of it:
+// a 56px tile, the padding around it, and the gap under the Dock itself.
+const DOCK_RESERVE = 92;
 
 // Opening size per kind of thing, in CSS pixels, clamped to the stage at open
 // time. A folder wants to be wider than a text file for the same reason it
@@ -122,7 +142,9 @@ const MIN_H = 200;
 const ICON_METRICS = {
   retro: { button: 80, cellW: 88, cellH: 92, icon: 32 },
   win11: { button: 94, cellW: 100, cellH: 108, icon: 48 },
-  mac: { button: 80, cellW: 88, cellH: 92, icon: 32 },
+  // macOS is the outlier: 64 pixels is its default desktop icon size, and the
+  // difference between that and Windows is immediately visible.
+  mac: { button: 104, cellW: 110, cellH: 120, icon: 64 },
 };
 
 // Where the windows land when the desktop boots with everything already open.
@@ -196,29 +218,12 @@ function beginPointerDrag(event, { onMove, onEnd }) {
 
 /* ---------------------------------------------------------------- glyphs -- */
 
-function IconFolder({ className }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <path d="M2 9a2 2 0 0 1 2-2h8l3 3h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9Z" fill="#ffd75e" stroke="#8a6d1a" strokeWidth="1" />
-    </svg>
-  );
-}
-
 function IconFile({ className }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
       <path d="M7 2h13l7 7v21a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" fill="#ffffff" stroke="#6b7280" strokeWidth="1" />
       <path d="M20 2v7h7" fill="none" stroke="#6b7280" strokeWidth="1" />
       <path d="M10 15h12M10 19h12M10 23h8" stroke="#1084d0" strokeWidth="1.4" />
-    </svg>
-  );
-}
-
-function IconTrash({ className }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <path d="M9 10h14l-1.2 17a2 2 0 0 1-2 1.8H12.2a2 2 0 0 1-2-1.8L9 10Z" fill="#d1d5db" stroke="#4b5563" strokeWidth="1" />
-      <path d="M6 10h20M12 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" fill="none" stroke="#4b5563" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -251,20 +256,6 @@ function IconInfo({ className }) {
   );
 }
 
-// The beige box with a CRT on top: the single most recognisable icon of the
-// era, and the thing a Windows 95 desktop is incomplete without.
-function IconComputer({ className }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <rect x="3" y="4" width="26" height="18" rx="1.5" fill="#dcd7c8" stroke="#5b5b5b" strokeWidth="1" />
-      <rect x="5.5" y="6.5" width="21" height="13" fill="#1084d0" stroke="#3b3b3b" strokeWidth="0.8" />
-      <path d="M7 17.5c4-6 8-3 12-7.5" fill="none" stroke="#7fd0ff" strokeWidth="1" />
-      <rect x="8" y="23" width="16" height="5" rx="1" fill="#c8c3b4" stroke="#5b5b5b" strokeWidth="1" />
-      <rect x="10.5" y="24.5" width="11" height="2" fill="#9a9484" />
-    </svg>
-  );
-}
-
 function IconWin11Logo(props) {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden {...props}>
@@ -272,14 +263,6 @@ function IconWin11Logo(props) {
       <rect x="11" y="1" width="8" height="8" />
       <rect x="1" y="11" width="8" height="8" />
       <rect x="11" y="11" width="8" height="8" />
-    </svg>
-  );
-}
-
-function IconAppleLogo(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
-      <path d="M16.7 12.4c0-2.6 2.1-3.8 2.2-3.9-1.2-1.7-3-1.9-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.2 3.1-2.5.7-1 1-2 1.3-2-2.3-.9-2.7-3.4-2.7-3.7ZM13.9 3.3c.7-.8 1.1-2 1-3.1-1 .1-2.2.7-2.9 1.5-.6.7-1.1 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z" />
     </svg>
   );
 }
@@ -320,71 +303,6 @@ function Glyph95Close(props) {
   );
 }
 
-function IconSearch(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden {...props}>
-      <circle cx="11" cy="11" r="7" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
-function IconWifiGlyph(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden {...props}>
-      <path d="M2 8.5a16 16 0 0 1 20 0" />
-      <path d="M5.5 12.5a11 11 0 0 1 13 0" />
-      <path d="M9 16.5a6 6 0 0 1 6 0" />
-      <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function IconVolumeGlyph(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
-      <path d="M17 9a5 5 0 0 1 0 6" />
-    </svg>
-  );
-}
-
-function IconBatteryGlyph(props) {
-  return (
-    <svg viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden {...props}>
-      <rect x="2" y="8" width="20" height="9" rx="2.5" />
-      <path d="M24.5 11.5v2.5" strokeLinecap="round" />
-      <rect x="4" y="10" width="14" height="5" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function IconControlCentre(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden {...props}>
-      <path d="M4 8h16M4 16h16" />
-      <circle cx="9" cy="8" r="2.2" fill="currentColor" stroke="none" />
-      <circle cx="16" cy="16" r="2.2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function IconChevronLeft(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
-      <path d="m15 5-7 7 7 7" />
-    </svg>
-  );
-}
-
-function IconChevronRight(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
-      <path d="m9 5 7 7-7 7" />
-    </svg>
-  );
-}
-
 function IconPower(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden {...props}>
@@ -403,98 +321,12 @@ function IconGear(props) {
   );
 }
 
-function IconGrid(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden {...props}>
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-}
-
 function IconTrophy({ className }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
       <path d="M8 4h8v4a4 4 0 0 1-8 0V4Z" />
       <path d="M8 5H6a1 1 0 0 0-1 1c0 2 1.3 3 3.1 3.2M16 5h2a1 1 0 0 1 1 1c0 2-1.3 3-3.1 3.2" />
       <path d="M12 12v3M9 19h6" />
-    </svg>
-  );
-}
-
-// A simplified outline set for anywhere the icon sits on a coloured surface
-// (Dock tiles, Windows 11 taskbar) rather than on the desktop, where the
-// full-colour icons read better.
-function monoGlyph(kind, className) {
-  if (kind === "folder" || kind === "computer") {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-      </svg>
-    );
-  }
-  if (kind === "mail") {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="m3 7 9 6 9-6" />
-      </svg>
-    );
-  }
-  if (kind === "award") return <IconTrophy className={className} />;
-  if (kind === "bin") {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-        <path d="M5 7h14l-1.2 12.5a2 2 0 0 1-2 1.5H8.2a2 2 0 0 1-2-1.5L5 7Z" />
-        <path d="M3 7h18M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M7 2h7l5 5v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" />
-      <path d="M14 2v5h5" />
-      <path d="M9 14h6M9 17h6" />
-    </svg>
-  );
-}
-
-// macOS's wire waste basket is a different silhouette from the solid Recycle
-// Bin, which is genuinely how the two systems' trash icons differ.
-function trashWireGlyph(className) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className={className} aria-hidden>
-      <path d="M6 8l1.5 12a1 1 0 0 0 1 .9h7a1 1 0 0 0 1-.9L18 8" />
-      <path d="M4 8h16M9 8V5.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V8" />
-      <path d="M9 11v7M12 11v7M15 11v7" />
-    </svg>
-  );
-}
-
-// Ruled lines and no page outline, so it reads as a legal pad the way Notes
-// does, rather than as a generic document.
-function notesLinesGlyph(className) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className} aria-hidden>
-      <path d="M5 6h14M5 10h14M5 14h10M5 18h7" />
-    </svg>
-  );
-}
-
-// Finder's icon is the whole tile, a two-tone blue face, not a glyph on a
-// coloured background, which is why the Dock renders it full bleed.
-function IconFinderLogo({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect width="24" height="24" fill="#eaf5ff" />
-      <path d="M12 0h12v24H12Z" fill="#0a63c9" />
-      <path d="M0 0h12v24H0Z" fill="#7fc1ff" />
-      <circle cx="7.4" cy="10.2" r="1.4" fill="#0a63c9" />
-      <circle cx="16.6" cy="10.2" r="1.4" fill="#fff" />
-      <path d="M5.8 15c1.7 2.2 4 2.2 5.9 0" stroke="#0a63c9" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-      <path d="M12.3 15c1.7 2.2 4 2.2 5.9 0" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" fill="none" />
     </svg>
   );
 }
@@ -532,8 +364,7 @@ const WIN95_ICONS = {
 // them into a modern format and hand back a blurred 16 pixel icon, which is
 // the opposite of the point.
 function Win95Icon({ kind, size = 32, className = "" }) {
-  const name = WIN95_ICONS[kind];
-  if (!name) return itemGlyph(kind, size >= 32 ? "h-8 w-8" : "h-4 w-4");
+  const name = WIN95_ICONS[kind] || "text-file";
   const source = size >= 32 ? 32 : 16;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- a 16px bitmap icon must not be re-encoded or resampled, which is exactly what the image pipeline would do to it
@@ -627,10 +458,88 @@ function Win11AppIcon({ kind, size, className }) {
 function FluentGlyph({ name, size = 16, className = "" }) {
   const source = `url("/retro-desktop/win11/${name}.svg")`;
   return (
+    <span aria-hidden className={`desk-glyph ${className}`} style={{ width: size, height: size, maskImage: source, WebkitMaskImage: source }} />
+  );
+}
+
+// macOS keeps the same split Windows does: the document's own icon on the desk
+// and in a Finder window, the application's icon in the Dock and beside the
+// menu bar's app name. There is no Macintosh HD icon in the set, so the machine
+// wears Finder's face, which is the closest thing Apple actually ships.
+const MAC_FILE_ICONS = {
+  document: "text-document",
+  file: "text-document",
+  award: "text-document",
+  folder: "folder",
+  computer: "finder",
+  mail: "mail",
+  bin: "trash-empty",
+};
+
+const MAC_APP_ICONS = {
+  document: "textedit",
+  file: "textedit",
+  award: "textedit",
+  folder: "finder",
+  computer: "finder",
+  mail: "mail",
+  bin: "trash-empty",
+};
+
+// Apple ships its app icons as 1024px masters and the Dock never draws one
+// above 512, which is the size these are. Same reasoning as Win11Icon for
+// bypassing the image pipeline: one source, many sizes.
+function MacIcon({ name, size, className = "" }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- one shared 512px source drawn at many sizes; a per-size variant from the image pipeline buys nothing here
+    <img
+      src={`/retro-desktop/mac/${name}.png`}
+      alt=""
+      width={size}
+      height={size}
+      draggable={false}
+      className={`shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+function MacFileIcon({ kind, size, className }) {
+  return <MacIcon name={MAC_FILE_ICONS[kind] || "text-document"} size={size} className={className} />;
+}
+
+function MacAppIcon({ kind, size, className }) {
+  return <MacIcon name={MAC_APP_ICONS[kind] || "textedit"} size={size} className={className} />;
+}
+
+// SF Symbols, rendered through AppKit and used here as masks, the same way the
+// Fluent glyphs are. Unlike those, they are not square: every symbol has its
+// own optical width, and squashing one into a square box is the fastest way to
+// make an Apple glyph look like somebody's redrawing of an Apple glyph. So the
+// caller gives a height and the width follows the artwork.
+const MAC_GLYPH_RATIO = {
+  "apple-logo": 86 / 106,
+  battery: 163 / 77,
+  "chevron-left": 70 / 95,
+  "chevron-right": 70 / 95,
+  "column-view": 135 / 100,
+  "control-center": 114 / 102,
+  "icon-view": 111 / 100,
+  "list-view": 119 / 82,
+  more: 113 / 109,
+  sidebar: 135 / 100,
+  spotlight: 114 / 106,
+  volume: 134 / 96,
+  wifi: 127 / 91,
+};
+
+function MacGlyph({ name, size, className = "" }) {
+  const source = `url("/retro-desktop/mac/${name}.png")`;
+  return (
     <span
       aria-hidden
-      className={`desk-glyph-11 ${className}`}
-      style={{ width: size, height: size, maskImage: source, WebkitMaskImage: source }}
+      className={`desk-glyph ${className}`}
+      style={{ height: size, width: Math.round(size * (MAC_GLYPH_RATIO[name] || 1)), maskImage: source, WebkitMaskImage: source }}
     />
   );
 }
@@ -695,24 +604,6 @@ function Toolbar95Glyph({ name }) {
   );
 }
 
-function itemGlyph(kind, className) {
-  if (kind === "document") return <IconDocument className={className} />;
-  if (kind === "folder") return <IconFolder className={className} />;
-  if (kind === "mail") return <IconEnvelope className={className} />;
-  if (kind === "award") return <IconRibbon className={className} />;
-  if (kind === "computer") return <IconComputer className={className} />;
-  if (kind === "bin") return <IconTrash className={className} />;
-  if (kind === "welcome") return <IconInfo className={className} />;
-  return <IconFile className={className} />;
-}
-
-const DOCK_GRADIENTS = {
-  file: "linear-gradient(160deg, #ffe27a, #f5a623)",
-  mail: "linear-gradient(160deg, #6fb1ff, #1f6fe0)",
-  award: "linear-gradient(160deg, #f6c453, #d97706)",
-  welcome: "linear-gradient(160deg, #9fd4ff, #2f7de1)",
-  bin: "linear-gradient(160deg, #e5e7eb, #9ca3af)",
-};
 
 /* --------------------------------------------------------------- content -- */
 
@@ -1087,7 +978,7 @@ function ContactBody({ theme, email, links }) {
 // as files, and openable from here exactly as they are out there. Large Icons
 // was the default view in every one of these shells, so that is the view.
 function FolderListing({ theme, entries, emptyText, onOpen }) {
-  const wrapper = theme === "retro" ? "bg-white p-2" : theme === "win11" ? "-m-1 p-1" : "rounded-xl border border-black/5 bg-white p-3";
+  const wrapper = theme === "retro" ? "bg-white p-2" : "-m-1 p-1";
 
   if (entries.length === 0) {
     return (
@@ -1110,7 +1001,7 @@ function FolderListing({ theme, entries, emptyText, onOpen }) {
               ? "w-[80px] p-[6px] hover:bg-[#000080]/10"
               : theme === "win11"
                 ? "w-[104px] rounded-[4px] p-2.5 hover:bg-black/[0.037]"
-                : "w-[92px] rounded-lg p-2 hover:bg-black/5"
+                : "w-[100px] rounded-[5px] p-2.5 hover:bg-black/[0.05]"
           }`}
         >
           {theme === "retro" ? (
@@ -1118,13 +1009,11 @@ function FolderListing({ theme, entries, emptyText, onOpen }) {
           ) : theme === "win11" ? (
             <Win11FileIcon kind={entry.kind} size={48} />
           ) : (
-            itemGlyph(entry.kind, "h-8 w-8")
+            <MacFileIcon kind={entry.kind} size={52} />
           )}
           <span
-            className={`w-full break-words leading-tight ${
-              theme === "retro" ? "text-black" : theme === "win11" ? "text-[12px]" : "text-[11px] text-neutral-700"
-            }`}
-            style={theme === "win11" ? { color: W11.text } : undefined}
+            className={`w-full break-words leading-tight ${theme === "retro" ? "text-black" : "text-[12px]"}`}
+            style={theme === "retro" ? undefined : { color: theme === "win11" ? W11.text : MAC.text }}
           >
             {entry.label}
           </span>
@@ -1147,14 +1036,17 @@ function DocumentBody({ theme, blocks, binLabel }) {
     <div className={theme === "retro" ? "space-y-4" : "space-y-6"}>
       {blocks.map((block) => (
         <section key={block.id}>
+          {/* Each heading wears the icon of the file that section also exists
+              as on the desktop, so the long read and the strewn windows are
+              visibly the same things. */}
           {theme === "retro" ? (
             <h2 className="mb-1.5 flex items-center gap-1.5 border-b border-[#808080] pb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-black">
-              {itemGlyph(block.kind, "h-3.5 w-3.5")}
+              <Win95Icon kind={block.kind} size={16} />
               {block.docTitle}
             </h2>
           ) : (
             <h2 className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-neutral-900">
-              {itemGlyph(block.kind, "h-4 w-4")}
+              {theme === "win11" ? <Win11FileIcon kind={block.kind} size={18} /> : <MacFileIcon kind={block.kind} size={18} />}
               {block.docTitle}
             </h2>
           )}
@@ -1280,45 +1172,98 @@ function ExplorerNav11({ label }) {
   );
 }
 
-function FinderToolbar() {
+// Finder does not stack a title bar and a toolbar: it merges them into one
+// 52px bar carrying the traffic lights, the back and forward chevrons, the
+// folder's name and the view controls. That merge is the single most
+// recognisable thing about a Finder window, so the traffic lights are passed in
+// rather than drawn above.
+function FinderToolbar({ label, kind, controls }) {
   return (
-    <div aria-hidden className="flex shrink-0 items-center gap-1 border-b border-black/5 bg-white/60 px-3 py-1.5 text-neutral-400">
-      <span className="flex h-6 w-6 items-center justify-center rounded hover:bg-black/5">
-        <IconChevronLeft className="h-3.5 w-3.5" />
-      </span>
-      <span className="flex h-6 w-6 items-center justify-center rounded hover:bg-black/5 opacity-40">
-        <IconChevronRight className="h-3.5 w-3.5" />
-      </span>
-      <span className="ml-2 flex items-center gap-0.5 rounded-md bg-black/5 p-0.5">
-        <span className="rounded bg-white px-1.5 py-0.5 shadow-sm">
-          <IconGrid className="h-3 w-3 text-neutral-600" />
+    <div className="flex h-[52px] shrink-0 items-center gap-2 px-3">
+      {controls}
+      <span aria-hidden className="ml-1 flex shrink-0 items-center gap-1" style={{ color: MAC.textFaint }}>
+        <span className="flex h-6 w-6 items-center justify-center rounded-[5px]">
+          <MacGlyph name="chevron-left" size={13} />
         </span>
-        <span className="px-1.5 py-0.5">
-          <IconGrid className="h-3 w-3 opacity-50" />
+        <span className="flex h-6 w-6 items-center justify-center rounded-[5px] opacity-45">
+          <MacGlyph name="chevron-right" size={13} />
         </span>
       </span>
-      <div className="flex-1" />
-      <div className="flex items-center gap-1.5 rounded-md bg-black/5 px-2 py-1 text-[11px] text-neutral-500">
-        <IconSearch className="h-3 w-3" /> Search
-      </div>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <MacFileIcon kind={kind} size={16} />
+        <span className="truncate text-[13px] font-semibold" style={{ color: MAC.text }}>
+          {label}
+        </span>
+      </span>
+      <span className="flex-1" />
+      {/* Icon view is the one this window is in, so it is the selected segment.
+          The other two are inert, which is why the whole group is hidden from
+          assistive tech. */}
+      <span aria-hidden className="hidden shrink-0 items-center gap-px rounded-[6px] p-0.5 sm:flex" style={{ background: "rgba(0,0,0,0.055)" }}>
+        {["icon-view", "list-view", "column-view"].map((view, index) => (
+          <span
+            key={view}
+            className="flex h-[22px] w-8 items-center justify-center rounded-[5px]"
+            style={
+              index === 0
+                ? { background: "#fff", boxShadow: "0 0.5px 1.5px rgba(0,0,0,0.2)", color: MAC.text }
+                : { color: MAC.textSoft }
+            }
+          >
+            <MacGlyph name={view} size={13} />
+          </span>
+        ))}
+      </span>
+      <span
+        aria-hidden
+        className="hidden h-[22px] w-8 shrink-0 items-center justify-center rounded-[5px] sm:flex"
+        style={{ color: MAC.textSoft }}
+      >
+        <MacGlyph name="more" size={14} />
+      </span>
+      <span
+        aria-hidden
+        className="hidden h-[22px] w-[132px] shrink-0 items-center gap-1.5 rounded-[6px] px-2 md:flex"
+        style={{ background: "rgba(0,0,0,0.055)", color: MAC.textFaint }}
+      >
+        <MacGlyph name="spotlight" size={12} />
+        <span className="truncate text-[12px]">Search</span>
+      </span>
     </div>
   );
 }
 
-function FinderSidebar() {
+// The sidebar is a vibrancy panel, not a panel with a border: it lets the
+// wallpaper through and blurs it, which is why it is lighter than the file list
+// beside it and why it has no dividing rule.
+function FinderSidebar({ label }) {
+  const row = "flex h-[26px] items-center gap-2 rounded-[5px] px-2";
   return (
-    <div aria-hidden className="hidden w-36 shrink-0 overflow-hidden border-r border-black/5 bg-neutral-50/60 p-2 text-[12px] text-neutral-700 sm:block">
-      <p className="px-2 py-1 text-[11px] font-semibold text-neutral-400">Favourites</p>
-      {["AirDrop", "Recents", "Applications", "Desktop", "Documents"].map((entry) => (
-        <div key={entry} className="flex items-center gap-2 rounded px-2 py-1 hover:bg-black/5">
-          <IconFolder className="h-3.5 w-3.5" />
+    <div
+      aria-hidden
+      className="hidden w-[172px] shrink-0 overflow-hidden px-2.5 pt-1 text-[13px] sm:block"
+      style={{ background: MAC.sidebar, color: MAC.text }}
+    >
+      <p className="px-2 pb-0.5 pt-2 text-[11px] font-semibold" style={{ color: MAC.textFaint }}>
+        Favourites
+      </p>
+      {["Recents", "Applications", "Desktop", "Documents", "Downloads"].map((entry) => (
+        <div key={entry} className={row}>
+          <MacIcon name="folder" size={16} />
           <span className="truncate">{entry}</span>
         </div>
       ))}
-      <p className="mt-3 px-2 py-1 text-[11px] font-semibold text-neutral-400">Locations</p>
-      <div className="flex items-center gap-2 rounded px-2 py-1 hover:bg-black/5">
-        <IconFolder className="h-3.5 w-3.5" />
+      <p className="px-2 pb-0.5 pt-3 text-[11px] font-semibold" style={{ color: MAC.textFaint }}>
+        Locations
+      </p>
+      <div className={row}>
+        <MacIcon name="finder" size={16} />
         <span className="truncate">Macintosh HD</span>
+      </div>
+      {/* The folder you are actually in, filled the way Finder fills it. */}
+      <div className={row} style={{ background: MAC.select }}>
+        <MacIcon name="folder" size={16} />
+        <span className="truncate">{label}</span>
       </div>
     </div>
   );
@@ -1492,9 +1437,10 @@ function Window({ theme, item, win, zIndex, focused, compact, stage, children, o
   // plus Explorer's address bar, toolbar and status bar when it is a folder.
   // Windows 11 stacks a 40px tabbed title bar over Explorer's 40px command bar,
   // its 40px address row and a 28px status bar; a Notepad window is the tabbed
-  // title bar on its own.
+  // title bar on its own. macOS is the leanest of the three, because Finder
+  // folds its title bar and its toolbar into one 52px row.
   const chromeHeight =
-    theme === "retro" ? (isFolder ? 108 : 40) : theme === "win11" ? (isFolder ? 148 : 40) : isFolder ? 116 : 74;
+    theme === "retro" ? (isFolder ? 108 : 40) : theme === "win11" ? (isFolder ? 148 : 40) : isFolder ? 78 : 28;
   const bodyClass = sized ? "min-h-0 flex-1" : "";
   const bodyStyle = sized
     ? undefined
@@ -1796,73 +1742,91 @@ function Window({ theme, item, win, zIndex, focused, compact, stage, children, o
     );
   }
 
-  // macOS
+  // macOS. The traffic lights are 12px on a 8px pitch and stay coloured only
+  // while the window is in front; behind, all three go grey. Their glyphs
+  // appear when the pointer is anywhere over the window, not just over the
+  // buttons, which is why the hover group is the whole frame.
+  const trafficLights = (
+    <div className="flex shrink-0 items-center gap-2">
+      {[
+        { label: `Close ${item.title}`, colour: "#ff5f57", glyph: "✕", size: "text-[7.5px]", onClick: onClose },
+        { label: `Minimise ${item.title}`, colour: "#febc2e", glyph: "−", size: "text-[10px]", onClick: onMinimise },
+        {
+          label: maximised ? `Restore ${item.title}` : `Zoom ${item.title}`,
+          colour: "#28c840",
+          glyph: "⤡",
+          size: "text-[8px]",
+          onClick: onToggleMax,
+        },
+      ].map((light) => (
+        <button
+          key={light.label}
+          type="button"
+          onClick={light.onClick}
+          aria-label={light.label}
+          className={`flex h-3 w-3 items-center justify-center rounded-full font-bold leading-none ${light.size}`}
+          style={{
+            background: focused ? light.colour : "#d4d4d4",
+            color: "rgba(0,0,0,0.5)",
+            boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+          }}
+        >
+          <span className="opacity-0 group-hover/window:opacity-100">{light.glyph}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <section
       ref={rootRef}
       aria-label={item.title}
       onPointerDown={onFocus}
-      style={frameStyle}
-      className={`desk-window-in group/window absolute flex flex-col overflow-hidden rounded-[11px] bg-white/95 ring-1 ring-black/15 ${
-        focused ? "shadow-[0_28px_70px_rgba(0,0,0,0.45)]" : "shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
-      }`}
+      style={{
+        ...frameStyle,
+        background: MAC.chrome,
+        // A hairline, not a border: macOS edges a window with half a pixel,
+        // and a full one reads as a drawn outline at any zoom.
+        boxShadow: focused
+          ? "0 24px 70px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(0,0,0,0.22)"
+          : "0 10px 30px rgba(0,0,0,0.24), 0 0 0 0.5px rgba(0,0,0,0.16)",
+      }}
+      className="desk-window-in group/window absolute flex flex-col overflow-hidden rounded-[10px] backdrop-blur-2xl"
     >
       <div
         onPointerDown={handleTitlePointerDown}
         onDoubleClick={onToggleMax}
-        className={`relative flex shrink-0 select-none items-center justify-center border-b border-black/5 bg-neutral-100/90 px-3 py-2 backdrop-blur-xl ${
-          maximised ? "" : "cursor-grab active:cursor-grabbing"
-        }`}
+        className={`relative shrink-0 select-none ${maximised ? "" : "cursor-grab active:cursor-grabbing"}`}
       >
-        <div className="absolute left-3 flex items-center gap-[7px]">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={`Close ${item.title}`}
-            className={`flex h-3 w-3 items-center justify-center rounded-full text-[7px] font-bold leading-none text-black/55 ${
-              focused ? "bg-[#ff5f57]" : "bg-neutral-300"
-            }`}
-          >
-            <span className="opacity-0 group-hover/window:opacity-100">&times;</span>
-          </button>
-          <button
-            type="button"
-            onClick={onMinimise}
-            aria-label={`Minimise ${item.title}`}
-            className={`flex h-3 w-3 items-center justify-center rounded-full text-[9px] font-bold leading-none text-black/55 ${
-              focused ? "bg-[#febc2e]" : "bg-neutral-300"
-            }`}
-          >
-            <span className="opacity-0 group-hover/window:opacity-100">&minus;</span>
-          </button>
-          <button
-            type="button"
-            onClick={onToggleMax}
-            aria-label={maximised ? `Restore ${item.title}` : `Zoom ${item.title}`}
-            className={`flex h-3 w-3 items-center justify-center rounded-full text-[8px] font-bold leading-none text-black/55 ${
-              focused ? "bg-[#28c840]" : "bg-neutral-300"
-            }`}
-          >
-            <span className="opacity-0 group-hover/window:opacity-100">&#10011;</span>
-          </button>
-        </div>
-        <div className={`flex min-w-0 items-center gap-1.5 ${focused ? "text-neutral-700" : "text-neutral-400"}`}>
-          {itemGlyph(item.kind, "h-3.5 w-3.5 shrink-0")}
-          <span className="truncate text-[12.5px] font-semibold">{item.title}</span>
-        </div>
+        {isFolder ? (
+          <FinderToolbar label={item.label} kind={item.kind} controls={trafficLights} />
+        ) : (
+          // A document window keeps the plain 28px title bar: traffic lights at
+          // the left, the name centred over them, and nothing else.
+          <div className="relative flex h-7 items-center justify-center px-3">
+            <div className="absolute left-3">{trafficLights}</div>
+            <div className="flex min-w-0 items-center gap-1.5" style={{ color: focused ? MAC.text : MAC.textFaint }}>
+              <MacFileIcon kind={item.kind} size={14} />
+              <span className="truncate text-[13px] font-semibold">{item.title}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {isFolder && <FinderToolbar />}
-
       <div className={`flex ${sized ? "min-h-0 flex-1" : ""}`}>
-        {isFolder && <FinderSidebar />}
-        <div className={`min-w-0 flex-1 overflow-auto p-4 ${sized ? "min-h-0" : ""} ${scrollClass}`} style={bodyStyle}>
+        {isFolder && <FinderSidebar label={item.label} />}
+        <div
+          className={`min-w-0 flex-1 overflow-auto p-4 ${sized ? "min-h-0" : ""} ${scrollClass}`}
+          style={{ background: "#ffffff", ...bodyStyle }}
+        >
           {children}
         </div>
       </div>
 
       {isFolder && (
-        <div className="shrink-0 border-t border-black/5 bg-neutral-50/80 py-1 text-center text-[11px] text-neutral-500">{item.statusText}</div>
+        <div className="shrink-0 py-1 text-center text-[11px]" style={{ color: MAC.textSoft, boxShadow: `inset 0 0.5px 0 ${MAC.hairline}` }}>
+          {item.statusText}
+        </div>
       )}
 
       {resizeGrip}
@@ -1901,8 +1865,14 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
     labelClass = "px-1 text-white";
     labelStyle = { textShadow: "0 1px 2px rgba(0,0,0,0.7)" };
   } else if (theme === "mac") {
-    labelClass = `rounded-[5px] px-1.5 py-0.5 text-white ${selected ? "bg-[#0071e3]" : ""}`;
-    labelStyle = { textShadow: selected ? "none" : "0 1px 2px rgba(0,0,0,0.55)" };
+    // macOS selects the label, not the cell, and fills it with the accent in a
+    // rounded rectangle. The unselected label keeps a shadow so white text
+    // survives a light patch of wallpaper.
+    labelClass = "rounded-[4px] px-1.5 py-px text-white";
+    labelStyle = {
+      textShadow: selected ? "none" : "0 1px 3px rgba(0,0,0,0.6)",
+      backgroundColor: selected ? MAC.accent : "transparent",
+    };
   }
 
   return (
@@ -1925,10 +1895,10 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
       }}
       className={`desk-focus-95 flex shrink-0 flex-col items-center gap-[3px] p-[6px] text-center ${
         theme === "retro" ? "" : theme === "win11" ? "rounded-[4px]" : "rounded-lg"
-      } ${selected && theme === "mac" ? "bg-white/10" : ""}`}
+      }`}
     >
       <span
-        className={`flex items-center justify-center ${theme === "retro" ? "" : "drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"}`}
+        className={`flex items-center justify-center ${theme === "retro" ? "" : "drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"}`}
         style={{ width: cell.icon, height: cell.icon }}
       >
         {theme === "retro" ? (
@@ -1941,10 +1911,13 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
         ) : theme === "win11" ? (
           <Win11FileIcon kind={item.kind} size={cell.icon} />
         ) : (
-          itemGlyph(item.kind, "h-8 w-8")
+          <MacFileIcon kind={item.kind} size={cell.icon} />
         )}
       </span>
-      <span className={`break-words leading-tight ${theme === "win11" ? "text-[12px]" : "text-[11px]"} ${labelClass}`} style={labelStyle}>
+      <span
+        className={`break-words leading-tight ${theme === "retro" ? "text-[11px]" : "text-[12px]"} ${labelClass}`}
+        style={labelStyle}
+      >
         {item.label}
       </span>
     </button>
@@ -2391,120 +2364,132 @@ function StartMenu11({ name, role, entries, recent, theme, onOpen, onOpenAll, on
   );
 }
 
-function DockIcon({ item, active, onClick }) {
-  let inner;
-  if (item.kind === "folder" || item.kind === "computer") {
-    inner = <IconFinderLogo className="h-full w-full" />;
-  } else if (item.kind === "bin") {
-    inner = (
-      <>
-        <span className="absolute inset-0" style={{ background: DOCK_GRADIENTS.bin }} />
-        <span className="relative text-neutral-600">{trashWireGlyph("h-6 w-6")}</span>
-      </>
-    );
-  } else if (item.kind === "file") {
-    inner = (
-      <>
-        <span className="absolute inset-0" style={{ background: DOCK_GRADIENTS.file }} />
-        <span className="relative text-[#7a5a12]">{notesLinesGlyph("h-6 w-6")}</span>
-      </>
-    );
-  } else {
-    inner = (
-      <>
-        <span className="absolute inset-0" style={{ background: DOCK_GRADIENTS[item.kind] || DOCK_GRADIENTS.mail }} />
-        <span className="relative text-white">{monoGlyph(item.kind, "h-6 w-6")}</span>
-      </>
-    );
-  }
-
+// A Dock tile is the app icon and nothing else: macOS icons carry their own
+// silhouette, shadow and rounding, so putting one on a rounded plate is a tell.
+// A running app gets a small dot under it, which is the whole indicator.
+function DockIcon({ item, tile, active, onClick }) {
   return (
-    <button type="button" onClick={onClick} title={item.label} aria-label={item.label} className="desk-dock-item group flex flex-col items-center">
-      <span className="desk-dock-tile relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-[13px] shadow-lg ring-1 ring-black/10">
-        {inner}
+    <button type="button" onClick={onClick} aria-label={item.label} className="desk-dock-item group relative flex flex-col items-center">
+      {/* macOS names the icon in a bubble above the Dock rather than in a
+          tooltip at the pointer. It sits outside the magnified tile so it does
+          not grow with it. */}
+      <span
+        aria-hidden
+        className="desk-dock-label pointer-events-none absolute bottom-full left-1/2 mb-3 -translate-x-1/2 whitespace-nowrap rounded-[6px] px-2 py-1 text-[12px] backdrop-blur-xl"
+        style={{ background: "rgba(246,246,246,0.9)", color: MAC.text, boxShadow: `0 4px 14px rgba(0,0,0,0.25), inset 0 0 0 0.5px ${MAC.hairline}` }}
+      >
+        {item.label}
       </span>
-      <span className={`mt-1 h-1 w-1 rounded-full bg-black/70 ${active ? "opacity-100" : "opacity-0"}`} />
+      <span className="desk-dock-tile flex items-end justify-center" style={{ width: tile, height: tile }}>
+        <MacAppIcon kind={item.kind} size={tile} />
+      </span>
+      <span className={`mt-0.5 h-1 w-1 rounded-full bg-black/55 ${active ? "opacity-100" : "opacity-0"}`} />
     </button>
   );
 }
 
-function Dock({ entries, binItem, openIds, onOpen }) {
+function Dock({ entries, binItem, tile, openIds, onOpen }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
+    <div className="pointer-events-none absolute inset-x-0 bottom-2 z-30 flex justify-center px-3">
+      {/* No scroller here on purpose: any overflow value other than visible
+          clips both axes, and the magnified tile grows upward out of the bar.
+          macOS does not scroll its Dock either, it shrinks the tiles to fit,
+          which is what the caller works out and passes in. */}
       <nav
         aria-label="Dock"
-        className="desk-dock pointer-events-auto flex max-w-full items-end gap-2 overflow-x-auto rounded-[22px] border border-white/40 bg-white/25 px-2.5 py-2 shadow-2xl backdrop-blur-2xl"
+        className="desk-dock pointer-events-auto flex items-end gap-1 rounded-[24px] px-2 py-1.5 backdrop-blur-2xl"
+        style={{
+          background: "rgba(255, 255, 255, 0.28)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.35), inset 0 0 0 0.5px rgba(255,255,255,0.5)",
+        }}
       >
         {entries.map((entry) => (
-          <DockIcon key={entry.id} item={entry} active={openIds.has(entry.id)} onClick={() => onOpen(entry.id)} />
+          <DockIcon key={entry.id} item={entry} tile={tile} active={openIds.has(entry.id)} onClick={() => onOpen(entry.id)} />
         ))}
-        <span aria-hidden className="mx-1 h-9 w-px shrink-0 self-center bg-black/15" />
-        <DockIcon item={binItem} active={openIds.has(binItem.id)} onClick={() => onOpen(binItem.id)} />
+        <span aria-hidden className="mx-1.5 w-px shrink-0 self-center bg-black/15" style={{ height: tile * 0.85 }} />
+        <DockIcon item={binItem} tile={tile} active={openIds.has(binItem.id)} onClick={() => onOpen(binItem.id)} />
       </nav>
     </div>
   );
 }
 
+// The menu bar is 24px of vibrancy with no bottom rule, the app name in bold
+// beside the Apple logo, and status items on the right at 13px. The menu titles
+// change with the app, because Finder has a Go menu where TextEdit has Format,
+// and that is the sort of thing somebody who uses a Mac notices immediately.
 function MacMenuBar({ appName, clock, menuOpen, onMenu, theme, onTheme, onAbout, onOpenAll, onShutDown }) {
+  const menus = appName === "Finder" ? ["File", "Edit", "View", "Go", "Window", "Help"] : ["File", "Edit", "Format", "View", "Window", "Help"];
+  const row = "flex w-full items-center gap-2 rounded-[4px] px-3 py-[3px] text-left hover:bg-[#0071e3] hover:text-white";
+
   return (
-    <div className="relative z-40 flex h-7 shrink-0 select-none items-center justify-between border-b border-black/10 bg-white/55 px-3 text-[12.5px] text-neutral-800 backdrop-blur-2xl">
+    <div
+      className="relative z-40 flex h-6 shrink-0 select-none items-center justify-between px-3 text-[13px] backdrop-blur-2xl"
+      style={{ background: "rgba(250, 250, 250, 0.5)", color: MAC.text }}
+    >
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onMenu}
           aria-label="Apple menu"
           aria-expanded={menuOpen}
-          className={`-mx-1 rounded px-1 py-0.5 ${menuOpen ? "bg-black/10" : "hover:bg-black/5"}`}
+          className={`-mx-1.5 flex items-center rounded-[3px] px-1.5 py-0.5 ${menuOpen ? "bg-black/10" : "hover:bg-black/5"}`}
         >
-          <IconAppleLogo className="h-3.5 w-3.5" />
+          <MacGlyph name="apple-logo" size={14} />
         </button>
         <span className="font-semibold">{appName}</span>
-        <span aria-hidden className="hidden gap-4 text-neutral-600 sm:flex">
-          <span>File</span>
-          <span>Edit</span>
-          <span>View</span>
-          <span>Window</span>
-          <span>Help</span>
+        <span aria-hidden className="hidden gap-4 sm:flex">
+          {menus.map((menu) => (
+            <span key={menu}>{menu}</span>
+          ))}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-neutral-700">
-        <IconBatteryGlyph className="h-3.5 w-4" />
-        <IconWifiGlyph className="h-3.5 w-3.5" />
-        <IconControlCentre className="h-3.5 w-3.5" />
-        <IconSearch className="h-3.5 w-3.5" />
-        <span className="whitespace-nowrap tabular-nums">{clock}</span>
+      <div className="flex items-center gap-4">
+        <MacGlyph name="battery" size={11} />
+        <MacGlyph name="wifi" size={13} />
+        <MacGlyph name="volume" size={13} />
+        <MacGlyph name="control-center" size={13} />
+        <MacGlyph name="spotlight" size={13} />
+        <span className="whitespace-nowrap">{clock}</span>
       </div>
 
       {menuOpen && (
-        <div className="desk-menu-in absolute left-2 top-7 w-56 rounded-lg border border-black/10 bg-white/85 p-1 text-[13px] text-neutral-800 shadow-2xl backdrop-blur-2xl">
-          <button type="button" onClick={onAbout} className="w-full rounded px-2.5 py-1.5 text-left hover:bg-[#0071e3] hover:text-white">
+        // A macOS menu is a vibrancy sheet with 4px inner padding, rows that
+        // round their own highlight, and hairline separators inset from both
+        // edges. The ellipsis on an item that opens something further is a
+        // single character in this system, not three full stops.
+        <div
+          className="desk-menu-in absolute left-1.5 top-[26px] w-60 rounded-[6px] p-1 text-[13px] backdrop-blur-2xl"
+          style={{
+            background: "rgba(246, 246, 246, 0.82)",
+            color: MAC.text,
+            boxShadow: `0 12px 34px rgba(0,0,0,0.28), inset 0 0 0 0.5px ${MAC.hairline}`,
+          }}
+        >
+          <button type="button" onClick={onAbout} className={row}>
             About This Mac
           </button>
-          <button type="button" onClick={onOpenAll} className="w-full rounded px-2.5 py-1.5 text-left hover:bg-[#0071e3] hover:text-white">
+          <button type="button" onClick={onOpenAll} className={row}>
             Open Everything
           </button>
-          <div className="my-1 h-px bg-black/10" />
-          <p className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">System Settings</p>
+          <div className="my-1 h-px" style={{ background: MAC.hairline }} />
+          <p className="px-3 py-[3px] text-[11px] font-semibold" style={{ color: MAC.textFaint }}>
+            Desktop
+          </p>
           {[
             { id: "retro", label: "Windows 95" },
             { id: "win11", label: "Windows 11" },
             { id: "mac", label: "macOS" },
           ].map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onTheme(option.id)}
-              className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left hover:bg-[#0071e3] hover:text-white"
-            >
+            <button key={option.id} type="button" onClick={() => onTheme(option.id)} className={row}>
               <span className="w-3 shrink-0" aria-hidden>
                 {theme === option.id ? "✓" : ""}
               </span>
               {option.label}
             </button>
           ))}
-          <div className="my-1 h-px bg-black/10" />
-          <button type="button" onClick={onShutDown} className="w-full rounded px-2.5 py-1.5 text-left hover:bg-[#0071e3] hover:text-white">
-            Shut Down...
+          <div className="my-1 h-px" style={{ background: MAC.hairline }} />
+          <button type="button" onClick={onShutDown} className={row}>
+            Shut Down&hellip;
           </button>
         </div>
       )}
@@ -2541,8 +2526,10 @@ function PowerOverlay({ theme, onRestart }) {
     );
   } else {
     body = (
-      <div className="flex flex-col items-center gap-7 text-center text-white">
-        <IconAppleLogo className="h-11 w-11" />
+      <div className="flex flex-col items-center gap-8 text-center text-white">
+        {/* The logo, then the bar, and nothing written: a Mac shutting down
+            says nothing at all, which is the whole character of the screen. */}
+        <MacGlyph name="apple-logo" size={64} />
         <div className="h-1 w-44 overflow-hidden rounded-full bg-white/20">
           <span className="block h-full w-1/3 rounded-full bg-white/80" />
         </div>
@@ -2675,30 +2662,42 @@ function ShellDialog({ theme, title, lead, body, footnote, actions, onClose }) {
     );
   }
 
+  // A macOS alert: narrow, centred, the icon of the application raising it at
+  // 64px above a bold line and a smaller message, and the buttons stacked at
+  // the bottom with the default one filled in the accent. It carries no title
+  // bar and no close button, because an NSAlert has neither.
   return (
-    <div className="desk-window-in w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-black/10 bg-white/95 p-5 shadow-2xl backdrop-blur-2xl">
-      <div className="flex gap-3">
-        {itemGlyph("welcome", "h-8 w-8 shrink-0")}
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold text-neutral-900">{lead}</p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-600">{body}</p>
-          {footnote && <p className="mt-3 border-t border-black/5 pt-2.5 text-[12px] text-neutral-500">{footnote}</p>}
-        </div>
-      </div>
-      <div className="mt-5 flex flex-wrap justify-end gap-2">
+    <div
+      className="desk-window-in w-[min(300px,calc(100vw-2rem))] rounded-[12px] px-4 pb-4 pt-5 text-center backdrop-blur-2xl"
+      style={{
+        background: "rgba(246, 246, 246, 0.92)",
+        color: MAC.text,
+        boxShadow: `0 26px 70px rgba(0,0,0,0.45), inset 0 0 0 0.5px ${MAC.hairline}`,
+      }}
+    >
+      <MacIcon name="finder" size={64} className="mx-auto" />
+      <p className="mt-3 text-[13px] font-bold leading-4">{lead}</p>
+      <p className="mt-2 text-[11px] leading-4" style={{ color: MAC.textSoft }}>
+        {body}
+      </p>
+      {footnote && (
+        <p className="mt-2.5 text-[11px] leading-4" style={{ color: MAC.textFaint }}>
+          {footnote}
+        </p>
+      )}
+      {/* Stacked, not in a row: macOS lays alert buttons out vertically as soon
+          as the labels run longer than a word, with the default one on top. */}
+      <div className="mt-4 flex flex-col gap-2">
         {actions.map((action) => (
           <button
             key={action.label}
             type="button"
             onClick={action.onClick}
-            className={
+            className="h-7 rounded-[6px] text-[13px] transition-colors"
+            style={
               action.primary
-                ? `px-3.5 py-1.5 text-[13px] font-semibold text-white ${
-                    theme === "win11" ? "rounded-md bg-[#2563eb] hover:bg-[#1d4ed8]" : "rounded-full bg-[#0071e3] hover:bg-[#0077ed]"
-                  }`
-                : `px-3.5 py-1.5 text-[13px] font-medium text-neutral-700 hover:bg-black/5 ${
-                    theme === "win11" ? "rounded-md border border-black/10" : "rounded-full border border-black/10"
-                  }`
+                ? { background: MAC.accent, color: "#fff" }
+                : { background: "rgba(255, 255, 255, 0.85)", color: MAC.text, boxShadow: "inset 0 0 0 0.5px rgba(0, 0, 0, 0.16)" }
             }
           >
             {action.label}
@@ -2754,6 +2753,8 @@ function ClearedDialog({ theme, yearsXp, binLabel, onReopen, onDismiss }) {
   );
 }
 
+// Windows files its desktop icons on the left and macOS on the right, so the
+// switcher takes whichever top corner the icons are not using.
 function ShellSwitcher({ theme, onChange, offset }) {
   const options = [
     { id: "retro", label: "95" },
@@ -2761,7 +2762,12 @@ function ShellSwitcher({ theme, onChange, offset }) {
     { id: "mac", label: null },
   ];
   return (
-    <div className="pointer-events-auto absolute right-3 z-40 flex gap-1 rounded-full bg-black/35 p-1 backdrop-blur-md" style={{ top: offset }}>
+    <div
+      className={`pointer-events-auto absolute z-40 flex gap-1 rounded-full bg-black/35 p-1 backdrop-blur-md ${
+        theme === "mac" ? "left-3" : "right-3"
+      }`}
+      style={{ top: offset }}
+    >
       {options.map((option) => (
         <button
           key={option.id}
@@ -2773,7 +2779,7 @@ function ShellSwitcher({ theme, onChange, offset }) {
             theme === option.id ? "bg-white/90 text-black" : "text-white hover:bg-white/20"
           }`}
         >
-          {option.label ?? <IconAppleLogo className="h-3 w-3" />}
+          {option.label ?? <MacGlyph name="apple-logo" size={12} />}
         </button>
       ))}
     </div>
@@ -2935,6 +2941,11 @@ export default function RetroDesktopTemplate({ data }) {
   const iconColumns = Math.ceil((fileEntries.length + 3) / perColumn);
   const iconReserve = clamp(iconColumns * cell.cellW + 10, 0, Math.max(0, stage.w - MIN_W - 24));
 
+  // The Dock never scrolls: it shrinks its tiles until the row fits, the way
+  // macOS does when you pin more apps than there is room for. Two extra tiles
+  // beyond the files, for the machine and the Trash, plus the separator.
+  const dockTile = clamp(Math.floor((stage.w - 72) / (fileEntries.length + 2)) - 5, 30, 56);
+
   const openWindow = useCallback(
     (id, kind, slot) => {
       setSelectedIcon(id);
@@ -2958,8 +2969,12 @@ export default function RetroDesktopTemplate({ data }) {
         const w = clamp(Math.round(size.w * (spread?.scale ?? 1)), MIN_W, Math.max(MIN_W, stage.w - 16));
         const h = clamp(Math.round(size.h * (spread?.scale ?? 1)), MIN_H, Math.max(MIN_H, stage.h - 16));
 
-        const left = 6 + iconReserve;
-        const freeX = Math.max(0, stage.w - w - left - 12);
+        // Windows files its desktop icons down the left edge and macOS down
+        // the right, so the strip kept clear of windows swaps sides with the
+        // shell. Getting this backwards is one of those details nobody can
+        // name but everybody notices.
+        const left = 6 + (theme === "mac" ? 0 : iconReserve);
+        const freeX = Math.max(0, stage.w - w - left - 12 - (theme === "mac" ? iconReserve : 0));
         const freeY = Math.max(0, stage.h - h - 12);
         const band = Math.max(0, stage.h - 80);
 
@@ -2989,7 +3004,7 @@ export default function RetroDesktopTemplate({ data }) {
         ];
       });
     },
-    [stage.w, stage.h, compact, iconReserve],
+    [stage.w, stage.h, compact, iconReserve, theme],
   );
 
   function openFromListing(entry) {
@@ -3006,7 +3021,9 @@ export default function RetroDesktopTemplate({ data }) {
   const computerEntry = {
     id: "computer",
     kind: "computer",
-    label: "My Computer",
+    // Each system calls the machine something different, and the name is on
+    // the desktop where a visitor reads it first.
+    label: tokens.computerLabel,
     statusText: `${fileEntries.length + 1} object${fileEntries.length === 0 ? "" : "s"}`,
     body: (
       <FolderListing theme={theme} entries={[documentEntry, ...fileEntries]} emptyText="This folder is empty." onOpen={openFromListing} />
@@ -3174,7 +3191,15 @@ export default function RetroDesktopTemplate({ data }) {
   const today = now ? now.toLocaleDateString() : "";
   const macClock = now ? `${now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}  ${clock}` : clock;
   const frontItem = focusedId ? items[focusedId] : null;
-  const macAppName = !frontItem ? "Finder" : frontItem.kind === "file" ? "TextEdit" : frontItem.kind === "mail" ? "Mail" : "Finder";
+  // The menu bar names whichever application owns the front window, which is
+  // the one thing on a Mac that tells you what you are actually in.
+  const macAppName = !frontItem
+    ? "Finder"
+    : frontItem.kind === "mail"
+      ? "Mail"
+      : frontItem.kind === "folder" || frontItem.kind === "computer" || frontItem.kind === "bin"
+        ? "Finder"
+        : "TextEdit";
 
   function dismissMenus() {
     setStartOpen(false);
@@ -3228,7 +3253,9 @@ export default function RetroDesktopTemplate({ data }) {
               click on "empty desktop" actually lands on: clearing the
               selection and any open menu belongs here, not on the stage. */}
           <div
-            className="absolute inset-0 flex select-none flex-col flex-wrap content-start gap-0.5 p-2"
+            className={`absolute inset-0 flex select-none flex-col flex-wrap gap-0.5 p-2 ${
+              theme === "mac" ? "content-end" : "content-start"
+            }`}
             onPointerDown={(event) => {
               if (event.target === event.currentTarget) {
                 setSelectedIcon(null);
@@ -3297,7 +3324,13 @@ export default function RetroDesktopTemplate({ data }) {
         </div>
 
         {theme === "mac" && (
-          <Dock entries={[computerEntry, ...fileEntries]} binItem={binEntry} openIds={openIds} onOpen={(id) => openWindow(id, items[id].kind)} />
+          <Dock
+            entries={[computerEntry, ...fileEntries]}
+            binItem={binEntry}
+            tile={dockTile}
+            openIds={openIds}
+            onOpen={(id) => openWindow(id, items[id].kind)}
+          />
         )}
       </div>
 

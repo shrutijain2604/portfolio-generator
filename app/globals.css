@@ -1942,8 +1942,42 @@ html:has(.home-root) {
   line-height: 20px;
 }
 
+/* Inter, standing in for SF Pro, under the SIL Open Font License. Apple's own
+   licence does not cover serving SF Pro from a website, and on the machines
+   where the difference is visible the system already has the real thing and
+   resolves it first through -apple-system. Everyone else gets the closest
+   freely licensed match rather than a generic sans. */
+@font-face {
+  font-family: "Inter Web";
+  src: url("/retro-desktop/fonts/inter-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter Web";
+  src: url("/retro-desktop/fonts/inter-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter Web";
+  src: url("/retro-desktop/fonts/inter-semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* macOS sets its interface at 13px on a 16px line, everywhere: menu bar, menus,
+   window titles, sidebars and Finder alike. It is a full step smaller than
+   Windows 11's window text and one of the plainest signals of which system you
+   are looking at. */
 .desk-font-mac {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Web", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 16px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Windows 95 scrollbar: a dithered track, a raised thumb, and stepper
@@ -2013,25 +2047,44 @@ html:has(.home-root) {
   background-clip: content-box;
 }
 
+/* macOS hides its scrollbar until you scroll, then shows a 7px pill with no
+   track at all and no stepper buttons. The bar appearing on hover rather than
+   sitting there permanently is the part people recognise, and it is also why a
+   Finder window can put content right up to its own edge. */
 .desk-scroll-mac {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  scrollbar-color: transparent transparent;
+}
+.desk-scroll-mac:hover,
+.desk-scroll-mac:focus-within {
+  scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
 }
 .desk-scroll-mac::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
+}
+.desk-scroll-mac::-webkit-scrollbar-track {
+  background: transparent;
 }
 .desk-scroll-mac::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
+  background: transparent;
+  background-clip: content-box;
+  transition: background-color 160ms ease;
+}
+.desk-scroll-mac:hover::-webkit-scrollbar-thumb,
+.desk-scroll-mac:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.28);
   background-clip: content-box;
 }
 
-/* Fluent System Icons, drawn as masks so a Microsoft glyph takes the colour of
-   whatever control it sits in the way an icon font does. Only the size and the
-   source change per glyph; everything else is the same every time. */
-.desk-glyph-11 {
+/* Vendor glyphs, drawn as masks so a Microsoft or Apple symbol takes the colour
+   of whatever control it sits in the way an icon font does. Only the size and
+   the source change per glyph; everything else is the same every time. macOS
+   symbols are not square, so the caller sets both dimensions from the artwork
+   rather than assuming one. */
+.desk-glyph {
   display: inline-block;
   flex-shrink: 0;
   background-color: currentColor;
@@ -2120,18 +2173,33 @@ html:has(.home-root) {
 /* The Dock's magnification is the single gesture people identify macOS by.
    It is pure CSS: the hovered tile lifts and grows, its immediate neighbours
    grow less, and the row keeps its baseline because every tile scales from
-   its bottom edge. */
-.desk-dock-item {
+   its bottom edge.
+
+   The transform sits on the tile rather than on the button so the name bubble
+   above it and the running dot below it keep their own size, which is how the
+   real Dock behaves. The Dock itself must never be given an overflow value:
+   any value other than visible clips both axes, and a tile that grows upward
+   out of the bar is the whole effect. */
+.desk-dock-tile {
   transform-origin: bottom center;
   transition: transform 170ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
-.desk-dock-item:hover,
-.desk-dock-item:focus-visible {
+.desk-dock-item:hover .desk-dock-tile,
+.desk-dock-item:focus-visible .desk-dock-tile {
   transform: translateY(-9px) scale(1.32);
 }
-.desk-dock-item:has(+ .desk-dock-item:hover),
-.desk-dock-item:hover + .desk-dock-item {
+.desk-dock-item:has(+ .desk-dock-item:hover) .desk-dock-tile,
+.desk-dock-item:hover + .desk-dock-item .desk-dock-tile {
   transform: translateY(-4px) scale(1.15);
+}
+
+.desk-dock-label {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.desk-dock-item:hover .desk-dock-label,
+.desk-dock-item:focus-visible .desk-dock-label {
+  opacity: 1;
 }
 
 /* The bounce a Dock icon makes when its window opens, and the pulse the
@@ -2162,14 +2230,16 @@ html:has(.home-root) {
     opacity: 0.75;
   }
   /* Magnification is decoration, so it goes. The hover state still has to
-     answer the pointer, so the tile keeps a small, motionless lift. */
-  .desk-dock-item {
+     answer the pointer, so the tile keeps a motionless outline and the name
+     bubble still appears. */
+  .desk-dock-tile,
+  .desk-dock-label {
     transition: none;
   }
-  .desk-dock-item:hover,
-  .desk-dock-item:focus-visible,
-  .desk-dock-item:has(+ .desk-dock-item:hover),
-  .desk-dock-item:hover + .desk-dock-item {
+  .desk-dock-item:hover .desk-dock-tile,
+  .desk-dock-item:focus-visible .desk-dock-tile,
+  .desk-dock-item:has(+ .desk-dock-item:hover) .desk-dock-tile,
+  .desk-dock-item:hover + .desk-dock-item .desk-dock-tile {
     transform: none;
   }
   .desk-dock-item:hover .desk-dock-tile,
