@@ -6,6 +6,7 @@ import OrbitMount from "@/components/motion/OrbitMount";
 import CreativeThreadMount from "@/components/motion/CreativeThreadMount";
 import ThoughtsMount from "@/components/motion/ThoughtsMount";
 import GearsMount from "@/components/motion/GearsMount";
+import CelebrationMount from "@/components/motion/CelebrationMount";
 
 export const metadata = {
   title: "Motion",
@@ -46,6 +47,13 @@ export default function MotionPage() {
           <p className="home-label">Gears</p>
           <div className="mt-4 rounded-[var(--home-radius)] border border-[var(--home-rule)] bg-[var(--home-surface)]">
             <GearsMount />
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <p className="home-label">Celebration</p>
+          <div className="mt-4 rounded-[var(--home-radius)] border border-[var(--home-rule)] bg-[var(--home-surface)]">
+            <CelebrationMount />
           </div>
         </section>
       </div>

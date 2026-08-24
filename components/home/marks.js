@@ -21,6 +21,16 @@ export function ArrowRight(props) {
   );
 }
 
+export function BriefMark(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 3.5h7.5L18 8v12.5H6V3.5Z" />
+      <path d="M13.5 3.5V8H18" />
+      <path d="M9 12.5h6M9 16h4" />
+    </svg>
+  );
+}
+
 export function GitHubMark(props) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>

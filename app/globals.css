@@ -1532,6 +1532,74 @@ html:has(.home-root) {
   transform-origin: top left;
 }
 
+/* The hero's proof. Two addresses on one navy slab, which is the same material
+   the handoff plates are cut from, so the claim above the fold and the argument
+   below it are visibly the same object seen twice. Set in mono because these
+   are addresses, and a developer reads a repo path faster than a sentence about
+   one. */
+.home-hero-slab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1.15rem;
+  padding: 0.95rem 1.15rem;
+  border-radius: var(--home-radius);
+  box-shadow:
+    0 2px 4px rgba(20, 54, 93, 0.08),
+    0 22px 40px -26px rgba(20, 54, 93, 0.45);
+}
+.home-hero-slab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13.5px;
+  color: var(--home-strong);
+}
+/* Hidden once the row wraps: a vertical rule between two stacked items is a
+   rule pointing the wrong way. */
+.home-hero-slab-rule {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(248, 229, 216, 0.2);
+}
+@media (max-width: 30rem) {
+  .home-hero-slab-rule {
+    display: none;
+  }
+}
+/* The stamp. Peach on navy is the strongest pairing this palette has, spent
+   here on the one word the whole page is arguing for. */
+.home-hero-slab-tag {
+  margin-left: auto;
+  padding: 0.34rem 0.72rem;
+  border-radius: 999px;
+  background: var(--home-strong);
+  color: #14365d;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+/* Vendor marks sitting inside a line of text rather than beside it. The em
+   sizing keeps them locked to the type if the step ever changes, and the
+   negative vertical-align sets them on the baseline instead of hanging them
+   off the cap height.
+
+   Both marks also carry width and height ATTRIBUTES in the markup. An svg with
+   neither an intrinsic size nor a CSS one falls back to filling its containing
+   block, so if this rule ever fails to arrive the logos do not merely look
+   wrong, they blow up to the width of the column and shove the hero off the
+   screen. The attributes are the floor; this rule still wins over them. */
+.home-hero-mark {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.17em;
+  margin-right: 0.14em;
+}
+
 /* Gallery thumbnails. These scales deliberately OVERFILL their column at
    every breakpoint and let the right edge crop, because the column is fluid
    and a scale that merely fits the widest case leaves a dead black gutter
@@ -1820,6 +1888,174 @@ html:has(.home-root) {
   .home-beat:hover .home-beat-plate,
   .home-beat:focus-within .home-beat-plate {
     transform: translate3d(0, -3px, 0);
+  }
+}
+
+/* The commission desk. Choices on the left are written onto a document on the
+   right, and that document is what gets mailed, so the motion here is doing
+   the one job motion is allowed to do on this page: showing a relationship
+   between two things that would otherwise look unrelated. */
+
+/* Choice chips. Real radios and checkboxes underneath, so arrow keys, grouping
+   and the checked state all come from the platform; the styling hangs off
+   :has() rather than a JavaScript class, which is what keeps the input the
+   source of truth instead of a mirror of it. */
+.home-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.15rem;
+  border: 1px solid var(--home-rule);
+  border-radius: 999px;
+  background: var(--home-surface);
+  color: var(--home-dim);
+  font-size: 15px;
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    color 200ms var(--home-ease),
+    background-color 200ms var(--home-ease),
+    border-color 200ms var(--home-ease),
+    transform 200ms var(--home-ease);
+}
+.home-chip:hover {
+  color: var(--home-strong);
+  border-color: rgba(20, 54, 93, 0.34);
+  transform: translate3d(0, -1px, 0);
+}
+.home-chip:has(:checked) {
+  background: var(--home-strong);
+  border-color: var(--home-strong);
+  color: var(--home-bg);
+}
+.home-chip:has(:focus-visible) {
+  outline: 2px solid var(--home-strong);
+  outline-offset: 3px;
+}
+/* The dot fills as the chip is taken, so the state is carried by a shape as
+   well as by colour. */
+.home-chip-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.3;
+  transform: scale(0.7);
+  transition:
+    opacity 200ms var(--home-ease),
+    transform 200ms var(--home-ease);
+}
+.home-chip:has(:checked) .home-chip-dot {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* The quiet alternative beside a filled button. Same treatment as the footer
+   links, declared separately because that rule is sized for the footer and
+   this one has to sit on a baseline with a pill. */
+.home-quiet-link {
+  font-size: 13px;
+  color: var(--home-dim);
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 200ms var(--home-ease);
+}
+.home-quiet-link:hover {
+  color: var(--home-strong);
+  text-decoration-line: underline;
+}
+.home-quiet-link:focus-visible {
+  outline: 2px solid var(--home-strong);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.home-field {
+  border: 1px solid var(--home-rule);
+  background: var(--home-surface);
+  color: var(--home-text);
+  transition:
+    border-color 200ms var(--home-ease),
+    box-shadow 200ms var(--home-ease);
+}
+.home-field::placeholder {
+  color: var(--home-faint);
+}
+.home-field:focus-visible {
+  outline: none;
+  border-color: var(--home-strong);
+  box-shadow: 0 0 0 3px rgba(20, 54, 93, 0.14);
+}
+
+/* The brief turns to face the reader the moment they start filling it in, and
+   the tilt only exists where the plate actually sits beside the questions.
+   Stacked under them on a phone, a rotated document is just a document that is
+   harder to read. */
+.home-brief-plate {
+  box-shadow:
+    0 2px 4px rgba(20, 54, 93, 0.08),
+    0 26px 46px -26px rgba(20, 54, 93, 0.42);
+  transition:
+    transform 600ms var(--home-ease),
+    box-shadow 600ms var(--home-ease);
+}
+@media (min-width: 1024px) {
+  .home-brief-stage {
+    perspective: 1600px;
+  }
+  .home-brief-plate {
+    transform-origin: right center;
+    transform: rotateY(-7deg);
+  }
+  .home-commission:hover .home-brief-plate,
+  .home-commission:focus-within .home-brief-plate {
+    transform: rotateY(0deg) translateZ(34px);
+    box-shadow:
+      0 4px 10px rgba(20, 54, 93, 0.12),
+      0 48px 74px -30px rgba(20, 54, 93, 0.5);
+  }
+}
+
+/* A line arriving in the document. It enters from the side the choice was made
+   on, which is the whole point: the chip did not just light up, it wrote this. */
+@keyframes home-brief-write {
+  from {
+    opacity: 0;
+    transform: translate3d(-8px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.home-brief-line {
+  animation: home-brief-write 340ms var(--home-ease) both;
+}
+
+/* Reduced motion keeps everything the motion means: the line still appears
+   where it was written and the plate still faces the reader. Only the travel
+   and the turn stop. */
+@media (prefers-reduced-motion: reduce) {
+  .home-brief-line {
+    animation: none;
+  }
+  .home-chip,
+  .home-chip-dot {
+    transition-duration: 1ms;
+  }
+  .home-chip:hover {
+    transform: none;
+  }
+  .home-brief-plate {
+    transform: none;
+    transition-duration: 1ms;
+  }
+  @media (min-width: 1024px) {
+    .home-commission:hover .home-brief-plate,
+    .home-commission:focus-within .home-brief-plate {
+      transform: none;
+    }
   }
 }
 

@@ -3,15 +3,13 @@ import Link from "next/link";
 import { templates } from "@/lib/portfolioData";
 import TemplatePreviewCard from "@/components/TemplatePreviewCard";
 import HeroDeck from "@/components/home/HeroDeck";
+import CommissionDesk from "@/components/home/CommissionDesk";
 import OrbitMount from "@/components/motion/OrbitMount";
 import CreativeThreadMount from "@/components/motion/CreativeThreadMount";
 import GearsMount from "@/components/motion/GearsMount";
 import ThoughtsMount from "@/components/motion/ThoughtsMount";
+import CelebrationMount from "@/components/motion/CelebrationMount";
 import { ArrowRight, GitHubMark, VercelMark } from "@/components/home/marks";
-
-// Countable claims read off the same source the app does, so prose on this
-// page cannot quietly go stale as templates are added or removed.
-const TEMPLATE_COUNT = templates.length;
 
 // Real routes only: each of these resolves to /editor/<id>.
 const FOOTER_TEMPLATES = templates.slice(0, 5);
@@ -92,6 +90,8 @@ export default function Home() {
         <MotionBreak>
           <ThoughtsMount />
         </MotionBreak>
+
+        <Commission />
       </main>
 
       <SiteFooter />
@@ -152,6 +152,12 @@ function SiteHeader() {
             How it works
           </a>
           <a
+            href="#custom"
+            className="home-label hidden transition-colors hover:text-[var(--home-strong)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--home-strong)] sm:inline"
+          >
+            Custom work
+          </a>
+          <a
             href="#templates"
             className="whitespace-nowrap rounded-full bg-[var(--home-strong)] px-4 py-2 text-[13px] font-medium text-[var(--home-bg)] transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--home-strong)]"
           >
@@ -176,8 +182,39 @@ function Hero() {
             <span className="home-em">compiled.</span>
           </h1>
 
-          <p className="mt-8 max-w-[34ch] text-[16px] leading-[1.6] text-[var(--home-dim)]">
-            Twelve developer portfolios that look nothing alike, deployed to your own GitHub and Vercel.
+          <p className="mt-8 max-w-[46ch] text-[16px] leading-[1.6] text-[var(--home-dim)]">
+            Developer portfolios that look nothing alike.
+          </p>
+
+          {/* The differentiator, shown rather than claimed. Written out as a
+              sentence it read as one more feature and got skipped, and anyone
+              who never scrolls past the fold is exactly the person who needs to
+              know this is not another site that rents you a subdomain.
+
+              So the two things a customer actually walks away with are put on
+              screen as the artifacts themselves, in the same navy the handoff
+              plates use further down, carrying the same two addresses those
+              plates carry. The stamp is the whole argument in one word. */}
+          <div className="home-hero-slab home-inset mt-8 max-w-[36rem]">
+            <span className="home-hero-slab-item">
+              <GitHubMark className="home-hero-mark" width={18} height={18} aria-hidden="true" />
+              github.com/you/portfolio
+            </span>
+            <span className="home-hero-slab-rule" aria-hidden="true" />
+            <span className="home-hero-slab-item">
+              <VercelMark className="home-hero-mark" width={18} height={18} aria-hidden="true" />
+              you.vercel.app
+            </span>
+            <span className="home-hero-slab-tag">Yours</span>
+          </div>
+
+          {/* Deliberately silent on price. The cost is stated plainly in the
+              handoff section and again in the footer, so it is disclosed before
+              anyone commits to anything; leading with it above the fold only
+              loses the people who have not yet been told what they get. */}
+          <p className="mt-5 max-w-[38ch] text-[15px] leading-[1.6] text-[var(--home-dim)]">
+            Both land in accounts you already own, so your portfolio never depends on this app to
+            stay online.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
@@ -274,7 +311,7 @@ function Handoff() {
         <div className="flex flex-col items-start gap-3 lg:items-center">
           <span className="home-beat-end" aria-hidden="true" />
           <p className="home-label">
-            All {TEMPLATE_COUNT} templates ship as their own standalone app
+            Every template ships as its own standalone app
           </p>
         </div>
       </div>
@@ -366,6 +403,49 @@ function HandoffBeat({ item, index }) {
   );
 }
 
+// The page has spent two sections arguing for the template gallery, so it
+// closes by admitting what a gallery cannot do. This is the only section
+// written in the first person, deliberately: the rest of the page is about a
+// product, and this part is about hiring a person.
+function Commission() {
+  return (
+    <section id="custom" className="home-band scroll-mt-16 pb-24 pt-14 lg:pb-28 lg:pt-20">
+      <div className="mx-auto w-full max-w-[86rem] px-6 lg:px-10">
+        {/* Same split the handoff header uses: the claim on the left, the
+            drawn graphic holding the column beside it, so the statement is not
+            left sitting against half a screen of empty ground. */}
+        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,52ch)_minmax(0,1fr)] lg:gap-12">
+          <div className="home-reveal">
+            <p className="home-label">
+              <span className="home-nums">03</span> Custom work
+            </p>
+            <h2 className="home-grotesque home-display-lg mt-5">
+              None of these? Then I&rsquo;ll <em className="home-em">build</em> it.
+            </h2>
+            <p className="mt-8 text-[16px] leading-[1.6] text-[var(--home-dim)]">
+              I am Shruti, the engineer behind this site and every template on it. If you already
+              know the portfolio you want and none of the ones above is it, commission it.
+              Your idea, your data, built to the same standard, and handed over the same way: the
+              source lands in your GitHub and it ships on your Vercel.
+            </p>
+            <p className="mt-5 text-[16px] leading-[1.6] text-[var(--home-dim)]">
+              Answer the three questions below and the brief writes itself. Send it when it says
+              what you mean.
+            </p>
+          </div>
+
+          <div className="home-reveal lg:pl-12" style={{ "--home-stagger": "4%" }}>
+            <CelebrationMount />
+          </div>
+        </div>
+
+        <div className="mt-14">
+          <CommissionDesk />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // The one blue field on the site. Every link here resolves to a route that
 // actually exists: no invented legal, social or docs pages.
@@ -394,7 +474,7 @@ function SiteFooter() {
               ))}
               <li>
                 <a href="#templates" className="home-footer-link">
-                  All {TEMPLATE_COUNT} templates
+                  Browse every template
                 </a>
               </li>
             </ul>
@@ -412,6 +492,11 @@ function SiteFooter() {
                 <Link href={`/editor/${FOOTER_TEMPLATES[0].id}`} className="home-footer-link">
                   Import a resume
                 </Link>
+              </li>
+              <li>
+                <a href="#custom" className="home-footer-link">
+                  Commission a custom build
+                </a>
               </li>
             </ul>
           </div>
