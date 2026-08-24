@@ -30,7 +30,19 @@ function MobileIcon(props) {
   );
 }
 
-// Pinned above the live preview (not inside the scrollable form) — a theme
+// Marks the one button that leaves the page. The two preview buttons sit
+// together and look alike, but only Desktop opens a tab, and without a cue
+// for that the pair reads as a toggle between two in-page states.
+function ExternalIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M8 16 16 8" />
+      <path d="M9.5 8H16v6.5" />
+    </svg>
+  );
+}
+
+// Pinned above the live preview (not inside the scrollable form). A theme
 // is only worth anything if it's seen, and it's easy to scroll past as just
 // another card in a long form. Sitting right next to the render it
 // controls, with zero scrolling or clicks needed to see it, is what makes
@@ -161,25 +173,42 @@ export default function PortfolioEditor({ template }) {
           </h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-y-2 gap-x-3">
-          <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500/10 to-sky-500/10 p-1 ring-1 ring-inset ring-indigo-500/25 dark:from-indigo-400/10 dark:to-sky-400/10 dark:ring-indigo-400/25">
-            <button
-              type="button"
-              onClick={openDesktopPreview}
-              title="See the full desktop layout in a new tab"
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-white hover:shadow-sm dark:text-indigo-300 dark:hover:bg-zinc-800"
-            >
-              <DesktopIcon className="h-3.5 w-3.5" />
-              Desktop
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMobilePreview(true)}
-              title="See how this looks on a phone"
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-white hover:shadow-sm dark:text-indigo-300 dark:hover:bg-zinc-800"
-            >
-              <MobileIcon className="h-3.5 w-3.5" />
-              Mobile
-            </button>
+          {/* Two actions, not a toggle: neither button has a selected state,
+              so the group is drawn as one bordered object split by a hairline
+              rather than as a segmented control that implies one of the two is
+              currently on. The label names what the pair is for, which the
+              buttons alone never said. */}
+          <div className="flex items-center gap-2.5">
+            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 sm:inline dark:text-zinc-500">
+              Preview
+            </span>
+            <div className="flex items-center rounded-full border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={openDesktopPreview}
+                title="See the full desktop layout in a new tab"
+                className="group flex items-center gap-1.5 rounded-l-full py-2 pl-3.5 pr-3 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+              >
+                <DesktopIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Desktop
+                <ExternalIcon
+                  className="h-2.5 w-2.5 shrink-0 text-zinc-400 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px dark:text-zinc-500"
+                  aria-hidden="true"
+                />
+              </button>
+
+              <span className="h-4 w-px shrink-0 bg-zinc-200 dark:bg-zinc-800" aria-hidden="true" />
+
+              <button
+                type="button"
+                onClick={() => setShowMobilePreview(true)}
+                title="See how this looks on a phone"
+                className="flex items-center gap-1.5 rounded-r-full py-2 pl-3 pr-3.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+              >
+                <MobileIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Mobile
+              </button>
+            </div>
           </div>
           <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
             Autosaved to this browser
