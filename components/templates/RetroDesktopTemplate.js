@@ -35,6 +35,28 @@ const SUNKEN_THIN = "inset 1px 1px 0 #808080, inset -1px -1px 0 #fff";
 const TITLE_ACTIVE = "linear-gradient(90deg, #000080, #1084d0)";
 const TITLE_IDLE = "linear-gradient(90deg, #7f7f7f, #b4b4b4)";
 
+// Windows 11 publishes the colours it paints itself with, down to the odd
+// alphas, and an Explorer window in light mode is exactly these values. Reading
+// them off the design system rather than reaching for a nearby Tailwind blue is
+// the difference between a Windows window and a modern-looking one.
+const W11 = {
+  mica: "#f3f3f3",
+  layer: "rgba(255, 255, 255, 0.7)",
+  stroke: "rgba(0, 0, 0, 0.0578)",
+  divider: "rgba(0, 0, 0, 0.0803)",
+  text: "rgba(0, 0, 0, 0.8956)",
+  textSoft: "rgba(0, 0, 0, 0.6063)",
+  textFaint: "rgba(0, 0, 0, 0.4458)",
+  hover: "rgba(0, 0, 0, 0.0373)",
+  accent: "#0067c0",
+  accentHover: "#1975c5",
+  // The accent shifts lighter on dark surfaces, which is why the taskbar's
+  // running-app line is not the same blue as a button in a window.
+  accentLight: "#60cdff",
+  // The one colour in the system that means "this button ends something".
+  closeHover: "#c42b1c",
+};
+
 const THEME_TOKENS = {
   retro: {
     wallpaper: "/retro_classic_wallpaper.jpeg",
@@ -48,11 +70,11 @@ const THEME_TOKENS = {
   win11: {
     wallpaper: "/windows_11.jpg",
     glow: "130, 160, 255",
-    linkColor: "#2563eb",
+    linkColor: "#0067c0",
     font: "desk-font-11",
     scroll: "desk-scroll-11",
     binLabel: "Recycle Bin",
-    taskbar: 56,
+    taskbar: 48,
   },
   mac: {
     wallpaper: "/Macbook-Pro-Wallpaper-4K-Desktop.jpg",
@@ -91,12 +113,17 @@ const WINDOW_SIZE = {
 const MIN_W = 300;
 const MIN_H = 200;
 
-// One desktop icon cell, width and height, matching the size DesktopIcon
-// renders at. The height is rounded up on purpose: it decides how many
+// One desktop icon cell per shell, matching what DesktopIcon renders. The two
+// systems disagree: Windows 95 drew a 32 pixel icon under a single line of
+// 11px text, and Windows 11 draws a 48 pixel one with room for two lines. The
+// cell measurements are rounded up on purpose, since they decide how many
 // columns the icon field wraps into, and over-counting a column costs a strip
 // of wallpaper, while under-counting buries an icon under a window.
-const ICON_CELL_W = 88;
-const ICON_CELL_H = 92;
+const ICON_METRICS = {
+  retro: { button: 80, cellW: 88, cellH: 92, icon: 32 },
+  win11: { button: 94, cellW: 100, cellH: 108, icon: 48 },
+  mac: { button: 80, cellW: 88, cellH: 92, icon: 32 },
+};
 
 // Where the windows land when the desktop boots with everything already open.
 //
@@ -293,39 +320,6 @@ function Glyph95Close(props) {
   );
 }
 
-function IconMinimizeLine(props) {
-  return (
-    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden {...props}>
-      <path d="M1 5h8" />
-    </svg>
-  );
-}
-
-function IconMaximizeLine(props) {
-  return (
-    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden {...props}>
-      <rect x="1.5" y="1.5" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-
-function IconRestoreLine(props) {
-  return (
-    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden {...props}>
-      <rect x="1" y="3.2" width="5.8" height="5.8" rx="1" />
-      <path d="M3.4 3.2V2a1 1 0 0 1 1-1H8a1 1 0 0 1 1 1v3.6a1 1 0 0 1-1 1H6.8" />
-    </svg>
-  );
-}
-
-function IconCloseLine(props) {
-  return (
-    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" aria-hidden {...props}>
-      <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" />
-    </svg>
-  );
-}
-
 function IconSearch(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden {...props}>
@@ -505,61 +499,6 @@ function IconFinderLogo({ className }) {
   );
 }
 
-// Windows 11 taskbar app logos: each open thing gets its own branded-looking
-// tile instead of the desktop's file glyph, the way Explorer, Notepad and Mail
-// each have their own.
-function IconNotepadLogo({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="#0a63c9" />
-      <rect x="6.5" y="5" width="11" height="14" rx="1" fill="#fff" />
-      <path d="M9 9h6M9 12h6M9 15h4" stroke="#0a63c9" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconExplorerLogo({ className }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <path d="M2 11a2 2 0 0 1 2-2h9l2.5 3H4a2 2 0 0 0-2 2v-3Z" fill="#bfe1ff" />
-      <path d="M4 13h24a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V13Z" fill="#3a8ee6" />
-      <path d="M4 13h24v3H4z" fill="#7fc1ff" />
-    </svg>
-  );
-}
-
-function IconMailLogo({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="#2f7de1" />
-      <rect x="5" y="7" width="14" height="10" rx="1.5" fill="#fff" />
-      <path d="M5.5 7.5 12 13l6.5-5.5" fill="none" stroke="#2f7de1" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
-function IconTrophyLogo({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="#d97706" />
-      <path d="M8.5 7h7v3a3.5 3.5 0 0 1-7 0V7Z" fill="#fff" />
-      <path d="M8.5 8H7a1 1 0 0 0-1 1c0 1.6 1.1 2.4 2.4 2.6M15.5 8H17a1 1 0 0 1 1 1c0 1.6-1.1 2.4-2.4 2.6" fill="none" stroke="#fff" strokeWidth="1" />
-      <rect x="10.8" y="10.3" width="2.4" height="3.7" fill="#fff" />
-      <path d="M8.7 17h6.6" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconComputerLogo({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect x="2" y="2" width="20" height="20" rx="5" fill="#155e9c" />
-      <rect x="5.5" y="6" width="13" height="9" rx="1" fill="#eaf5ff" />
-      <path d="M8.5 18h7" stroke="#eaf5ff" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 // The one document that holds everything: a page with a heading block, so it
 // reads as a résumé rather than as another text file among the text files.
 function IconDocument({ className }) {
@@ -621,6 +560,77 @@ function Win95Chrome({ name, size = 16, className = "" }) {
       draggable={false}
       className={`desk-pixel shrink-0 ${className}`}
       style={{ width: size, height: size }}
+    />
+  );
+}
+
+// Windows 11 draws two different icons for the same thing at the same time:
+// the document's own icon wherever the file appears, and the icon of the
+// application that opens it in the taskbar and the title bar. Both maps are
+// real shell artwork, so a .txt looks like a .txt on the desk and like Notepad
+// on the taskbar, which is exactly what the system does.
+const WIN11_FILE_ICONS = {
+  document: "text-document",
+  file: "text-document",
+  // Windows has no icon for an achievement, and neither has this desktop: an
+  // Achievements.txt is a text file and is drawn as one.
+  award: "text-document",
+  folder: "folder",
+  computer: "this-pc",
+  mail: "mail",
+  bin: "recycle-bin-empty",
+};
+
+const WIN11_APP_ICONS = {
+  document: "notepad",
+  file: "notepad",
+  award: "notepad",
+  folder: "explorer",
+  computer: "explorer",
+  mail: "mail",
+  bin: "recycle-bin-empty",
+};
+
+// One 256px source per icon, drawn down by the browser. next/image is the usual
+// choice, but these appear at half a dozen sizes across the shell and it would
+// fetch a separate variant for each; a single source cached once is the cheaper
+// trade, and at these sizes the artwork is downscaled either way.
+function Win11Icon({ name, size, className = "" }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- one shared 256px source drawn at many sizes; a per-size variant from the image pipeline buys nothing here
+    <img
+      src={`/retro-desktop/win11/${name}.png`}
+      alt=""
+      width={size}
+      height={size}
+      draggable={false}
+      className={`shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+function Win11FileIcon({ kind, size, className }) {
+  return <Win11Icon name={WIN11_FILE_ICONS[kind] || "text-document"} size={size} className={className} />;
+}
+
+function Win11AppIcon({ kind, size, className }) {
+  return <Win11Icon name={WIN11_APP_ICONS[kind] || "notepad"} size={size} className={className} />;
+}
+
+// Microsoft's own Fluent System Icons, loaded as a mask so each glyph takes the
+// colour of the control it sits in the way an icon font does. They are the same
+// shapes Windows 11 uses for its window controls, its tray and Explorer's
+// command bar, so none of this shell's chrome is a drawn approximation of a
+// Microsoft glyph. The set is 20px artwork on a 16 unit body, which is why 16
+// is the size everything here asks for: it lands the stroke on a pixel.
+function FluentGlyph({ name, size = 16, className = "" }) {
+  const source = `url("/retro-desktop/win11/${name}.svg")`;
+  return (
+    <span
+      aria-hidden
+      className={`desk-glyph-11 ${className}`}
+      style={{ width: size, height: size, maskImage: source, WebkitMaskImage: source }}
     />
   );
 }
@@ -694,17 +704,6 @@ function itemGlyph(kind, className) {
   if (kind === "bin") return <IconTrash className={className} />;
   if (kind === "welcome") return <IconInfo className={className} />;
   return <IconFile className={className} />;
-}
-
-function taskbarLogo(kind, className) {
-  if (kind === "document") return <IconDocument className={className} />;
-  if (kind === "folder") return <IconExplorerLogo className={className} />;
-  if (kind === "mail") return <IconMailLogo className={className} />;
-  if (kind === "award") return <IconTrophyLogo className={className} />;
-  if (kind === "computer") return <IconComputerLogo className={className} />;
-  if (kind === "bin") return <IconTrash className={className} />;
-  if (kind === "welcome") return <IconInfo className={className} />;
-  return <IconNotepadLogo className={className} />;
 }
 
 const DOCK_GRADIENTS = {
@@ -1001,10 +1000,12 @@ function ActionButton({ theme, href, icon, children }) {
     );
   }
   if (theme === "win11") {
+    // A Windows 11 accent button: 32 tall, 4px corners, and the system accent
+    // rather than a blue picked to look like it.
     return (
       <a
         href={href}
-        className="flex items-center gap-1.5 rounded-md bg-[#2563eb] px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+        className="flex h-8 items-center gap-2 rounded-[4px] bg-[#0067c0] px-3.5 text-[14px] text-white transition-colors hover:bg-[#1975c5] active:bg-[#2b7cc9]"
       >
         {icon}
         {children}
@@ -1086,12 +1087,7 @@ function ContactBody({ theme, email, links }) {
 // as files, and openable from here exactly as they are out there. Large Icons
 // was the default view in every one of these shells, so that is the view.
 function FolderListing({ theme, entries, emptyText, onOpen }) {
-  const wrapper =
-    theme === "retro"
-      ? "bg-white p-2"
-      : theme === "win11"
-        ? "rounded-lg border border-black/5 bg-white p-3"
-        : "rounded-xl border border-black/5 bg-white p-3";
+  const wrapper = theme === "retro" ? "bg-white p-2" : theme === "win11" ? "-m-1 p-1" : "rounded-xl border border-black/5 bg-white p-3";
 
   if (entries.length === 0) {
     return (
@@ -1109,12 +1105,27 @@ function FolderListing({ theme, entries, emptyText, onOpen }) {
           type="button"
           onClick={() => onOpen(entry)}
           title={`Open ${entry.label}`}
-          className={`desk-focus-95 flex flex-col items-center gap-[3px] text-center ${
-            theme === "retro" ? "w-[80px] p-[6px] hover:bg-[#000080]/10" : "w-[92px] rounded-lg p-2 hover:bg-black/5"
+          className={`desk-focus-95 flex flex-col items-center gap-1.5 text-center ${
+            theme === "retro"
+              ? "w-[80px] p-[6px] hover:bg-[#000080]/10"
+              : theme === "win11"
+                ? "w-[104px] rounded-[4px] p-2.5 hover:bg-black/[0.037]"
+                : "w-[92px] rounded-lg p-2 hover:bg-black/5"
           }`}
         >
-          {theme === "retro" ? <Win95Icon kind={entry.kind} size={32} /> : itemGlyph(entry.kind, "h-8 w-8")}
-          <span className={`w-full break-words leading-tight ${theme === "retro" ? "text-black" : "text-[11px] text-neutral-700"}`}>
+          {theme === "retro" ? (
+            <Win95Icon kind={entry.kind} size={32} />
+          ) : theme === "win11" ? (
+            <Win11FileIcon kind={entry.kind} size={48} />
+          ) : (
+            itemGlyph(entry.kind, "h-8 w-8")
+          )}
+          <span
+            className={`w-full break-words leading-tight ${
+              theme === "retro" ? "text-black" : theme === "win11" ? "text-[12px]" : "text-[11px] text-neutral-700"
+            }`}
+            style={theme === "win11" ? { color: W11.text } : undefined}
+          >
             {entry.label}
           </span>
         </button>
@@ -1172,41 +1183,99 @@ function DocumentBody({ theme, blocks, binLabel }) {
 // Explorer and Finder furniture. It is set dressing, so it is hidden from
 // assistive tech and is not focusable: a Quick access list that navigates
 // nowhere would be a worse lie to a screen reader than to an eye.
-function ExplorerCommandBar({ label }) {
+// Explorer's two chrome rows as Windows 11 rebuilt them: the icon command bar
+// that replaced the ribbon, and the address row under it with the back, forward
+// and up arrows, the breadcrumb and the search box. Both are set dressing, so
+// they are inert and hidden from assistive tech: a Sort button that sorts
+// nothing would be a worse lie to a screen reader than to an eye.
+function ExplorerChrome11({ label }) {
+  const pill = { background: W11.layer, boxShadow: `inset 0 0 0 1px ${W11.stroke}` };
   return (
-    <div aria-hidden className="shrink-0 border-b border-black/5 bg-white/70">
-      <div className="flex items-center gap-0.5 overflow-hidden px-2 py-1.5 text-[11px] text-neutral-600">
-        {["New", "Cut", "Copy", "Rename", "Sort", "View"].map((entry) => (
-          <span key={entry} className="shrink-0 whitespace-nowrap rounded px-2 py-1 hover:bg-black/5">
-            {entry}
+    <div aria-hidden className="shrink-0 text-[12px]" style={{ color: W11.text }}>
+      <div className="flex h-10 items-center gap-0.5 overflow-hidden px-2">
+        <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[4px] py-1.5 pl-2 pr-2.5">
+          <FluentGlyph name="new" size={16} />
+          New
+          <span className="text-[8px]" style={{ color: W11.textSoft }}>
+            &#9662;
+          </span>
+        </span>
+        <span className="mx-1 h-4 w-px shrink-0" style={{ background: W11.divider }} />
+        {["cut", "copy", "paste", "rename", "delete"].map((glyph) => (
+          <span key={glyph} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px]">
+            <FluentGlyph name={glyph} size={16} />
           </span>
         ))}
+        <span className="mx-1 h-4 w-px shrink-0" style={{ background: W11.divider }} />
+        <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[4px] px-2 py-1.5 sm:flex">
+          <FluentGlyph name="sort" size={16} />
+          Sort
+        </span>
+        <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[4px] px-2 py-1.5 sm:flex">
+          <FluentGlyph name="view" size={16} />
+          View
+        </span>
       </div>
-      <div className="flex items-center gap-1.5 border-t border-black/5 px-3 py-1.5 text-[11px] text-neutral-500">
-        <IconChevronLeft className="h-3 w-3" />
-        <IconChevronRight className="h-3 w-3 opacity-40" />
-        <span className="ml-1.5 flex min-w-0 items-center gap-1 rounded border border-black/10 bg-white px-2 py-0.5">
-          <IconExplorerLogo className="h-3 w-3 shrink-0" />
-          <span className="truncate">This PC</span>
-          <IconChevronRight className="h-2.5 w-2.5 shrink-0 opacity-50" />
-          <span className="truncate text-neutral-700">{label}</span>
+
+      <div className="flex h-10 items-center gap-0.5 px-2">
+        {[
+          { glyph: "arrow-left", dim: false },
+          { glyph: "arrow-right", dim: true },
+          { glyph: "arrow-up", dim: false },
+        ].map((arrow) => (
+          <span
+            key={arrow.glyph}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px]"
+            style={{ color: arrow.dim ? W11.textFaint : W11.textSoft }}
+          >
+            <FluentGlyph name={arrow.glyph} size={16} />
+          </span>
+        ))}
+        <span className="ml-1 flex min-w-0 flex-1 items-center gap-1.5 rounded-[4px] px-2.5 py-1.5" style={pill}>
+          <Win11Icon name="this-pc" size={16} />
+          <span className="shrink-0" style={{ color: W11.textSoft }}>
+            This PC
+          </span>
+          <FluentGlyph name="chevron-right" size={12} className="opacity-40" />
+          <span className="truncate">{label}</span>
+        </span>
+        <span className="ml-1.5 hidden w-40 shrink-0 items-center gap-2 rounded-[4px] px-2.5 py-1.5 md:flex" style={pill}>
+          <span className="flex shrink-0" style={{ color: W11.textSoft }}>
+            <FluentGlyph name="search" size={14} />
+          </span>
+          <span className="truncate" style={{ color: W11.textFaint }}>
+            Search {label}
+          </span>
         </span>
       </div>
     </div>
   );
 }
 
-function ExplorerNav() {
+// The navigation pane, listing only the places this machine's own icons cover.
+// Inventing a OneDrive row with a borrowed glyph would be the kind of detail
+// that reads wrong precisely because everything around it reads right.
+function ExplorerNav11({ label }) {
   return (
-    <div aria-hidden className="hidden w-36 shrink-0 overflow-hidden border-r border-black/5 bg-neutral-50/70 p-2 text-[12px] text-neutral-700 sm:block">
-      <p className="px-2 py-1 text-[11px] font-semibold text-neutral-400">Quick access</p>
+    <div aria-hidden className="hidden w-[178px] shrink-0 overflow-hidden px-1.5 pt-1 text-[12px] sm:block" style={{ color: W11.text }}>
       {["Desktop", "Downloads", "Documents", "Pictures"].map((entry) => (
-        <div key={entry} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-black/5">
-          <IconFolder className="h-4 w-4" />
+        <div key={entry} className="flex h-8 items-center gap-2.5 rounded-[4px] px-2.5">
+          <Win11Icon name="folder" size={16} />
           <span className="truncate">{entry}</span>
         </div>
       ))}
-      <p className="mt-3 px-2 py-1 text-[11px] font-semibold text-neutral-400">This PC</p>
+      <div className="my-1.5 ml-2.5 h-px" style={{ background: W11.divider }} />
+      <div className="flex h-8 items-center gap-2.5 rounded-[4px] px-2.5">
+        <Win11Icon name="this-pc" size={16} />
+        <span className="truncate">This PC</span>
+      </div>
+      {/* Where you actually are, marked the way Explorer marks it: a tinted row
+          with an accent bar down the left edge. */}
+      <div className="relative flex h-8 items-center gap-2.5 rounded-[4px] px-2.5" style={{ background: W11.hover }}>
+        <span className="absolute left-0 top-1/2 h-3.5 w-[3px] -translate-y-1/2 rounded-full" style={{ background: W11.accent }} />
+        <Win11Icon name="folder" size={16} />
+        <span className="truncate">{label}</span>
+      </div>
     </div>
   );
 }
@@ -1295,11 +1364,94 @@ function Button95({ label, onClick, children }) {
   );
 }
 
+// A Windows 11 caption button is 46 wide by 32 tall with a 16px glyph, and the
+// close button is the only control in the system that turns red under the
+// pointer. Both of those are load-bearing: the proportions are what the eye
+// recognises, and the red is what stops anyone closing a window by accident.
+function CaptionButton11({ label, glyph, danger, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`flex h-8 w-[46px] shrink-0 items-center justify-center transition-colors ${
+        danger ? "hover:bg-[#c42b1c] hover:text-white" : "hover:bg-black/[0.055]"
+      }`}
+      style={{ color: "inherit" }}
+    >
+      <FluentGlyph name={glyph} size={16} />
+    </button>
+  );
+}
+
+// Snap Layouts, the arrangement grid Windows 11 drops when you hover a
+// maximise button. Each zone is a fraction of the desk, so one table covers
+// every stage size, and picking a zone really does move and resize the window:
+// the window manager already had everything it needed to honour it, which is
+// why this is the shell's one memorable gesture rather than a picture of one.
+const SNAP_LAYOUTS = [
+  [
+    [0, 0, 0.5, 1],
+    [0.5, 0, 0.5, 1],
+  ],
+  [
+    [0, 0, 0.66, 1],
+    [0.66, 0, 0.34, 1],
+  ],
+  [
+    [0, 0, 0.34, 1],
+    [0.34, 0, 0.32, 1],
+    [0.66, 0, 0.34, 1],
+  ],
+  [
+    [0, 0, 0.5, 0.5],
+    [0.5, 0, 0.5, 0.5],
+    [0, 0.5, 0.5, 0.5],
+    [0.5, 0.5, 0.5, 0.5],
+  ],
+];
+
+function SnapFlyout({ title, onSnap, onDismiss }) {
+  return (
+    <div
+      onPointerLeave={onDismiss}
+      className="desk-menu-in absolute right-0 top-full z-20 w-[236px] rounded-lg p-2 backdrop-blur-2xl"
+      style={{
+        background: "rgba(249, 249, 249, 0.92)",
+        boxShadow: `0 8px 24px rgba(0, 0, 0, 0.28), inset 0 0 0 1px ${W11.stroke}`,
+      }}
+    >
+      <div className="grid grid-cols-2 gap-2">
+        {SNAP_LAYOUTS.map((zones, layout) => (
+          <div key={layout} className="relative h-[56px] rounded-[4px]" style={{ background: "rgba(0, 0, 0, 0.045)" }}>
+            {zones.map((zone, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => onSnap(zone)}
+                aria-label={`Snap ${title} to position ${index + 1} of ${zones.length} in layout ${layout + 1}`}
+                className="desk-snap-zone absolute rounded-[3px]"
+                style={{
+                  left: `calc(${zone[0] * 100}% + 2px)`,
+                  top: `calc(${zone[1] * 100}% + 2px)`,
+                  width: `calc(${zone[2] * 100}% - 4px)`,
+                  height: `calc(${zone[3] * 100}% - 4px)`,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // One Window for all three shells. The frame, the controls and the furniture
 // change per theme; the drag, resize and focus behaviour does not, so a new
 // section is written once and behaves the same everywhere.
 function Window({ theme, item, win, zIndex, focused, compact, stage, children, onFocus, onClose, onMinimise, onToggleMax, onCommit }) {
   const rootRef = useRef(null);
+  const [snapOpen, setSnapOpen] = useState(false);
   const maximised = win.max || compact;
   const isFolder = item.kind === "folder" || item.kind === "computer" || item.kind === "bin";
   // A dialog is not an application window in any of these systems: no menu
@@ -1338,7 +1490,11 @@ function Window({ theme, item, win, zIndex, focused, compact, stage, children, o
 
   // Chrome eats into the room the content gets: a caption, plus a menu bar,
   // plus Explorer's address bar, toolbar and status bar when it is a folder.
-  const chromeHeight = theme === "retro" ? (isFolder ? 108 : 40) : isFolder ? 116 : 74;
+  // Windows 11 stacks a 40px tabbed title bar over Explorer's 40px command bar,
+  // its 40px address row and a 28px status bar; a Notepad window is the tabbed
+  // title bar on its own.
+  const chromeHeight =
+    theme === "retro" ? (isFolder ? 108 : 40) : theme === "win11" ? (isFolder ? 148 : 40) : isFolder ? 116 : 74;
   const bodyClass = sized ? "min-h-0 flex-1" : "";
   const bodyStyle = sized
     ? undefined
@@ -1398,6 +1554,21 @@ function Window({ theme, item, win, zIndex, focused, compact, stage, children, o
         element.style.height = `${h}px`;
       },
       onEnd: (delta) => onCommit({ ...nextSize(delta), y: startTop, by: null }),
+    });
+  }
+
+  // A snap zone is a fraction of the desk, so the same table works whatever
+  // size the stage is. Snapping drops whichever edge the window was anchored
+  // to and takes an explicit box, the same shape a manual resize commits.
+  function handleSnap(zone) {
+    setSnapOpen(false);
+    onCommit({
+      x: Math.round(zone[0] * stage.w),
+      y: Math.round(zone[1] * stage.h),
+      by: null,
+      w: Math.max(MIN_W, Math.round(zone[2] * stage.w)),
+      h: Math.max(MIN_H, Math.round(zone[3] * stage.h)),
+      max: false,
     });
   }
 
@@ -1513,75 +1684,112 @@ function Window({ theme, item, win, zIndex, focused, compact, stage, children, o
         ref={rootRef}
         aria-label={item.title}
         onPointerDown={onFocus}
-        style={frameStyle}
-        className={`desk-window-in absolute flex flex-col overflow-hidden rounded-lg bg-[#f6f6f6]/95 ring-1 backdrop-blur-2xl ${
-          focused ? "shadow-[0_24px_60px_rgba(0,0,0,0.4)] ring-black/20" : "shadow-[0_10px_28px_rgba(0,0,0,0.25)] ring-black/10"
+        // Mica: the wallpaper, blurred and washed out, showing through the
+        // frame. A maximised window loses its rounded corners, the way every
+        // Windows 11 window does when it fills the screen.
+        style={{ ...frameStyle, background: "rgba(243, 243, 243, 0.86)" }}
+        className={`desk-window-in absolute flex flex-col ring-1 backdrop-blur-2xl ${maximised ? "" : "rounded-lg"} ${
+          focused ? "shadow-[0_28px_64px_rgba(0,0,0,0.38)] ring-black/25" : "shadow-[0_10px_28px_rgba(0,0,0,0.2)] ring-black/15"
         }`}
       >
+        {/* Windows 11 put the tabs in the title bar, in Notepad and in Explorer
+            both, so the caption row is 40px and the tab sits on its bottom edge
+            while the caption buttons stay pinned to the top at 32. */}
         <div
           onPointerDown={handleTitlePointerDown}
           onDoubleClick={onToggleMax}
-          className={`flex shrink-0 select-none items-center justify-between border-b border-black/5 bg-white/60 pl-3 ${
+          className={`flex shrink-0 select-none items-end gap-1 pl-2 ${isDialog ? "h-8" : "h-10"} ${
             maximised ? "" : "cursor-grab active:cursor-grabbing"
           }`}
         >
-          <div className="flex min-w-0 items-center gap-2 py-2 text-neutral-800">
-            {taskbarLogo(item.kind, "h-4 w-4 shrink-0")}
-            <span className="truncate text-[13px] font-medium">{item.title}</span>
-          </div>
-          <div className="flex shrink-0 items-center">
+          {isDialog ? (
+            <span className="flex min-w-0 flex-1 items-center self-center text-[12px]" style={{ color: W11.text }}>
+              <span className="truncate">{item.title}</span>
+            </span>
+          ) : (
+            <>
+              <span
+                className="flex h-8 min-w-0 max-w-[260px] items-center gap-2 rounded-t-[7px] px-3"
+                style={{ background: focused ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.45)" }}
+              >
+                <Win11FileIcon kind={item.kind} size={16} />
+                <span className="truncate text-[12px]" style={{ color: W11.text }}>
+                  {item.label}
+                </span>
+                <span className="ml-1 shrink-0 opacity-40" style={{ color: W11.text }}>
+                  <FluentGlyph name="chrome-close" size={12} />
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px]"
+                style={{ color: W11.textSoft }}
+              >
+                <FluentGlyph name="new" size={14} />
+              </span>
+              <span className="flex-1" />
+            </>
+          )}
+
+          <div className="flex shrink-0 self-start" style={{ color: W11.text }}>
             {!isDialog && (
               <>
-                <button
-                  type="button"
-                  onClick={onMinimise}
-                  aria-label={`Minimise ${item.title}`}
-                  className="flex h-8 w-11 items-center justify-center text-neutral-600 hover:bg-black/5"
+                <CaptionButton11 label={`Minimise ${item.title}`} glyph="chrome-minimize" onClick={onMinimise} />
+                {/* The maximise button and the Snap Layouts flyout it drops are
+                    one control: hovering or tabbing to the button opens the
+                    grid, and leaving the pair closes it again. */}
+                <span
+                  className="relative flex"
+                  onPointerEnter={() => !compact && setSnapOpen(true)}
+                  onPointerLeave={() => setSnapOpen(false)}
+                  onFocus={() => !compact && setSnapOpen(true)}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setSnapOpen(false);
+                  }}
                 >
-                  <IconMinimizeLine className="h-2.5 w-2.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onToggleMax}
-                  aria-label={maximised ? `Restore ${item.title}` : `Maximise ${item.title}`}
-                  className="flex h-8 w-11 items-center justify-center text-neutral-600 hover:bg-black/5"
-                >
-                  {maximised ? <IconRestoreLine className="h-3 w-3" /> : <IconMaximizeLine className="h-2.5 w-2.5" />}
-                </button>
+                  <CaptionButton11
+                    label={maximised ? `Restore ${item.title}` : `Maximise ${item.title}`}
+                    glyph={maximised ? "chrome-restore" : "chrome-maximize"}
+                    onClick={onToggleMax}
+                  />
+                  {snapOpen && !compact && (
+                    <SnapFlyout title={item.title} onSnap={handleSnap} onDismiss={() => setSnapOpen(false)} />
+                  )}
+                </span>
               </>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={`Close ${item.title}`}
-              className="flex h-8 w-11 items-center justify-center text-neutral-600 hover:bg-[#c42b1c] hover:text-white"
+            <CaptionButton11 label={`Close ${item.title}`} glyph="chrome-close" danger onClick={onClose} />
+          </div>
+        </div>
+
+        {/* Everything under the caption is clipped to the frame's bottom
+            corners here rather than on the frame itself, so the Snap flyout can
+            hang past the window edge the way the real one does. */}
+        <div className={`flex flex-col overflow-hidden ${maximised ? "" : "rounded-b-lg"} ${sized ? "min-h-0 flex-1" : ""}`}>
+          {isFolder && <ExplorerChrome11 label={item.label} />}
+
+          <div className={`flex ${sized ? "min-h-0 flex-1" : ""}`}>
+            {isFolder && <ExplorerNav11 label={item.label} />}
+            <div
+              className={`desk-11-body min-w-0 flex-1 overflow-auto p-4 ${isFolder ? "rounded-tl-lg" : ""} ${
+                sized ? "min-h-0" : ""
+              } ${scrollClass}`}
+              style={{
+                background: "#ffffff",
+                boxShadow: isFolder ? `inset 1px 1px 0 ${W11.stroke}` : undefined,
+                ...bodyStyle,
+              }}
             >
-              <IconCloseLine className="h-3 w-3" />
-            </button>
+              {children}
+            </div>
           </div>
+
+          {isFolder && (
+            <div className="flex h-7 shrink-0 items-center px-3 text-[12px]" style={{ color: W11.textSoft }}>
+              {item.statusText}
+            </div>
+          )}
         </div>
-
-        {isFolder && <ExplorerCommandBar label={item.label} />}
-        {!isFolder && !isDialog && (
-          <div aria-hidden className="flex shrink-0 items-end gap-1 border-b border-black/5 bg-white/40 px-2 pt-1.5">
-            <span className="flex max-w-[70%] items-center gap-2 rounded-t-md bg-white px-3 py-1.5 text-[12px] text-neutral-700 shadow-sm">
-              <span className="truncate">{item.label}</span>
-              <IconCloseLine className="h-2 w-2 opacity-50" />
-            </span>
-            <span className="pb-1.5 pl-1 text-[13px] text-neutral-400">+</span>
-          </div>
-        )}
-
-        <div className={`flex ${sized ? "min-h-0 flex-1" : ""}`}>
-          {isFolder && <ExplorerNav />}
-          <div className={`min-w-0 flex-1 overflow-auto bg-white/70 p-4 ${sized ? "min-h-0" : ""} ${scrollClass}`} style={bodyStyle}>
-            {children}
-          </div>
-        </div>
-
-        {isFolder && (
-          <div className="shrink-0 border-t border-black/5 bg-white/60 px-3 py-1 text-[11px] text-neutral-500">{item.statusText}</div>
-        )}
 
         {resizeGrip}
       </section>
@@ -1679,6 +1887,7 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
   // focus rectangle round it, and it never softened the label with a shadow:
   // the shadow here is a later convention that keeps white text legible on a
   // photographic wallpaper, so it stays, but only while nothing is selected.
+  const cell = ICON_METRICS[theme];
   let labelClass = "px-[2px] text-white";
   let labelStyle = {
     textShadow: selected ? "none" : "1px 1px 1px rgba(0,0,0,0.85)",
@@ -1687,8 +1896,10 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
     outlineOffset: "-1px",
   };
   if (theme === "win11") {
-    labelClass = `rounded px-1.5 py-0.5 text-white ${selected ? "bg-white/25" : ""}`;
-    labelStyle = { textShadow: "0 1px 2px rgba(0,0,0,0.65)" };
+    // Windows 11 selects the whole cell, not the label: a 4px rounded wash with
+    // a hairline edge, and the label keeps its shadow either way.
+    labelClass = "px-1 text-white";
+    labelStyle = { textShadow: "0 1px 2px rgba(0,0,0,0.7)" };
   } else if (theme === "mac") {
     labelClass = `rounded-[5px] px-1.5 py-0.5 text-white ${selected ? "bg-[#0071e3]" : ""}`;
     labelStyle = { textShadow: selected ? "none" : "0 1px 2px rgba(0,0,0,0.55)" };
@@ -1706,11 +1917,20 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
         }
       }}
       aria-label={`Open ${item.label}`}
-      className={`desk-focus-95 flex w-[80px] shrink-0 flex-col items-center gap-[3px] p-[6px] text-center ${
-        theme === "retro" ? "" : "rounded-lg"
-      } ${selected && theme !== "retro" ? "bg-white/10" : ""}`}
+      style={{
+        width: cell.button,
+        ...(theme === "win11" && selected
+          ? { background: "rgba(255, 255, 255, 0.22)", boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.35)" }
+          : null),
+      }}
+      className={`desk-focus-95 flex shrink-0 flex-col items-center gap-[3px] p-[6px] text-center ${
+        theme === "retro" ? "" : theme === "win11" ? "rounded-[4px]" : "rounded-lg"
+      } ${selected && theme === "mac" ? "bg-white/10" : ""}`}
     >
-      <span className={`flex h-8 w-8 items-center justify-center ${theme === "retro" ? "" : "drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"}`}>
+      <span
+        className={`flex items-center justify-center ${theme === "retro" ? "" : "drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"}`}
+        style={{ width: cell.icon, height: cell.icon }}
+      >
         {theme === "retro" ? (
           // A selected icon in Windows 95 was drawn through a navy 50% dither,
           // which reads as a blue tint over the bitmap.
@@ -1718,11 +1938,13 @@ function DesktopIcon({ theme, item, selected, onSelect, onOpen }) {
             <Win95Icon kind={item.kind} size={32} />
             {selected && <span className="absolute inset-0 bg-[#000080] opacity-40 mix-blend-multiply" />}
           </span>
+        ) : theme === "win11" ? (
+          <Win11FileIcon kind={item.kind} size={cell.icon} />
         ) : (
           itemGlyph(item.kind, "h-8 w-8")
         )}
       </span>
-      <span className={`break-words text-[11px] leading-tight ${labelClass}`} style={labelStyle}>
+      <span className={`break-words leading-tight ${theme === "win11" ? "text-[12px]" : "text-[11px]"} ${labelClass}`} style={labelStyle}>
         {item.label}
       </span>
     </button>
@@ -1920,24 +2142,41 @@ function StartMenu95({ firstName, entries, theme, onOpen, onOpenAll, onTheme, on
   );
 }
 
-function Taskbar11({ items, windows, focusedId, startOpen, onStart, onTask, clock, today }) {
+// The Windows 11 taskbar: 48px tall, its buttons centred, 40px square each with
+// a 24px icon, and a running app marked by a line under it that widens when the
+// app is the one in front. The tray sits right, the clock and date stack under
+// each other, and the four pixels past the clock are the Show desktop strip,
+// which does what it has always done.
+function Taskbar11({ items, windows, focusedId, startOpen, onStart, onTask, onShowDesktop, clock, today }) {
   return (
-    <div className="relative z-30 flex h-14 shrink-0 select-none items-center bg-neutral-900/75 px-3 backdrop-blur-2xl">
+    <div
+      className="relative z-30 flex h-12 shrink-0 select-none items-center px-2 backdrop-blur-2xl"
+      style={{ background: "rgba(32, 32, 32, 0.82)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.07)" }}
+    >
       <div className="flex flex-1 items-center justify-center gap-1">
         <button
           type="button"
           onClick={onStart}
           aria-label="Start"
           aria-expanded={startOpen}
-          className={`flex h-10 w-10 items-center justify-center rounded-md text-white hover:bg-white/10 ${startOpen ? "bg-white/15" : ""}`}
+          className={`flex h-10 w-10 items-center justify-center rounded-[5px] transition-colors hover:bg-white/10 ${
+            startOpen ? "bg-white/15" : ""
+          }`}
         >
-          <IconWin11Logo className="h-[18px] w-[18px]" />
+          <Win11Icon name="start" size={24} />
         </button>
-        <div aria-hidden className="hidden h-9 w-44 shrink items-center gap-2 rounded-full bg-white/10 px-3 text-[12px] text-white/70 sm:flex">
-          <IconSearch className="h-3.5 w-3.5 shrink-0" />
+        <div
+          aria-hidden
+          className="hidden h-9 w-44 shrink items-center gap-2.5 rounded-full px-3.5 text-[12px] text-white/70 sm:flex"
+          style={{ background: "rgba(255, 255, 255, 0.08)", boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.09)" }}
+        >
+          <FluentGlyph name="search" size={16} />
           <span className="truncate">Search</span>
         </div>
-        <div className="mx-1 h-6 w-px bg-white/15" />
+        <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-[5px] text-white/85">
+          <FluentGlyph name="task-view" size={24} />
+        </span>
+        <span className="mx-1 h-6 w-px bg-white/15" />
         {windows.map((win) => {
           const item = items[win.id];
           const current = focusedId === win.id && !win.min;
@@ -1948,65 +2187,158 @@ function Taskbar11({ items, windows, focusedId, startOpen, onStart, onTask, cloc
               onClick={() => onTask(win.id)}
               title={item.label}
               aria-label={item.label}
-              className={`relative flex h-10 w-10 items-center justify-center rounded-md hover:bg-white/10 ${current ? "bg-white/15" : ""}`}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-[5px] transition-colors hover:bg-white/10 ${
+                current ? "bg-white/[0.14]" : ""
+              }`}
             >
-              {taskbarLogo(item.kind, "h-5 w-5")}
+              <Win11AppIcon kind={item.kind} size={24} />
               <span
-                className={`absolute bottom-1 h-[3px] rounded-full bg-[#60cdff] transition-all ${current ? "w-4" : "w-1.5 opacity-70"}`}
+                className={`absolute bottom-[3px] h-[3px] rounded-full transition-all ${current ? "w-4" : "w-1.5 opacity-60"}`}
+                style={{ background: W11.accentLight }}
               />
             </button>
           );
         })}
       </div>
-      <div className="absolute right-3 flex items-center gap-3 text-white">
-        <div className="flex items-center gap-2.5 opacity-90">
-          <IconWifiGlyph className="h-3.5 w-3.5" />
-          <IconVolumeGlyph className="h-3.5 w-3.5" />
-          <IconBatteryGlyph className="h-3.5 w-4" />
-        </div>
-        <div className="rounded px-1.5 py-1 text-right leading-tight hover:bg-white/10">
-          <div className="text-[11px] tabular-nums">{clock}</div>
-          <div className="text-[10px] opacity-70">{today}</div>
-        </div>
+
+      <div className="absolute right-2 flex items-center text-white">
+        <span
+          aria-hidden
+          className="flex items-center gap-2.5 rounded-[5px] px-2 py-1.5 text-white/85 transition-colors hover:bg-white/10"
+        >
+          <FluentGlyph name="wifi" size={16} />
+          <FluentGlyph name="volume" size={16} />
+          <FluentGlyph name="battery" size={16} />
+        </span>
+        <span className="rounded-[5px] px-2 py-1 text-right text-[12px] leading-4 transition-colors hover:bg-white/10">
+          <span className="block tabular-nums">{clock}</span>
+          <span className="block">{today}</span>
+        </span>
+        <button
+          type="button"
+          onClick={onShowDesktop}
+          aria-label="Show desktop"
+          className="ml-1 h-9 w-[6px] rounded-sm border-l border-white/25 transition-colors hover:bg-white/15"
+        />
       </div>
     </div>
   );
 }
 
-function StartMenu11({ name, role, entries, theme, onOpen, onOpenAll, onTheme, onShutDown, onDismiss }) {
+// The Windows 11 Start menu, in the shape it actually has: a search field, a
+// grid of pinned apps under a header with All apps on the right, a Recommended
+// list under its own header, and an account bar across the bottom on a darker
+// strip. The one thing it will not do is invent its Recommended list. Windows
+// fills that from what you have really opened, and so does this: the row is
+// whatever the visitor has opened on this desk, in the order they opened it,
+// with the system's own empty state when they have opened nothing yet.
+function StartMenu11({ name, role, entries, recent, theme, onOpen, onOpenAll, onTheme, onShutDown, onDismiss }) {
   const [query, setQuery] = useState("");
   const [powerOpen, setPowerOpen] = useState(false);
   const term = query.trim().toLowerCase();
   const shown = term ? entries.filter((entry) => entry.label.toLowerCase().includes(term)) : entries;
 
-  return (
-    <div className="desk-menu-in w-[min(560px,calc(100vw-2rem))] rounded-xl border border-white/15 bg-neutral-800/85 p-5 text-white shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-      <label className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-2">
-        <IconSearch className="h-3.5 w-3.5 shrink-0 opacity-70" />
-        <span className="sr-only">Search apps</span>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search apps"
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-white/50 focus:outline-none"
-        />
-      </label>
+  function launch(id) {
+    onOpen(id);
+    onDismiss();
+  }
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            onOpenAll();
-            onDismiss();
-          }}
-          className="flex items-center gap-2 rounded-md px-2 py-1 text-[13px] font-semibold hover:bg-white/10"
+  return (
+    <div
+      className="desk-menu-in w-[min(620px,calc(100vw-1.5rem))] overflow-hidden rounded-lg text-white backdrop-blur-2xl"
+      style={{
+        background: "rgba(43, 43, 43, 0.88)",
+        boxShadow: "0 32px 80px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.09)",
+      }}
+    >
+      <div className="p-6 pb-5">
+        <label
+          className="flex items-center gap-2.5 rounded-[16px] px-4 py-2"
+          style={{ background: "rgba(255, 255, 255, 0.06)", boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.1)" }}
         >
-          <IconDocument className="h-4 w-4" />
-          Open everything
-        </button>
+          <FluentGlyph name="search" size={16} className="opacity-70" />
+          <span className="sr-only">Search apps</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search for apps and files"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-white placeholder:text-white/50 focus:outline-none"
+          />
+        </label>
+
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <p className="text-[14px] font-semibold">Pinned</p>
+          <button
+            type="button"
+            onClick={() => {
+              onOpenAll();
+              onDismiss();
+            }}
+            className="flex items-center gap-1.5 rounded-[4px] px-3 py-1 text-[12px] font-medium transition-colors hover:bg-white/10"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.1)" }}
+          >
+            Open all
+            <FluentGlyph name="chevron-right" size={12} className="opacity-70" />
+          </button>
+        </div>
+
+        <div className="mt-2 grid grid-cols-4 gap-0.5 sm:grid-cols-6">
+          {shown.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => launch(entry.id)}
+              className="flex flex-col items-center gap-1.5 rounded-[4px] px-1 pb-2 pt-3 transition-colors hover:bg-white/[0.06]"
+            >
+              <Win11AppIcon kind={entry.kind} size={32} />
+              <span className="w-full break-words text-center text-[12px] leading-tight text-white/90">{entry.label}</span>
+            </button>
+          ))}
+          {shown.length === 0 && (
+            <p className="col-span-full py-8 text-center text-[13px] text-white/50">No results for &ldquo;{query}&rdquo;.</p>
+          )}
+        </div>
+
+        <p className="mt-6 text-[14px] font-semibold">Recommended</p>
+        {recent.length === 0 ? (
+          <p className="mt-2 py-3 text-[13px] text-white/55">
+            Open something and it will show up here, the way it does on a machine you have been using for a while.
+          </p>
+        ) : (
+          <div className="mt-1 grid gap-0.5 sm:grid-cols-2">
+            {recent.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => launch(entry.id)}
+                className="flex items-center gap-3 rounded-[4px] px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+              >
+                <Win11FileIcon kind={entry.kind} size={32} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px]">{entry.label}</span>
+                  <span className="block truncate text-[12px] text-white/55">Opened on this desk</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 px-6 py-3" style={{ background: "rgba(255, 255, 255, 0.04)" }}>
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
+          style={{ background: W11.accent }}
+        >
+          {initials(name)}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-medium">{name || "Your Name"}</span>
+          {role && <span className="block truncate text-[12px] text-white/55">{role}</span>}
+        </span>
+
         {/* The shell picker lives here as well as on the floating switcher,
             because inside the fiction this is where a display setting belongs. */}
-        <div className="flex items-center gap-1 rounded-full bg-white/10 p-0.5 text-[11px]">
+        <div className="ml-auto flex items-center gap-0.5 rounded-[4px] p-0.5 text-[12px]" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
           {[
             { id: "retro", label: "95" },
             { id: "win11", label: "11" },
@@ -2017,54 +2349,39 @@ function StartMenu11({ name, role, entries, theme, onOpen, onOpenAll, onTheme, o
               type="button"
               onClick={() => onTheme(option.id)}
               aria-pressed={theme === option.id}
-              className={`rounded-full px-2.5 py-1 ${theme === option.id ? "bg-white text-neutral-900" : "hover:bg-white/15"}`}
+              className={`rounded-[3px] px-2.5 py-1 transition-colors ${
+                theme === option.id ? "bg-white text-neutral-900" : "hover:bg-white/10"
+              }`}
             >
               {option.label}
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-5">
-        {shown.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            onClick={() => {
-              onOpen(entry.id);
-              onDismiss();
-            }}
-            className="flex flex-col items-center gap-2 rounded-lg p-3 hover:bg-white/10"
-          >
-            {taskbarLogo(entry.kind, "h-7 w-7")}
-            <span className="w-full break-words text-center text-[11px] leading-tight text-white/85">{entry.label}</span>
-          </button>
-        ))}
-        {shown.length === 0 && <p className="col-span-full py-6 text-center text-[12px] text-white/50">No apps match &ldquo;{query}&rdquo;.</p>}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3 border-t border-white/10 pt-4">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-[12px] font-semibold">
-          {initials(name)}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-medium">{name || "Your Name"}</p>
-          {role && <p className="truncate text-[11px] text-white/60">{role}</p>}
-        </div>
-        <div className="relative ml-auto">
+        <div className="relative">
           <button
             type="button"
             onClick={() => setPowerOpen((open) => !open)}
             aria-label="Power"
             aria-expanded={powerOpen}
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-white/10"
+            className="flex h-8 w-8 items-center justify-center rounded-[4px] transition-colors hover:bg-white/10"
           >
             <IconPower className="h-4 w-4" />
           </button>
           {powerOpen && (
-            <div className="desk-menu-in absolute bottom-full right-0 mb-2 w-36 rounded-lg border border-white/15 bg-neutral-800/95 p-1 shadow-xl">
-              <button type="button" onClick={onShutDown} className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-[12px] hover:bg-white/10">
-                <IconPower className="h-3.5 w-3.5" /> Shut down
+            <div
+              className="desk-menu-in absolute bottom-full right-0 mb-2 w-36 rounded-lg p-1"
+              style={{
+                background: "rgba(43, 43, 43, 0.96)",
+                boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.09)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={onShutDown}
+                className="flex w-full items-center gap-2.5 rounded-[4px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-white/10"
+              >
+                <IconPower className="h-4 w-4" /> Shut down
               </button>
             </div>
           )}
@@ -2209,12 +2526,14 @@ function PowerOverlay({ theme, onRestart }) {
     );
   } else if (theme === "win11") {
     body = (
-      <div className="flex flex-col items-center gap-6 text-center text-white">
+      <div className="flex flex-col items-center gap-7 text-center text-white">
+        {/* White, not the blue tile: the shutdown screen is the one place
+            Windows 11 draws its own logo as a silhouette. */}
         <IconWin11Logo className="h-9 w-9 opacity-90" />
-        <p className="text-lg">Shutting down</p>
+        <p className="text-[17px]">Shutting down</p>
         <div className="flex gap-1.5" aria-hidden>
           {[0, 1, 2, 3, 4].map((dot) => (
-            <span key={dot} className="h-1.5 w-1.5 rounded-full bg-white/70" />
+            <span key={dot} className="desk-boot-dot h-1.5 w-1.5 rounded-full bg-white" style={{ animationDelay: `${dot * 130}ms` }} />
           ))}
         </div>
         <p className="text-[11px] uppercase tracking-[0.3em] text-white/50">Click anywhere to restart</p>
@@ -2297,13 +2616,69 @@ function ShellDialog({ theme, title, lead, body, footnote, actions, onClose }) {
     );
   }
 
-  const rounded = theme === "win11" ? "rounded-lg" : "rounded-2xl";
+  // Windows 11's own dialog is a content dialog: no title bar and no close
+  // button, its title set as a 20px heading inside the body, and a button row
+  // on a darker strip where the buttons share the width equally. It says the
+  // same things the 95 dialog says, in the same order, in this system's voice.
+  if (theme === "win11") {
+    return (
+      <div
+        className="desk-window-in w-[min(460px,calc(100vw-2rem))] overflow-hidden rounded-lg"
+        style={{
+          background: W11.mica,
+          boxShadow: "0 32px 64px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <div className="px-6 pb-5 pt-5">
+          <p className="text-[20px] font-semibold leading-7" style={{ color: W11.text }}>
+            {title}
+          </p>
+          <p className="mt-3 text-[14px] font-semibold leading-5" style={{ color: W11.text }}>
+            {lead}
+          </p>
+          <p className="mt-1.5 text-[14px] leading-5" style={{ color: W11.textSoft }}>
+            {body}
+          </p>
+          {/* An InfoBar, which is the control Windows 11 uses for exactly this
+              kind of aside: a tinted panel with the system's information glyph
+              and one line of reassurance, rather than small grey text under a
+              rule. */}
+          {footnote && (
+            <div
+              className="mt-4 flex gap-2.5 rounded-[4px] p-3"
+              style={{ background: "rgba(0, 103, 192, 0.06)", boxShadow: `inset 0 0 0 1px ${W11.stroke}` }}
+            >
+              <IconInfo className="mt-px h-4 w-4 shrink-0" />
+              <p className="min-w-0 text-[12px] leading-4" style={{ color: W11.textSoft }}>
+                {footnote}
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 border-t px-6 py-4" style={{ borderColor: W11.divider, background: "rgba(0, 0, 0, 0.02)" }}>
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={action.onClick}
+              className={`h-8 flex-1 rounded-[4px] text-[14px] transition-colors ${
+                action.primary
+                  ? "bg-[#0067c0] text-white hover:bg-[#1975c5] active:bg-[#2b7cc9]"
+                  : "bg-[#fdfdfd] text-black/90 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] hover:bg-[#f5f5f5] active:bg-[#f0f0f0]"
+              }`}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`desk-window-in w-[min(420px,calc(100vw-2rem))] border border-black/10 bg-white/95 p-5 shadow-2xl backdrop-blur-2xl ${rounded}`}
-    >
+    <div className="desk-window-in w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-black/10 bg-white/95 p-5 shadow-2xl backdrop-blur-2xl">
       <div className="flex gap-3">
-        {taskbarLogo("welcome", "h-8 w-8 shrink-0")}
+        {itemGlyph("welcome", "h-8 w-8 shrink-0")}
         <div className="min-w-0">
           <p className="text-[15px] font-semibold text-neutral-900">{lead}</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-600">{body}</p>
@@ -2339,19 +2714,20 @@ function ShellDialog({ theme, title, lead, body, footnote, actions, onClose }) {
 // one click rather than something they walk into. Closing it and taking the
 // button do the same thing: there is no way to end up looking at an empty
 // desktop wondering what happened.
-function WelcomeDialog({ theme, name, role, counts, binLabel, onEnter }) {
-  const has = counts.length > 0;
-  const body = has
-    ? `There ${counts.length === 1 ? "is" : "are"} ${counts.join(", ")} in here, and they open all at once, scattered across the desk. Read one, close it, move to the next. Drag a window by its title bar if it is in the way.`
-    : "Everything is filed as a window on this desk. Read one, close it, move to the next, and drag a window by its title bar if it is in the way.";
+function WelcomeDialog({ theme, name, role, binLabel, onEnter }) {
+  // The two shells this visitor is not currently looking at, named rather than
+  // listed generically: offering someone Windows 11 while they are standing in
+  // Windows 11 is the sort of line that gives the whole thing away.
+  const elsewhere = [theme !== "retro" && "Windows 95", theme !== "win11" && "Windows 11", theme !== "mac" && "a Mac"].filter(Boolean);
+  const launcher = theme === "mac" ? "Apple menu" : "Start menu";
 
   return (
     <ShellDialog
       theme={theme}
       title="Welcome"
       lead={`${name || "This"}${name ? "'s" : ""} desktop${role ? `, ${role}` : ""}`}
-      body={body}
-      footnote={`Nothing here can break: the ${binLabel} is empty and the Start menu puts it all back. It will also hand you Windows 11 or a Mac instead, if you would rather.`}
+      body="Every window is already open behind this one, strewn across the desk the way a real one is at the end of a working day. Read a window, close it, move to the next. Drag any of them by the title bar if it is standing in front of something better."
+      footnote={`Nothing here can break: the ${binLabel} is empty, and the ${launcher} puts it all back. It will also hand you ${elsewhere.join(" or ")} instead, if you would rather.`}
       actions={[{ label: "Have a look", onClick: onEnter, primary: true }]}
       onClose={onEnter}
     />
@@ -2420,6 +2796,10 @@ export default function RetroDesktopTemplate({ data }) {
   const [tidyDismissed, setTidyDismissed] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(true);
   const [entered, setEntered] = useState(false);
+  // What the Windows 11 Start menu lists under Recommended. It is what the
+  // visitor has actually opened, most recent first, because that is what the
+  // real one lists and because inventing the row would be inventing content.
+  const [recentIds, setRecentIds] = useState([]);
   const [now, setNow] = useState(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
 
@@ -2545,22 +2925,15 @@ export default function RetroDesktopTemplate({ data }) {
   // gets anywhere near the limit anyway.
   const bootOrder = fileEntries.slice(0, SCATTER.length);
 
-  // Real counts only, the same rule as every other template: nothing on this
-  // desktop is a number the customer did not type.
-  const counts = [
-    projects?.length > 0 && `${projects.length} project${projects.length === 1 ? "" : "s"}`,
-    skills?.length > 0 && `${skills.length} skill${skills.length === 1 ? "" : "s"}`,
-    achievements?.length > 0 && `${achievements.length} achievement${achievements.length === 1 ? "" : "s"}`,
-  ].filter(Boolean);
-
   // The icon field wraps into columns down the left edge, and windows open to
   // the right of it: a window dropped on top of the icons hides the way into
   // everything else, which is the one thing the desktop cannot afford.
-  const perColumn = Math.max(1, Math.floor((stage.h - 16) / ICON_CELL_H));
+  const cell = ICON_METRICS[theme];
+  const perColumn = Math.max(1, Math.floor((stage.h - 16) / cell.cellH));
   // Three system icons (the document, My Computer, the bin) sit alongside
   // the files, and only the count matters here, not the entries.
   const iconColumns = Math.ceil((fileEntries.length + 3) / perColumn);
-  const iconReserve = clamp(iconColumns * ICON_CELL_W + 10, 0, Math.max(0, stage.w - MIN_W - 24));
+  const iconReserve = clamp(iconColumns * cell.cellW + 10, 0, Math.max(0, stage.w - MIN_W - 24));
 
   const openWindow = useCallback(
     (id, kind, slot) => {
@@ -2568,6 +2941,7 @@ export default function RetroDesktopTemplate({ data }) {
       setStartOpen(false);
       setAppleOpen(false);
       setTidyDismissed(false);
+      setRecentIds((prev) => [id, ...prev.filter((entry) => entry !== id)].slice(0, 4));
       setWins((prev) => {
         const z = ++zRef.current;
         const existing = prev.find((win) => win.id === id);
@@ -2659,8 +3033,19 @@ export default function RetroDesktopTemplate({ data }) {
       statusText: entry.statusText || "",
     };
   }
+  // Resolved here rather than stored as entries: the bodies inside `items` are
+  // rebuilt whenever the shell changes, and a Recommended row holding a stale
+  // one would open a window rendered for the wrong desktop.
+  const recent = recentIds.map((id) => items[id]).filter(Boolean);
+
   function closeWindow(id) {
     setWins((prev) => prev.filter((win) => win.id !== id));
+  }
+
+  // The Show desktop strip at the far end of the Windows 11 taskbar. It has
+  // done the same thing since 2009, so it does it here.
+  function minimiseAll() {
+    setWins((prev) => (prev.some((win) => !win.min) ? prev.map((win) => ({ ...win, min: true })) : prev));
   }
 
   function focusWindow(id) {
@@ -2869,7 +3254,6 @@ export default function RetroDesktopTemplate({ data }) {
                 theme={theme}
                 name={name}
                 role={role}
-                counts={counts}
                 binLabel={tokens.binLabel}
                 onEnter={() => {
                   setWelcomeOpen(false);
@@ -2950,6 +3334,7 @@ export default function RetroDesktopTemplate({ data }) {
                 name={name}
                 role={role}
                 entries={desktopEntries}
+                recent={recent}
                 theme={theme}
                 onOpen={(id) => openWindow(id, items[id].kind)}
                 onOpenAll={openAll}
@@ -2981,6 +3366,7 @@ export default function RetroDesktopTemplate({ data }) {
           startOpen={startOpen}
           onStart={() => setStartOpen((open) => !open)}
           onTask={handleTaskClick}
+          onShowDesktop={minimiseAll}
           clock={clock}
           today={today}
         />

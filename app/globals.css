@@ -1831,9 +1831,11 @@ html:has(.home-root) {
    recognise. Classes are `desk-` prefixed so they cannot collide with another
    template's decorations sharing this stylesheet.
 
-   Fonts are stacks, not webfonts: the shells are recreations of typefaces
-   most machines already have, and downloading a face to imitate Tahoma would
-   cost a request on every visit for a difference nobody can name. */
+   Each shell's own face is served rather than guessed at, because the type is
+   half of what a system is recognised by. Every one of them is licensed for
+   this: the Windows 95 bitmap face, Microsoft's own open substitute for Segoe
+   UI, and Inter standing in for SF Pro. Machines that already have the real
+   thing installed resolve it first and never fetch ours. */
 
 /* Windows 95 drew its entire interface in 11px MS Sans Serif. This is that
    face, packaged as a webfont by the 98.css project.
@@ -1903,9 +1905,43 @@ html:has(.home-root) {
   font-size: 15px;
   line-height: 21px;
 }
-.desk-font-11 {
-  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+/* Selawik: Microsoft's own open-source, metric-compatible substitute for Segoe
+   UI, under the SIL Open Font License. A Windows visitor resolves real Segoe UI
+   from their system and never downloads this; everyone else gets the same
+   metrics, so the shell keeps its line lengths and spacing either way. */
+@font-face {
+  font-family: "Selawik";
+  src: url("/retro-desktop/fonts/selawik-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
+@font-face {
+  font-family: "Selawik";
+  src: url("/retro-desktop/fonts/selawik-semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Windows 11 sets its chrome at 12px on a 16px line: taskbar, title bars,
+   menus and Explorer's command bar are all that size, and getting it wrong by
+   a step is one of the things that makes a recreation read as approximate. */
+.desk-font-11 {
+  font-family: "Segoe UI Variable Text", "Segoe UI", Selawik, system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Inside a window the system steps up to Body, 14px on a 20px line. This sets
+   the base only, without reaching into the content components: what they size
+   deliberately stays sized deliberately, and everything else lands on the
+   system's reading size instead of on the chrome's. */
+.desk-11-body {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .desk-font-mac {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, system-ui, sans-serif;
 }
@@ -1992,6 +2028,53 @@ html:has(.home-root) {
   background-clip: content-box;
 }
 
+/* Fluent System Icons, drawn as masks so a Microsoft glyph takes the colour of
+   whatever control it sits in the way an icon font does. Only the size and the
+   source change per glyph; everything else is the same every time. */
+.desk-glyph-11 {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* A zone in the Snap Layouts flyout. It fills with the accent under the
+   pointer, which is exactly what the real flyout does to say "this is where
+   the window is about to go". */
+.desk-snap-zone {
+  background: rgba(0, 0, 0, 0.18);
+  transition: background-color 120ms ease;
+}
+.desk-snap-zone:hover {
+  background: #0067c0;
+}
+.desk-snap-zone:focus-visible {
+  background: #0067c0;
+  outline: 2px solid #0067c0;
+  outline-offset: 2px;
+}
+
+/* The ring of dots Windows 11 spins while it shuts down: each one brightens in
+   turn, which is the whole of the animation. */
+@keyframes desk-boot-dot {
+  0%,
+  70%,
+  100% {
+    opacity: 0.25;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+.desk-boot-dot {
+  animation: desk-boot-dot 1400ms ease-in-out infinite;
+}
+
 /* Windows 95 drew keyboard focus as a dotted rectangle inside the control,
    not as a ring around it. Keeping that shape means the shell can stay
    accurate without dropping a visible focus indicator. */
@@ -2071,6 +2154,12 @@ html:has(.home-root) {
   .desk-menu-in,
   .desk-dock-bounce {
     animation: none;
+  }
+  /* The shutdown dots stop moving but stay lit, so the screen still reads as
+     a machine mid-shutdown rather than as five dead pixels. */
+  .desk-boot-dot {
+    animation: none;
+    opacity: 0.75;
   }
   /* Magnification is decoration, so it goes. The hover state still has to
      answer the pointer, so the tile keeps a small, motionless lift. */
