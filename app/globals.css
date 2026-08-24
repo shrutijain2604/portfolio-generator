@@ -2248,3 +2248,144 @@ html:has(.home-root) {
     outline-offset: 2px;
   }
 }
+
+/* Artist Profile: the Spotify desktop application.
+   ---------------------------------------------------------------------------
+   The template draws the shell in JSX; what lives here is the handful of
+   things utility classes cannot express. The player's progress and the lyric
+   lines share one clock, which is why both are CSS animations gated by a single
+   `spot-playing` class on the root rather than a timer in JavaScript: nothing
+   ticks, nothing re-renders per frame, and pausing is one class away.
+   Classes are `spot-` prefixed so they cannot collide with another template's
+   decorations sharing this stylesheet. */
+
+/* Spotify's scrollbar: no track, no buttons, and a translucent white thumb
+   that only exists while the pointer is over the pane it belongs to. */
+.spot-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.spot-scroll:hover,
+.spot-scroll:focus-within {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+.spot-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.spot-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.spot-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  background-clip: content-box;
+  transition: background-color 160ms ease;
+}
+.spot-scroll:hover::-webkit-scrollbar-thumb,
+.spot-scroll:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: content-box;
+}
+
+/* The progress fill. scaleX rather than width, so a bar running for half a
+   minute never touches layout, and `forwards` so it holds at the end of the
+   track long enough for the animationend handler to move the queue on. */
+@keyframes spot-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.spot-progress {
+  width: 100%;
+  transform: scaleX(0);
+  animation-name: spot-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-play-state: paused;
+}
+.spot-playing .spot-progress {
+  animation-play-state: running;
+}
+
+/* Lyrics. Each line is staggered by its own delay and brightens as the track
+   reaches it. The resting state is the readable grey rather than a dimmed one,
+   because these are the customer's sentences: they must be legible to somebody
+   who never presses play at all. */
+@keyframes spot-lyric {
+  to {
+    color: #ffffff;
+  }
+}
+.spot-lyric {
+  color: rgba(255, 255, 255, 0.55);
+  animation: spot-lyric 600ms ease forwards;
+  animation-play-state: paused;
+}
+.spot-playing .spot-lyric {
+  animation-play-state: running;
+}
+
+/* The three bars beside the row that is playing. */
+@keyframes spot-eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.spot-eq > span {
+  transform-origin: bottom center;
+  animation: spot-eq 900ms ease-in-out infinite;
+}
+.spot-eq > span:nth-child(2) {
+  animation-duration: 700ms;
+  animation-delay: 120ms;
+}
+.spot-eq > span:nth-child(3) {
+  animation-duration: 1100ms;
+  animation-delay: 240ms;
+}
+
+/* Spotify grows its play buttons very slightly under the pointer and drops
+   them back on press. It is a 4% change and it is most of why the button feels
+   like a control rather than a picture of one. */
+.spot-play {
+  transition: transform 100ms ease;
+}
+.spot-play:hover {
+  transform: scale(1.04);
+}
+.spot-play:active {
+  transform: scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The progress bar stops travelling and the lyrics stop taking turns, so
+     nothing here moves. Both keep the state that carries the information: the
+     bar shows a position, and every lyric line is fully legible at once. */
+  .spot-progress {
+    animation: none;
+    transform: scaleX(0.35);
+  }
+  .spot-lyric {
+    animation: none;
+    color: #ffffff;
+  }
+  .spot-eq > span {
+    animation: none;
+  }
+  .spot-play {
+    transition: none;
+  }
+  .spot-play:hover,
+  .spot-play:active {
+    transform: none;
+  }
+}

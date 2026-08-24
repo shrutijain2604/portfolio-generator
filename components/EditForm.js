@@ -247,12 +247,21 @@ function AddButton({ onClick, children }) {
 // look "broken" for anyone not on one of these three.
 const TEMPLATES_WITH_PHOTOS = new Set(["warm", "scrapbook", "spotify"]);
 
+// Artist Profile is the only template with a player bar, so it is the only one
+// with anywhere to put a song. Same gating rule as the photo fields above: a
+// field nothing renders looks broken to whoever is filling it in.
+const TEMPLATES_WITH_NOW_PLAYING = new Set(["spotify"]);
+
 export default function EditForm({ data, onChange, templateId }) {
   const set = (patch) => onChange({ ...data, ...patch });
   const showPhotoFields = TEMPLATES_WITH_PHOTOS.has(templateId);
+  const showNowPlaying = TEMPLATES_WITH_NOW_PLAYING.has(templateId);
 
   const setLink = (key, value) =>
     set({ links: { ...data.links, [key]: value } });
+
+  const setNowPlaying = (key, value) =>
+    set({ nowPlaying: { ...data.nowPlaying, [key]: value } });
 
   // A resume import is an authoritative snapshot, not a patch — it replaces
   // these fields exactly as extracted, including empty ones. Falling back to
@@ -400,6 +409,29 @@ export default function EditForm({ data, onChange, templateId }) {
             value={data.photoUrl || ""}
             onChange={(e) => set({ photoUrl: e.target.value })}
           />
+        )}
+        {showNowPlaying && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field
+              label="Now playing: song (optional)"
+              hint="Shown in the player bar. Nothing actually plays. Leave both blank and it reads Frank Sinatra, My Way."
+              value={data.nowPlaying?.track || ""}
+              onChange={(e) => setNowPlaying("track", e.target.value)}
+            />
+            <Field
+              label="Now playing: artist (optional)"
+              value={data.nowPlaying?.artist || ""}
+              onChange={(e) => setNowPlaying("artist", e.target.value)}
+            />
+            <div className="sm:col-span-2">
+              <Field
+                label="Now playing: link (optional)"
+                hint="Point the title at the song, on YouTube or anywhere else. Left blank, the title is just text."
+                value={data.nowPlaying?.url || ""}
+                onChange={(e) => setNowPlaying("url", e.target.value)}
+              />
+            </div>
+          </div>
         )}
       </FormSection>
 
