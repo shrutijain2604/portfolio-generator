@@ -14,6 +14,16 @@ import { sanitizePortfolioData } from "@/lib/portfolioData";
 import { GITHUB_TOKEN_COOKIE } from "@/lib/githubSession";
 
 export async function POST(request) {
+  // Checked before anything else, so a server missing its GitHub credentials
+  // says so in place rather than sending the customer off on an OAuth round
+  // trip that cannot possibly complete.
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+    return Response.json(
+      { error: "Deploying isn't set up on this server yet. Please try again later." },
+      { status: 503 }
+    );
+  }
+
   const jar = await cookies();
   const token = jar.get(GITHUB_TOKEN_COOKIE)?.value;
 

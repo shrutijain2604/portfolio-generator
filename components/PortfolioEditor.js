@@ -254,7 +254,9 @@ export default function PortfolioEditor({ template }) {
       setDeployError(
         failure === "cancelled"
           ? "You cancelled the GitHub connection, so nothing was created."
-          : "That GitHub connection didn't complete. Please try again."
+          : failure === "unconfigured"
+            ? "Deploying isn't set up on this server yet. Please try again later."
+            : "That GitHub connection didn't complete. Please try again."
       );
       return;
     }
