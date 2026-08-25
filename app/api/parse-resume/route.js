@@ -1,5 +1,5 @@
 // Resume import: extract text from an uploaded PDF/DOCX, then split the work
-// by field type instead of a rules-first/LLM-fallback cascade —
+// by field type instead of a rules-first/LLM-fallback cascade:
 // deterministic regex for the handful of fields that have an unambiguous
 // format (email, GitHub, LinkedIn), and the LLM for everything that requires
 // actually understanding unstructured prose (experience, projects, etc.).
@@ -43,7 +43,7 @@ const resumeSchema = {
     },
     website: {
       type: Type.STRING,
-      description: "Personal website or portfolio URL, if present. Empty string if none — do not guess.",
+      description: "Personal website or portfolio URL, if present. Empty string if none. Do not guess.",
     },
     skills: { type: Type.ARRAY, items: { type: Type.STRING } },
     codingProfiles: {
@@ -153,14 +153,14 @@ export async function POST(request) {
       text = result.value;
     } else {
       return Response.json(
-        { error: "Unsupported file type — please upload a PDF or DOCX resume." },
+        { error: "Unsupported file type. Please upload a PDF or DOCX resume." },
         { status: 400 }
       );
     }
   } catch (err) {
     console.error("resume text extraction failed:", err);
     return Response.json(
-      { error: "Couldn't read that file — it may be corrupted or password-protected." },
+      { error: "Couldn't read that file. It may be corrupted or password-protected." },
       { status: 400 }
     );
   }
@@ -169,7 +169,7 @@ export async function POST(request) {
     return Response.json(
       {
         error:
-          "Couldn't find readable text in that file — if it's a scanned image rather than a text-based resume, this won't work.",
+          "Couldn't find readable text in that file. If it's a scanned image rather than a text-based resume, this won't work.",
       },
       { status: 400 }
     );
@@ -182,7 +182,7 @@ export async function POST(request) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Extract structured portfolio data from this resume text. Only use information actually present in the text — never invent companies, dates, numbers, or achievements. Leave a field as an empty string or empty array if the resume doesn't contain it.\n\n---\n${text}\n---`,
+      contents: `Extract structured portfolio data from this resume text. Only use information actually present in the text. Never invent companies, dates, numbers, or achievements. Leave a field as an empty string or empty array if the resume doesn't contain it.\n\n---\n${text}\n---`,
       config: {
         responseMimeType: "application/json",
         responseSchema: resumeSchema,
@@ -192,7 +192,7 @@ export async function POST(request) {
   } catch (err) {
     console.error("gemini extraction failed:", err.message || err);
     return Response.json(
-      { error: "The resume parser is temporarily unavailable — please try again in a moment." },
+      { error: "The resume parser is temporarily unavailable. Please try again in a moment." },
       { status: 502 }
     );
   }
