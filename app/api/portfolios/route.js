@@ -18,11 +18,20 @@ const TEMPLATE_IDS = new Set(templates.map((t) => t.id));
 
 // TODO: each remaining template needs its own templates/<id>/ subdirectory
 // (standalone Next.js app, same pattern as templates/terminal/) pushed to
-// the repo before it can go here. Maps to null until that exists — the
+// the repo before it can go here. Maps to null until that exists, so the
 // route below refuses to build a deploy link rather than send someone to a
 // broken clone.
 const TEMPLATE_REPOS = {
-  changelog: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/changelog",
+  // Deliberately withheld, and permanently so. templates/changelog no longer
+  // reads its content from this database: it renders data/portfolio.js out of
+  // its own repo, so the customer owns and can edit their content instead of
+  // renting it back from us. It deploys through /api/github/create-repo
+  // instead, which writes that file into a repository in their own account.
+  //
+  // This route must never build a clone link for it. Vercel's clone flow
+  // copies a repo and sets env vars but cannot write a file, so going through
+  // it would hand somebody a live site showing the sample portfolio.
+  changelog: null,
   terminal: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/terminal",
   editorial: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/editorial",
   warm: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/warm",
@@ -50,7 +59,7 @@ export async function POST(request) {
   const repoUrl = TEMPLATE_REPOS[template];
   if (!repoUrl) {
     return Response.json(
-      { error: "Deploying this template isn't set up yet — its standalone repo doesn't exist." },
+      { error: "Deploying this template isn't available right now. Please pick another one." },
       { status: 501 }
     );
   }
