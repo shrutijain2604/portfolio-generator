@@ -341,26 +341,20 @@ export const DASHBOARD_PALETTES = [
   },
 ];
 
-// Level Up's own palette set. Each entry is a whole console: on top of the
-// usual PAPER/INK/.../PALETTE shape it carries the four colors the level
-// itself is built from, because this template's page is a side-scrolling
-// world rather than a document on a background. SKY_HI and SKY_LO are the
-// sky at the top of the screen and at the horizon, LAND and LAND_DEEP are
-// the terrain's lit face and the rock under it, and FRAME is the hard 2px
-// edge every panel wears. FRAME is a palette value rather than a mix of INK
-// and PAPER because a panel here floats over the sky, not over PAPER: it has
-// to separate from both, and on the dark palettes that means a light edge
-// where a derived one would have been another dark tone.
+// Level Up's palette set. Each entry is a whole console: on top of the usual
+// PAPER/INK/.../PALETTE shape it carries the four colors the level is built
+// from, since this page is a side-scrolling world rather than a document.
+// SKY_HI/SKY_LO are the sky at top and horizon, LAND/LAND_DEEP the terrain's
+// lit face and the rock under it, FRAME the hard 2px panel edge. FRAME is a
+// palette value rather than derived from INK and PAPER because a panel floats
+// over the sky and has to separate from both.
 //
-// Every pair was checked rather than eyeballed: all body, label and accent
-// text clears WCAG AA (4.5:1) against the surface it actually sits on, and
-// FRAME clears 3:1 against the panel, both sky stops and the terrain. Two
-// consequences are baked into the template. MUTED is only ever used inside a
-// panel, since it fails against the open sky on three of the four palettes;
-// and any hue used as a solid fill behind text picks PAPER or INK by that
-// hue's own luminance (see onFill in LevelUpTemplate.js) instead of assuming
-// PAPER, because the greens and golds here are light enough to need dark
-// text on them.
+// Contrast was measured, not eyeballed: body, label and accent text clears
+// WCAG AA against the surface it sits on, and FRAME clears 3:1 against panel,
+// both sky stops and terrain. Two consequences: MUTED is only used inside a
+// panel, since it fails against open sky on three of the four palettes, and
+// any hue filled behind text picks PAPER or INK by its own luminance (see
+// onFill in LevelUpTemplate.js).
 export const LEVEL_UP_PALETTES = [
   {
     id: "arcade",

@@ -1,41 +1,21 @@
 "use client";
 
 // Pure presentational component: renders portfolio `data`, holding no state
-// beyond which band is currently in view: the same contract every template
-// here follows (see EditorialTemplate.js's header comment for why).
+// beyond which band is in view, the contract every template here follows.
 //
-// The look: refraction as a behaviour, never as a picture. Nothing here draws
-// a prism. Instead every heading is printed in three colour channels that sit
-// apart and slide back into register as it comes up the page, so the reader
-// watches white light resolve out of its own spectrum rather than looking at a
-// diagram of a triangle doing it. Section hues are tapped from one continuous
-// dispersion ramp across the customer's `sectionOrder`, so reordering sections
-// re-tunes the whole page. Skills render as a real emission spectrum: each line
-// sits at the true spectral position of the color shared.js already derives
-// from that skill's name, so the plate is a readout of the entered stack rather
-// than decoration.
+// Refraction as a behaviour, never a picture: nothing draws a prism. Headings
+// print in three colour channels that sit apart and slide back into register
+// as they come up the page. Section hues tap one continuous dispersion ramp
+// across sectionOrder, so reordering re-tunes the page, and each skill sits at
+// the true spectral position of the colour shared.js derives from its name,
+// making the plate a readout of the entered stack rather than decoration.
 //
-// Deliberately not the previous build, which drew a glass triangle with a
-// rainbow fanning out of it above a readout labelled "Optical profile". That
-// took the name literally and landed as a physics textbook figure: the optics
-// were illustrated instead of felt, and no amount of precision in the drawing
-// fixed the fact that a portfolio is not a diagram. What survived is
-// everything that was doing real work rather than cosplaying an instrument:
-// the dispersion ramp, the spectrum rail, the emission plate, the section
-// tracking.
+// Convergence is scroll-linked through animation-timeline: view(), so it costs
+// no scroll listener. Where that is unsupported, and under reduced motion, the
+// channels rest converged: the finished state is the default.
 //
-// The convergence is scroll-linked through `animation-timeline: view()`, so it
-// costs no scroll listener and no JavaScript at all. Where that is
-// unsupported, and under a reduced-motion preference, the channels simply rest
-// at their converged offset: the finished state is the default, so nothing is
-// ever left waiting on a feature that may not arrive.
-//
-// No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
-// EditForm.js's TEMPLATES_WITH_PHOTOS), so the previous build's <img> could
-// only ever resolve to the seeded /default-photo.jpg, which does not exist in
-// this template's standalone app and 404'd on every deployed copy. The
-// aperture monogram is built from the name instead, so it is always present
-// and always right.
+// No photo: photoUrl is only offered for warm/scrapbook/spotify (see
+// EditForm.js), so the aperture monogram is built from the name instead.
 
 import { useEffect, useRef, useState } from "react";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
@@ -374,18 +354,13 @@ function SpectralRule({ bands, colors, fade = "none" }) {
 }
 
 // The section index, drawn as the spectrum itself with its stops labelled.
+// Laying sections out along the spectrum makes the width carry information
+// rather than be dead space, and puts the page's one idea to work as
+// navigation: the reader picks a wavelength, not a contents row.
 //
-// The first attempt at this was a full-width table: number on the far left,
-// a small label, a count on the far right, and half a screen of nothing in
-// between. Laying the sections out ALONG the spectrum instead means the width
-// is what carries the information rather than being dead space, and it puts
-// the page's one idea to work as navigation: the reader is picking a
-// wavelength, not reading a contents page.
-//
-// Equal grid columns rather than positions computed from each band's hue: a
-// column guarantees its own label somewhere to sit, so no two names can ever
-// collide however long they are or however many sections a customer has. The
-// rule above carries the true continuous dispersion, so nothing is lost.
+// Equal grid columns rather than positions computed from each band's hue, so
+// no two labels can collide however long they are or however many sections
+// there are. The rule above carries the true continuous dispersion.
 function SectionIndex({ bands, colors, isDark }) {
   const count = bands.length;
 
@@ -790,18 +765,16 @@ function ProjectsBand({ projects, hue, colors, isDark }) {
   );
 }
 
-// Skills as an emission spectrum. Each line's horizontal position is the true
-// spectral position of the color shared.js derives from that skill's name, so
-// the plate is a readout of what was actually entered rather than a
-// decorative gradient. The plate is aria-hidden and the list below carries
-// the same information as text, so nothing here is color-only. The plate
-// stays near-black on every palette, light ones included, because that is
-// what an emission spectrum is read off.
-// Two skills whose colors share a hue land on exactly the same line and one
-// silently hides the other (Python and PostgreSQL both sit near 210 degrees),
-// so positions are pushed apart by the smallest gap that keeps both legible.
-// Spectral order is preserved, and the list below the plate is the exact
-// readout either way.
+// Skills as an emission spectrum. Each line sits at the true spectral position
+// of the colour shared.js derives from that skill's name, so the plate is a
+// readout of what was entered rather than a decorative gradient. It is
+// aria-hidden with the list below carrying the same information as text, and
+// stays near-black on every palette, because that is what a spectrum is read
+// off.
+//
+// Two skills sharing a hue would land on one line and hide each other (Python
+// and PostgreSQL both sit near 210 degrees), so positions are pushed apart by
+// the smallest gap that keeps both legible. Spectral order is preserved.
 const MIN_LINE_GAP = 0.035;
 
 function SkillsBand({ skills, colors }) {

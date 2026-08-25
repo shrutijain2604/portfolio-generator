@@ -4,20 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { IconGithub, IconLink, IconLinkedin, IconMail } from "./shared";
 
-// The status bar along the bottom of the level, and the pause screen it
-// opens. This is the only interactive chrome in the template and the only
-// place it ships client JavaScript.
+// The status bar along the bottom of the level and the pause screen it opens:
+// the only interactive chrome in the template, and the only client JavaScript.
 //
-// Two things need the browser and nothing else does. Which stage the visitor
-// is currently in is tracked with an IntersectionObserver rather than a
-// scroll handler, so no layout is read on the scroll path; the fill that
-// runs along the top edge of the bar is a CSS scroll-driven animation and is
-// not JavaScript at all. The pause screen needs focus management, a key
-// handler and scroll locking, which is state by nature.
+// Current stage is tracked with an IntersectionObserver rather than a scroll
+// handler, so no layout is read on the scroll path, and the fill along the top
+// edge is a CSS scroll-driven animation. The pause screen needs focus
+// management, a key handler and scroll locking, which is state by nature.
 //
-// The stage chips are the level-select strip: they are the page's navigation
-// on a wide screen, and the pause screen is the same navigation for a narrow
-// one, where six chips could not be given honest touch targets.
+// The stage chips are the page's navigation on a wide screen; the pause screen
+// is the same navigation on a narrow one, where six chips could not be given
+// honest touch targets.
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';

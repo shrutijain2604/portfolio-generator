@@ -1,28 +1,20 @@
 // Pure presentational component: renders portfolio `data` only, holding no
-// state of its own. Every template follows this contract so the editor can
-// swap templates without touching the user's entered data; the two pieces
-// that need interaction (the timeline crosshair, the scroll-spy rail) are
-// isolated client components.
+// state of its own. The two interactive pieces (the timeline crosshair, the
+// scroll-spy rail) are isolated client components.
 //
-// The look: an operations console for one service, where the service is the
-// person. Not the generic admin panel this template used to be. The idea that
-// holds it together is a single shared time axis: the Timeline panel lays every
-// dated thing the customer entered onto one year scale that the visitor can
-// scrub with a crosshair, and each Experience and Education row below carries
-// the same axis as a hairline bar, so a role's position in the page and its
-// position in the career read as the same fact.
+// An operations console for one service, where the service is the person. One
+// shared time axis holds it together: the Timeline panel lays every dated
+// thing onto one year scale the visitor can scrub, and each Experience and
+// Education row carries the same axis as a hairline bar, so a role's position
+// in the page and in the career read as the same fact.
 //
-// Every number on screen is an aggregate of entered data. Years come from the
-// dates typed into the form, the concurrency strip counts overlapping spans,
-// and the coverage matrix is a real incidence table of project tags against
-// projects. There are no invented metrics, no percentages of nothing, and no
-// stat card that renders a bare zero: a tile with no genuine value behind it,
-// or a whole row of them, simply does not render.
+// Every number is an aggregate of entered data: years from typed dates, the
+// concurrency strip from overlapping spans, the coverage matrix a real
+// incidence table of tags against projects. No invented metrics, and a tile
+// with no genuine value behind it does not render at all.
 //
-// No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
-// EditForm.js's TEMPLATES_WITH_PHOTOS), so an <img> here could only ever
-// resolve to the seeded default that does not exist in this template's
-// standalone app. The monogram plate is built from the name instead.
+// No photo: photoUrl is only offered for warm/scrapbook/spotify (see
+// EditForm.js), so the monogram plate is built from the name instead.
 
 import { Archivo, Azeret_Mono } from "next/font/google";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";

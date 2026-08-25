@@ -1,53 +1,19 @@
-// Front Page: a MODERN newspaper, set as a single no-scroll page.
+// Front Page: a modern newspaper set as one no-scroll page on lg and up.
 //
-// Design rules this template holds to, in priority order:
+// Height is a fixed budget rather than a flow, so densityFor() derives type
+// size, leading, entry spacing and column count from how much the customer
+// actually entered. It is a budget, not magic: an enormous portfolio can still
+// outrun the smallest tier. Below lg the page scrolls and type returns to a
+// fixed readable size.
 //
-// 1. ONE PAGE, NO SCROLL (on lg and up). The root is `h-dvh` with
-//    `overflow-hidden` and the body flow is the flex child that absorbs
-//    whatever height is left over. A front page is a fixed piece of paper;
-//    this behaves like one.
+// Exactly two rules on the page, under the nameplate and above the sign-off,
+// and the body is one continuous multi-column flow that breaks mid-story like
+// newsprint. Only headings are protected, via break-after: avoid.
 //
-//    The consequence to understand: height is a FIXED BUDGET, so copy that
-//    does not fit is clipped rather than pushed below the fold. That is
-//    managed by `densityFor()` — type size, leading, entry spacing, and
-//    column count are all derived from how many characters the customer
-//    actually entered, so a heavy portfolio sets tighter and still fits. It
-//    is a real budget, though, not magic: a genuinely enormous portfolio can
-//    still outrun the smallest tier.
-//
-//    Below `lg` the page scrolls normally and type returns to a readable
-//    fixed size. Fitting four roles and forty skills into 667px of phone at
-//    a legible size is not possible, and shipping unreadable 9px copy on
-//    mobile would be worse than scrolling.
-//
-// 2. WHITE PAPER, NO TEXTURE. Cream stock, paper grain, and halftone-screened
-//    photos all read "antique reproduction". This is white, with clean
-//    full-colour cuts.
-// 3. SEPARATE WITH SPACE AND WEIGHT, NOT WITH LINES. An earlier version drew
-//    roughly thirty hairlines on one page — double rules, a border above every
-//    entry, an underline beneath every skill, rules between every column — and
-//    the result was noise that fought the reading. There are exactly TWO rules
-//    here: one under the nameplate, one above the sign-off.
-// 4. Column inches matter: the body is ONE continuous multi-column flow and
-//    copy breaks across columns mid-story exactly like newsprint. Only
-//    headings are protected, via `break-after: avoid`. Making each heading
-//    plus its first entry an unbreakable block (an earlier attempt) meant any
-//    block too tall for the space left in a column jumped wholesale to the
-//    next, stranding hundreds of pixels of dead column.
-// 5. The customer's own section order decides what leads: sectionOrder[0] gets
-//    the largest heading, per the editor's reorder card ("lead with Projects
-//    if that's your strongest section").
-// 6. Nothing is fabricated. The tenure line is computed from real dates and
-//    the EST. year is the earliest real start year. Edition furniture is
-//    derived or omitted, never invented.
-//
-// Still a pure render of `data` with no state of its own — same contract as
-// every other template, and the density tiers below are derived from props, so
-// server and client always agree. Still no palette picker (see
-// lib/palettes.js): the fixed black-on-white editorial look IS the identity.
-//
-// No CursorGlow: a tracking light is a screen affordance, and on a page
-// pretending to be printed matter it broke the illusion.
+// sectionOrder[0] gets the largest heading. Nothing is fabricated: tenure and
+// the EST. year are computed from real dates. No palette picker and no
+// CursorGlow, both deliberate: black on white IS the identity, and a tracking
+// light breaks the printed-matter illusion.
 
 import { Fragment } from "react";
 import { Playfair_Display, Source_Serif_4, JetBrains_Mono } from "next/font/google";

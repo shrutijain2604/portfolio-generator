@@ -1,24 +1,18 @@
 "use client";
 
-// The dashboard's signature panel: every dated thing the customer entered
-// (roles from Experience, degrees from Education) laid out on ONE shared year
-// axis, with a crosshair the visitor scrubs to read off what was live in any
-// given year. Nothing here is invented: a span's start and end are the years
-// the customer typed, and the "concurrent" strip underneath is literally a
-// count of how many of those spans overlap each year, which is why it can
-// legitimately read 1 for a straightforward career and 3 for someone who
-// interned and studied at the same time.
+// The dashboard's signature panel: every dated thing the customer entered laid
+// out on one shared year axis, with a crosshair the visitor scrubs. Nothing is
+// invented: spans are the years they typed, and the "concurrent" strip counts
+// how many spans overlap each year.
 //
-// Year granularity, not day granularity: the schema only collects years (see
-// lib/portfolioData.js), so a year is one CELL rather than one point on a
-// continuous line. That is what makes "2021 to 2023" three cells wide instead
-// of two, and it is what lets a single-year career still render as a full-width
-// band instead of a 1px sliver.
+// Year granularity, not day: the schema only collects years (see
+// lib/portfolioData.js), so a year is one cell rather than a point on a line.
+// That makes "2021 to 2023" three cells wide, and lets a single-year career
+// render as a full-width band instead of a 1px sliver.
 //
-// Every lane is a drawn track and every year is a ruled column, so the part of
-// a lane a span does not cover reads as measured, empty time rather than as
-// blank page. A chart whose background disappears is what makes a sparse
-// timeline look broken.
+// Every lane is a drawn track and every year a ruled column, so uncovered time
+// reads as measured and empty rather than as blank page. A chart whose
+// background disappears is what makes a sparse timeline look broken.
 
 import { useMemo, useRef, useState } from "react";
 import { tint } from "./shared";

@@ -264,18 +264,12 @@ export default function PortfolioEditor({ template }) {
     runHandoff(dataRef.current);
   }, [restored, runHandoff]);
 
-  // Watching the build for real, instead of guessing.
-  //
-  // Vercel posts a commit status back to the repository, so the truth about
-  // whether somebody's site built is public information on a public repo, and
-  // the browser can read it directly. Polling from here rather than from our
-  // server matters: it runs against the visitor's own GitHub rate limit
-  // instead of pooling every customer onto one server IP, and it needs no
-  // token, so nothing has to be kept alive after the handoff.
-  //
-  // The combined status endpoint is one request per poll rather than the two
-  // the deployments API would need, which is what keeps a five minute watch
-  // well inside the sixty-per-hour anonymous allowance.
+  // Vercel posts a commit status back to the repository, so whether a site
+  // built is public information the browser can read directly. Polling from
+  // here rather than the server runs against the visitor's own rate limit and
+  // needs no token, so nothing has to outlive the handoff. The combined status
+  // endpoint is one request per poll, which keeps a five minute watch inside
+  // the anonymous allowance.
   useEffect(() => {
     if (!vercelOpened || !handoff?.branch) return undefined;
 

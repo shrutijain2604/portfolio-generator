@@ -1,38 +1,21 @@
 // Pure presentational component: renders portfolio `data` only, holding no
-// state of its own. Every template follows this contract so the editor can
-// swap templates without touching the customer's entered data; the two
-// pieces that need interaction (the status bar with its pause screen, the
-// loadout) are isolated client components.
+// state of its own. The two interactive pieces (the status bar with its pause
+// screen, the loadout) are isolated client components.
 //
-// The idea: the page is one continuous side-scrolling level, and scrolling
-// down it is travelling right through that level. A parallax world sits
-// behind the content, terrain and a runner sit in front of it, and a status
-// bar runs along the bottom of the screen the way a game's does, below the
-// play field rather than floating over it. The runner's stride is driven by
-// the scroll position itself, so the character runs exactly as far as the
-// visitor scrolls and stands still when they stop. That is the whole
-// signature: you scroll, the world pans, the little figure runs.
+// The page is one continuous side-scrolling level: scrolling down is
+// travelling right through it. A parallax world sits behind the content,
+// terrain and a runner in front, and a status bar along the bottom of the
+// screen rather than floating over it. The runner's stride is driven by scroll
+// position, so the figure runs exactly as far as the visitor scrolls.
 //
-// What the old build was, and why none of it survived: a two-pane character
-// sheet of bracket-cornered cards on a flat background, with an accent that
-// read as SaaS teal, three drifting clouds as the only scenery, and a typing
-// test bolted on the end that had nothing to do with the customer's data.
-// Corner brackets on a rounded card are HUD dressing, not a game; the thing
-// that makes something read as a game is a world you move through, so this
-// build spends its complexity there instead.
+// Nothing on screen is invented: no XP, no level number, no proficiency bar.
+// The three numbers are the stage count (sections filled in), the reading
+// meter (scroll position), and a per-skill count of how many of the customer's
+// own projects and roles mention that skill. A role reads as in progress or
+// cleared purely from whether its end date says present.
 //
-// Nothing on screen is invented. There is no XP, no level number, no builder
-// score, no proficiency bar. The three numeric things here are the stage
-// count (how many sections the customer filled in), the reading progress
-// meter (literally the scroll position), and a per-skill count of how many of
-// the customer's own projects and roles mention that skill. A role reads as
-// in progress or cleared purely from whether the end date they typed says
-// present. That is the lot.
-//
-// No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
-// EditForm.js's TEMPLATES_WITH_PHOTOS), so an <img> here could only resolve
-// to a seeded default that does not exist in this template's standalone app.
-// The monogram plate in the status bar is built from the name instead.
+// No photo: photoUrl is only offered for warm/scrapbook/spotify (see
+// EditForm.js), so the status bar monogram is built from the name instead.
 
 import { Chakra_Petch, Press_Start_2P, Russo_One } from "next/font/google";
 import { LEVEL_UP_PALETTES, getPalette } from "@/lib/palettes";

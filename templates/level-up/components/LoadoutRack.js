@@ -2,20 +2,16 @@
 
 import { useState } from "react";
 
-// The loadout, and the one thing on this page you can actually play with.
+// The loadout, and the one thing on this page you can play with.
 //
-// Equipping a skill answers the question a recruiter genuinely asks and a
-// chip cloud never does: where did this person actually use it. Everything
-// it reports is a cross-reference of what the customer typed, computed in
-// the template and handed here as plain data (see buildLoadout in
-// LevelUpTemplate.js), so this component only decides what is on screen.
-// There is no rating, no proficiency bar and no years-per-skill number,
-// because none of those exist anywhere in the entered data.
+// Equipping a skill answers what a chip cloud never does: where the person
+// actually used it. Everything reported is a cross-reference of entered data,
+// computed in the template (see buildLoadout in LevelUpTemplate.js). No
+// rating, no proficiency bar, no years-per-skill, because none of those exist
+// in the entered data.
 //
-// A slot with nothing to cross-reference is not a button. Making every chip
-// look interactive when a third of them would open an empty drawer is worse
-// than an honest difference in affordance, and it keeps the detail panel
-// from ever having to say "nothing here" on a published portfolio.
+// A slot with nothing to cross-reference is not a button: an honest difference
+// in affordance beats a third of the chips opening an empty drawer.
 export default function LoadoutRack({ slots }) {
   const [equipped, setEquipped] = useState(null);
   const active = slots.find((slot) => slot.name === equipped) || null;

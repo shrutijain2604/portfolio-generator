@@ -1,21 +1,16 @@
 // Pure presentational component: renders portfolio `data` only, no state of
-// its own. Every template follows this contract so the editor can swap
-// templates without touching the user's entered data.
+// its own.
 //
-// The design is one bound, tabbed notebook lying on a desk. Every section
-// is a punched sheet in that binder, and every sheet carries a different
-// real paper object rather than a recolored copy of one card: experience
-// is a run of index cards on a stitched rail, projects are prints held by
-// photo corners, skills are a die-cut sticker sheet, achievements are
-// perforated ticket stubs, education is a library checkout card, coding
-// profiles are punched hang tags. That per-section artifact is what makes
-// the page readable at a glance, and it is also the fix for the previous
-// version, which applied one torn-paper edge to every card in every
-// section and so read as a pile rather than a book.
+// One bound, tabbed notebook lying on a desk. Every section is a punched sheet
+// carrying a different real paper object rather than a recolored copy of one
+// card: index cards on a stitched rail for experience, prints in photo corners
+// for projects, a die-cut sticker sheet for skills, perforated stubs for
+// achievements, a library checkout card for education, punched hang tags for
+// coding profiles. That per-section artifact is what makes the page readable
+// at a glance and keeps it reading as a book rather than a pile.
 //
-// Navigation is part of the concept, not bolted on: the sheets carry
-// staggered divider tabs, a sticky index rail tracks whichever sheet is in
-// view (ScrapbookTabs), and the cover opens with a real table of contents.
+// Navigation is part of the concept: staggered divider tabs, a sticky index
+// rail tracking the sheet in view (ScrapbookTabs), and a real contents page.
 /* eslint-disable @next/next/no-img-element */
 
 import { Bodoni_Moda, Newsreader, Courier_Prime, Caveat } from "next/font/google";
@@ -333,24 +328,18 @@ function ExperienceSheet({ experience, accent, ink, c }) {
   );
 }
 
-// Projects: album mounts. The print sits on a panel with its highlights on
-// a slip of paper tucked in behind it: visible, not hidden behind a flip,
-// because the highlights are the part a hiring manager actually came to
-// read. The mount tilts in real perspective on hover and the print lifts
-// toward the viewer (see .scrapbook-mount in globals.css).
+// Projects: album mounts. The print sits on a panel with its highlights on a
+// slip tucked in behind it, visible rather than hidden behind a flip, because
+// the highlights are what a hiring manager came to read. The mount tilts in
+// real perspective on hover (see .scrapbook-mount in globals.css).
 //
-// A mount is laid out landscape when it is full width and portrait when it
-// shares the row, which is what keeps the sheet from ever showing an empty
-// column: an odd project count promotes the first project to a full-width
-// lead mount so the remaining even number pairs up exactly. A plain
-// two-column grid left a lonely half-width card next to dead space whenever
-// the count was odd, and with a single project that dead space was half the
-// page.
+// Landscape at full width, portrait when sharing the row. An odd project count
+// promotes the first to a full-width lead mount so the rest pair up exactly,
+// which is what keeps the sheet from ever showing an empty column.
 //
-// The landscape split only kicks in from md up: below that the sheet is
-// narrow enough that a fixed 17rem print column would squeeze the copy and
-// the notes slip into an unreadable gutter, so the print stacks above the
-// text as it does in a half-width mount.
+// The landscape split only applies from md up: below that a fixed 17rem print
+// column would squeeze the copy into an unreadable gutter, so the print stacks
+// above the text instead.
 function ProjectMount({ project, accent, ink, c, tilt, wide }) {
   const print = (
     <PhotoPrint

@@ -1,36 +1,23 @@
 "use client";
 
 // Pure presentational component: renders portfolio `data` only, no state of
-// its own, the same contract every template here follows (see
-// EditorialTemplate.js's header comment for why).
+// its own, the contract every template here follows.
 //
-// The look: holographic foil as a material, not science fiction. Real
-// holograms are things people have actually held, a foil-stamped seal or a
-// laminated card whose spectrum slides as it tilts, so this is pearl stock
-// carrying one foil gradient. Every iridescent surface on the page (the name,
-// the seal, the section numerals, the skill pills, the sheet edges and the
-// light raking across them) is that same gradient at one shared position,
-// held in `--iris`. Moving the pointer slides all of them together, which is
-// the whole idea: one material, one light, one page.
+// Holographic foil as a material, not science fiction: pearl stock carrying
+// one foil gradient. Every iridescent surface (the name, the seal, the section
+// numerals, the skill pills, the sheet edges) is that same gradient at one
+// shared position held in --iris, so moving the pointer slides all of them
+// together. One material, one light, one page.
 //
-// Two earlier builds are deliberately abandoned. The foil trading card deck
-// was a dozen variations of one rounded card in a masonry column, and it also
-// truncated real content. The volumetric projection that replaced it was
-// dark, cyan, monospaced, and framed in bracketed panels, which is Level Up's
-// wardrobe: two templates in one catalogue cannot dress the same. This one
-// carries no monospace, no neon on black, and no hard corner anywhere: two
-// radii, one hairline, one shadow, one gradient.
+// No monospace, no neon on black, no hard corner: two radii, one hairline, one
+// shadow, one gradient. That keeps it out of Level Up's wardrobe, since two
+// templates in one catalogue cannot dress the same.
 //
-// Fixed built-in look, no customer palette picker, same reasoning as
-// Terminal/Spotify/Retro Desktop: the subject is one iridescent material, and
-// a hue picker would be picking a hue for the one thing defined by having all
-// of them.
+// No palette picker, as with Terminal/Spotify/Retro Desktop: a hue picker
+// would be picking a hue for the one thing defined by having all of them.
 //
-// No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
-// EditForm.js's TEMPLATES_WITH_PHOTOS), so an <img> here could only ever
-// resolve to the seeded /default-photo.jpg, which does not exist in this
-// template's standalone app and 404s on every deployed copy. The seal carries
-// the initials instead.
+// No photo: photoUrl is only offered for warm/scrapbook/spotify (see
+// EditForm.js), so the seal carries the initials instead.
 
 import { useEffect, useRef } from "react";
 import { Manrope, Outfit } from "next/font/google";

@@ -2,20 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-// The binder's index: one colored divider tab per sheet, tracking whichever
-// sheet is actually in view, so the rail reads as an edge-on view of the
-// pages rather than a link list that never reflects where the visitor is.
-// The active tab slides out of the stack the way a thumbed-through divider
-// does. Desktop only: small screens navigate from the table of contents on
-// the cover instead, since a fixed rail there would eat width the sheets
-// need. Plain anchors rather than scroll handlers: they work before this
-// component hydrates, and the browser scrolls whichever container the
-// template happens to be inside (the editor's preview pane included).
+// The binder's index: one colored divider tab per sheet, tracking whichever is
+// in view, so the rail reads as an edge-on view of the pages rather than a
+// link list. Desktop only, since a fixed rail on a small screen would eat
+// width the sheets need. Plain anchors rather than scroll handlers: they work
+// before hydration, and the browser scrolls whichever container the template
+// sits in, the editor's preview pane included.
 //
-// `mono` is the template's typewriter font class, passed in rather than
-// loaded here: every other template keeps its next/font calls in the
-// template file, and a second call for the same family would just duplicate
-// the @font-face rules.
+// `mono` is passed in rather than loaded here, because a second next/font call
+// for the same family would duplicate the @font-face rules.
 export default function ScrapbookTabs({ items, mono, card, ink, inkSoft, rule }) {
   const [activeId, setActiveId] = useState(items[0]?.id || null);
   const itemKey = items.map((item) => item.id).join(",");

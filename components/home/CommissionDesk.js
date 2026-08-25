@@ -1,24 +1,19 @@
 "use client";
 
-// The landing page's closing argument: a template gallery is not everything, so
-// this is where someone who already knows what they want commissions it.
+// Where someone who already knows what they want commissions it, since a
+// template gallery is not everything.
 //
-// The signature idea is that the brief writes itself. Every choice on the left
-// lands as a written line on the plate to the right, and sending then opens a
-// compose window with exactly that text already in it. Nobody is handed an
-// empty compose window and asked to explain themselves from scratch, and the
-// document they watched assemble is the document that gets sent.
+// The brief writes itself: every choice on the left lands as a written line on
+// the plate to the right, and sending opens a compose window with exactly that
+// text in it. Nobody is handed an empty window and asked to start from scratch.
 //
-// Sending offers three destinations rather than one mailto. A bare mailto is
-// handed to whatever the operating system registered, which on a Mac is Apple
-// Mail even for the many people who have never opened it, so the flow dead-ends
-// in an app they do not use. Gmail's compose URL covers most visitors, the
-// mailto still serves anyone on a real desktop client, and copying covers every
-// remaining client without this page having to guess at it.
+// Three send destinations rather than one mailto, because a bare mailto goes
+// to whatever the OS registered (Apple Mail on a Mac, for people who have
+// never opened it) and dead-ends there. Gmail's compose URL covers most
+// visitors, mailto serves real desktop clients, and copying covers the rest.
 //
-// Nothing is posted anywhere and nothing is stored: this surface has no server
-// route behind it on purpose, so a half-finished brief someone abandons never
-// becomes a record sitting in a database.
+// Nothing is posted or stored: no server route behind this on purpose, so an
+// abandoned brief never becomes a record in a database.
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, BriefMark } from "./marks";

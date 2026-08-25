@@ -380,18 +380,14 @@ export const LEVEL_UP_PALETTES = [
   },
 ];
 
-// Scrapbook's own palette set — vintage as in "1960s-70s travel poster and
-// Kodachrome film," not "faded sepia photograph": warm aged-paper
-// backgrounds paired with genuinely saturated, punchy accents (burnt
-// orange, hot pink, mustard, emerald, cobalt). An earlier pass here went
-// fully desaturated/muted for "vintage" and it just read as dull — the
-// actual vintage-but-vibrant reference point is mid-century poster art and
-// old film-print color casts, which are bold, not washed out. Same
-// PAPER/INK/.../PALETTE shape as the others, plus one addition: CARD, a
-// warm-paper (or, for the dark palette, near-black) tone every board card
-// sits on — distinct from PAPER since a masonry grid of cards needs its
-// own consistent surface color regardless of how tinted the page
-// background is.
+// Scrapbook's palette set. Vintage as in 1960s travel poster and Kodachrome,
+// not faded sepia: warm aged-paper backgrounds with genuinely saturated
+// accents (burnt orange, hot pink, mustard, emerald, cobalt). Desaturating for
+// "vintage" reads as dull; the reference point is bold, not washed out.
+//
+// Same shape as the others plus CARD, a warm-paper (near-black on the dark
+// palette) tone every board card sits on, distinct from PAPER because a
+// masonry grid needs one consistent surface however tinted the page is.
 export const SCRAPBOOK_PALETTES = [
   {
     id: "sunkissed",

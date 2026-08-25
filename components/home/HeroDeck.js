@@ -1,18 +1,15 @@
 "use client";
 
 // The hero's signature object: a stack of real template components in
-// perspective that deals itself through all twelve on its own.
+// perspective that deals itself through all twelve.
 //
-// These are live renders of the same components the editor and the deployed
-// subapps use, not screenshots, for the same reason TemplatePreviewCard
-// renders live: a picture of a template can drift out of sync with the
-// template, and this one sits at the top of the page where that would be most
-// visible.
+// Live renders of the same components the editor and the subapps use, not
+// screenshots, because a picture of a template drifts out of sync with the
+// template, and this sits where that would be most visible.
 //
-// Only a window of four is mounted at a time. Twelve full template renders
-// above the fold is a lot of DOM for a decorative object, and windowing keeps
-// the cost to one template mounting per turn: the three cards behind the front
-// keep their identity and simply shift a slot, so React reuses them.
+// Only a window of four is mounted at a time: twelve full renders above the
+// fold is a lot of DOM for a decorative object. The three cards behind the
+// front keep their identity and shift a slot, so React reuses them.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";

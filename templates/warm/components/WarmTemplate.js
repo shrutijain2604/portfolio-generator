@@ -1,24 +1,19 @@
 // Pure presentational component: renders portfolio `data` only, no state of
-// its own. Every template follows this contract so the editor can swap
-// templates without touching the user's entered data.
+// its own.
 //
-// The idea: one room, one sun. The page is a warm interior lit from a single
-// window, and everything on it is an object sitting in that light rather than
-// a card on a background. Two rules follow from that and are worth knowing
-// before editing anything here:
+// One room, one sun. The page is a warm interior lit from a single window and
+// everything on it is an object sitting in that light rather than a card on a
+// background. Two rules follow:
 //
-//   - There is one light, so there is one shadow direction. It lives in
-//     `--warm-sh-x` / `--warm-sh-y` (app/globals.css) and every raised thing
-//     reads it. Nothing hardcodes an offset, because a room where two objects
-//     disagree about where the sun is stops reading as a room.
-//   - The light has an hour, held in `data-light` on the root. HourDial sets
-//     it from the visitor's own clock and then from their choice, and the
-//     stylesheet re-aims the sun, the shadows, the sky and the spill off that
-//     one attribute. No JavaScript is involved in the re-lighting itself.
+//   - One light means one shadow direction, held in --warm-sh-x / --warm-sh-y
+//     (app/globals.css). Nothing hardcodes an offset, because a room where two
+//     objects disagree about where the sun is stops reading as a room.
+//   - The light has an hour, held in data-light on the root. HourDial sets it
+//     from the visitor's clock and then their choice, and the stylesheet
+//     re-aims sun, shadows, sky and spill off that one attribute.
 //
-// Interaction and motion are therefore about light: content rises into it on
-// a view() timeline, the rail beside a career lights up as it is read, and
-// picking a thing up shortens its shadow.
+// Motion is therefore about light: content rises into it on a view() timeline,
+// and picking a thing up shortens its shadow.
 /* eslint-disable @next/next/no-img-element */
 
 import { Fraunces, Instrument_Sans } from "next/font/google";

@@ -1,28 +1,18 @@
-// The level itself: the parallax world the Level Up page is set in, split
-// into the part behind the content (PixelSky) and the part in front of it
-// (PixelGround, which carries the terrain and the runner). Both are plain
-// server components. Nothing here holds state, listens for scroll, or ships
-// a byte of JavaScript: the panning is done entirely by CSS scroll-driven
-// animations declared in the template's stylesheet, so travelling through
-// the level costs no main thread work at all.
+// The parallax world Level Up is set in, split into the part behind the
+// content (PixelSky) and the part in front (PixelGround, carrying terrain and
+// runner). Both are plain server components shipping no JavaScript: panning is
+// done entirely by CSS scroll-driven animations in the template's stylesheet.
 //
 // Every layer is one repeating tile emitted as a data-URI SVG background
-// image rather than as SVG elements in the document. Three reasons:
-// background-size gives exact control of the pixel grid, repeat-x gives free
-// horizontal tiling, and one composited transform pans the whole layer. The
-// same art as DOM nodes would be several thousand <rect>s for no gain, and a
-// CSS gradient cannot draw a stepped silhouette at all. Colors are baked
-// into each tile at render time because a data URI cannot read a custom
-// property; they come from the chosen palette, so switching palette simply
-// re-renders the tiles.
+// rather than SVG elements, because background-size controls the pixel grid,
+// repeat-x tiles for free, and one composited transform pans the layer. Colors
+// are baked into each tile at render time, since a data URI cannot read a
+// custom property, so switching palette re-renders the tiles.
 //
-// All art is drawn on an integer grid in art units, one unit being one
-// pixel-art pixel, and scaled to the screen by a single custom property
-// (--lu-px: 4px on a wide screen, 3px on a narrow one). Every layer's height
-// is therefore an exact integer multiple of one art pixel, which is what
-// keeps brick courses even and edges hard. shape-rendering="crispEdges" does
-// the rest: it is the difference between pixel art and vector art with a
-// retro palette applied to it.
+// Art is drawn on an integer grid in art units (one unit is one pixel-art
+// pixel) and scaled by --lu-px, so every layer height is an exact multiple of
+// one art pixel. That plus shape-rendering="crispEdges" is the difference
+// between pixel art and vector art with a retro palette applied.
 
 // --- tile construction -------------------------------------------------
 
