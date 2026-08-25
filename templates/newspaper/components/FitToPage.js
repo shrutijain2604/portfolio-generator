@@ -2,27 +2,17 @@
 
 // Scales a block of type until it exactly fills the height it has been given.
 //
-// Why this exists: the Front Page template is a single no-scroll page, so its
-// body has a FIXED height budget. Picking type sizes to match that budget from
-// the data alone (character counts, entry counts, `vh` curves) was tried and
-// repeatedly failed, because the two variables that decide whether copy fits —
-// how much copy there is, and how large the window is — interact in a way no
-// static heuristic tracked. The failures went both directions: too large and
-// real sentences were silently clipped off the page; too small and a third of
-// the page sat empty. One tier boundary shrank the type 12%, which (column
-// height scales with roughly the SQUARE of type size) cost 22% of the page.
+// Front Page is one no-scroll page, so its body has a fixed height budget.
+// Predicting type size from the data alone (character counts, vh curves)
+// failed in both directions, because how much copy there is and how large the
+// window is interact in a way no static heuristic tracked. So measure instead:
+// binary-search the largest multiplier at which the content still fits, ~11
+// synchronous reflows of one element, once per resize.
 //
-// So instead of predicting, measure. Binary-search a multiplier for the largest
-// value at which the content still fits, then keep it. Self-correcting for any
-// content and any viewport, and it converges in ~11 synchronous reflows of one
-// element, once per resize.
-//
-// The overflow test deserves a note: a CSS multi-column box with a constrained
-// height does NOT grow taller when it runs out of room, it creates additional
-// columns beside the existing ones. So `scrollHeight` stays equal to
-// `clientHeight` even while content is being lost, and the real signal is
-// `scrollWidth`. Checking only the height is what let the earlier clipping go
-// unnoticed.
+// The overflow test matters. A constrained multi-column box does not grow
+// taller when it runs out of room, it adds columns beside the existing ones,
+// so scrollHeight stays equal to clientHeight while content is being lost. The
+// real signal is scrollWidth.
 
 import { useEffect, useRef } from "react";
 

@@ -2,22 +2,17 @@
 
 // A real desktop, not a picture of one.
 //
-// The component renders only from the `data` prop, like every other template,
-// but it also owns a small window manager: windows open, focus, stack, drag,
-// resize, minimise, maximise and close, the taskbar lists what is actually
-// open, and the Start menu launches things. That machinery is the point. A
-// desktop that cannot do those is a screenshot with a wallpaper behind it, and
-// a visitor spots the difference in about two seconds.
+// Renders from the `data` prop like every template, but also owns a small
+// window manager: windows open, focus, stack, drag, resize, minimise, maximise
+// and close, the taskbar lists what is open, and the Start menu launches
+// things. That machinery is the point: a desktop that cannot do those is a
+// screenshot with a wallpaper behind it.
 //
-// Three shells (Windows 95, Windows 11, macOS) share one content model, built
-// once from `data`. Only the chrome changes per shell: bevels versus mica
-// versus vibrancy, taskbar versus dock, and the fonts and scrollbars each
-// system is recognised by. The shell is local UI state, not saved portfolio
-// data: it is a display preference a visitor can play with, the same way
-// toggling light and dark on a website does not require an account.
+// Three shells (Windows 95, Windows 11, macOS) share one content model built
+// once from `data`; only the chrome changes. The shell is local UI state, not
+// saved portfolio data, the same way a light/dark toggle needs no account.
 //
-// No photo: the builder only offers photoUrl for warm/scrapbook/spotify, so
-// there is never one to render here.
+// No photo: photoUrl is only offered for warm/scrapbook/spotify.
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -149,19 +144,16 @@ const ICON_METRICS = {
 
 // Where the windows land when the desktop boots with everything already open.
 //
-// Fractions of the free space rather than pixels, so the same strewn shape
-// holds at any stage size, and a fixed table rather than a random one, so a
-// re-render never reshuffles the desk under the visitor. The rows are
-// deliberately out of step and the sizes deliberately uneven: a neat diagonal
-// cascade reads as a screensaver, while this reads as a desk somebody has
-// actually been working at. Every title bar stays clickable, which is what
-// makes reading and closing them one at a time work.
-// Horizontal placement is a fraction of the free width. Vertical placement is
-// a fraction of the stage measured from whichever edge the slot names, and the
-// two-edge business is the whole trick: a window is only as tall as its text,
-// so anything placed from the top leaves the bottom of the desk bare. Half of
-// these hang off the bottom edge instead, and they fill it whatever height
-// they turn out to be.
+// Fractions of the free space rather than pixels, so the shape holds at any
+// stage size, and a fixed table rather than a random one, so a re-render never
+// reshuffles the desk. Rows are deliberately out of step and sizes uneven: a
+// neat diagonal cascade reads as a screensaver, this reads as a desk somebody
+// has been working at.
+//
+// Vertical placement is measured from whichever edge the slot names, and that
+// is the trick: a window is only as tall as its text, so anything placed from
+// the top leaves the bottom bare. Half of these hang off the bottom instead
+// and fill it whatever height they turn out to be.
 const SCATTER = [
   { fx: 0.0, top: 0.02, scale: 0.95 },
   { fx: 0.58, top: 0.0, scale: 0.92 },

@@ -1,31 +1,21 @@
 "use client";
 
-// The Spotify desktop app, not a page that borrows its palette.
+// The Spotify desktop app, not a page that borrows its palette. The shell is
+// what makes it recognisable: a black gutter holding three rounded panes, a
+// library rail left, one scroller in the middle owning its own top bar, and a
+// player pinned across the bottom.
 //
-// What makes that application recognisable is its shell rather than its
-// colours: a black gutter with three rounded panes floating in it, a library
-// rail down the left, one scroller in the middle that owns its own top bar, and
-// a player pinned across the bottom. Every other Spotify-flavoured design on
-// the internet is a green button on a dark page, so the shell is the work.
+// Unlike the other templates this one owns state: a track can be played, the
+// player bar follows it, and the bullets light up in turn like lyrics, running
+// on the customer's own entered text.
 //
-// The component owns a little state, which earlier versions did not: a track
-// can be selected and played, the player bar follows it, and the bullets of
-// whatever is playing light up in turn like lyrics. That is the one thing this
-// template can do that a screenshot cannot, and it runs on the customer's own
-// entered text.
+// Honesty rules as everywhere else: the progress and volume fills are chrome
+// carrying no numbers, there are no invented durations, and the track list's
+// right column shows the dates the customer typed. "Monthly listeners" is a
+// themed display number derived from real counts, not a claim of an audience.
 //
-// Honesty rules, unchanged from every other template: the progress bar and the
-// volume fill are chrome and carry no numbers, there are no invented track
-// durations, and the right-hand column of the track list shows the dates the
-// customer actually typed. "Monthly listeners" is a themed display number
-// derived from real counts (projects, skills, years of experience), the same
-// device as Level Up's Builder Score, and it is not a claim of an audience.
-// Achievements and certifications share one schema field, so they render once,
-// as Top Charts.
-//
-// No Spotify wordmark or logo anywhere: the layout is the homage, and a
-// trademark shipped into a paying customer's own repository is not ours to
-// hand over. Where the application puts its mark, this puts the artist's.
+// No Spotify wordmark or logo: the layout is the homage, and a trademark
+// shipped into a paying customer's repository is not ours to hand over.
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -623,21 +613,18 @@ export default function SpotifyTemplate({ data }) {
   const songUrl = (nowPlaying?.url || "").trim();
 
   // The queue: the song, then every role, then every release. Roles carry
-  // lyrics because a compact track row has nowhere to put their bullets;
-  // releases carry none, since a release row already prints everything it has
-  // and the same words twice on one screen would read as a bug.
+  // lyrics because a compact track row cannot hold their bullets; releases
+  // carry none, since a release row already prints everything it has.
   //
-  // The song is the one thing on this page that is not the customer's own work,
-  // and it is deliberately in the queue and in no section: the player has to
-  // have something cued on arrival, and a portfolio deserves a soundtrack. My
-  // Way is the default for reasons that need no explaining. Anyone who would
-  // rather pick their own says so in the form, and naming a song without naming
-  // an artist leaves that line empty rather than crediting Sinatra with it.
+  // The song is the one thing here that is not the customer's own work, and it
+  // sits in the queue and in no section: the player needs something cued on
+  // arrival. Anyone who would rather pick their own says so in the form, and
+  // naming a song without an artist leaves that line empty rather than
+  // crediting the default's.
   //
-  // The title links out to the recording. The default carries its own link;
-  // a customer's own song only becomes clickable if they gave one, and the
-  // address is forced through https the same way every other link here is, so
-  // a scheme typed into the box cannot become one the browser will execute.
+  // The title links out to the recording, and the address is forced through
+  // https like every other link, so a scheme typed into the box cannot become
+  // one the browser will execute.
   const tracks = useMemo(
     () => [
       {
