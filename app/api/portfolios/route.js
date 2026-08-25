@@ -1,49 +1,20 @@
-// Saves a portfolio draft ahead of the Vercel deploy redirect. Always
-// created unpublished — supabase/schema.sql's RLS policy means the row is
-// invisible to the public publishable key (and so to any deployed site)
-// until the /deployed callback confirms a real deployment and flips
-// is_published, not at the moment this route is hit.
-//
-// Also builds the Vercel clone URL here rather than in the browser: it
-// needs NEXT_PUBLIC_SUPABASE_URL/PUBLISHABLE_KEY baked into the deployed
-// project's own env vars (same values for every customer, since every
-// deployed site reads from this one database) alongside the per-customer
-// PORTFOLIO_ID, and this is the one place that already has the
-// repository-url -> template mapping without duplicating it client-side.
+// Saved a portfolio draft ahead of the old Vercel clone redirect. Rows are
+// always created unpublished: supabase/schema.sql's RLS policy hides them from
+// the publishable key until /deployed confirms a real deployment.
 
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sanitizePortfolioData, templates } from "@/lib/portfolioData";
 
 const TEMPLATE_IDS = new Set(templates.map((t) => t.id));
 
-// TODO: each remaining template needs its own templates/<id>/ subdirectory
-// (standalone Next.js app, same pattern as templates/terminal/) pushed to
-// the repo before it can go here. Maps to null until that exists, so the
-// route below refuses to build a deploy link rather than send someone to a
-// broken clone.
-const TEMPLATE_REPOS = {
-  // Deliberately withheld, and permanently so. templates/changelog no longer
-  // reads its content from this database: it renders data/portfolio.js out of
-  // its own repo, so the customer owns and can edit their content instead of
-  // renting it back from us. It deploys through /api/github/create-repo
-  // instead, which writes that file into a repository in their own account.
-  //
-  // This route must never build a clone link for it. Vercel's clone flow
-  // copies a repo and sets env vars but cannot write a file, so going through
-  // it would hand somebody a live site showing the sample portfolio.
-  changelog: null,
-  terminal: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/terminal",
-  editorial: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/editorial",
-  warm: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/warm",
-  dashboard: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/dashboard",
-  "level-up": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/level-up",
-  "retro-desktop": "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/retro-desktop",
-  scrapbook: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/scrapbook",
-  spotify: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/spotify",
-  newspaper: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/newspaper",
-  prism: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/prism",
-  holographic: "https://github.com/shrutijain2604/portfolio-generator/tree/master/templates/holographic",
-};
+// Empty, and permanently so. Every template now renders data/portfolio.js from
+// its own repository and deploys through /api/github/create-repo, so no clone
+// link should ever be built again: Vercel's clone flow cannot write a file, and
+// would hand somebody a live site showing the sample portfolio.
+//
+// The route is kept because /live/[id] and /deployed still read the rows it
+// wrote, for portfolios deployed before the handoff existed.
+const TEMPLATE_REPOS = {};
 
 export async function POST(request) {
   const body = await request.json();

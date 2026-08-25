@@ -1,22 +1,14 @@
-// The only page this site has. PORTFOLIO_ID is fixed per deployment — set
-// once, as an env var, when the customer went through Vercel's clone flow
-// (see the builder repo's app/api/portfolios/route.js for how the deploy
-// link is constructed). Unlike the builder's /live/[id] validation route,
-// there's no dynamic segment here: one deployment is permanently one
-// portfolio.
-import { notFound } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+// Your site's one page. It renders at build time from data/portfolio.js, so
+// there is no database behind it, no API key to set and nothing to configure:
+// edit that file, commit, and the site rebuilds itself.
+//
+// Edit data/portfolio.js rather than this file. Entries left blank are dropped
+// instead of rendering as empty rows, and a section missing from sectionOrder
+// is added back at the end, so the page holds together while you work on it.
+import portfolio from "@/data/portfolio";
 import { sanitizePortfolioData } from "@/lib/portfolioData";
 import WarmTemplate from "@/components/WarmTemplate";
 
-export const dynamic = "force-dynamic";
-
-export default async function Page() {
-  const id = process.env.PORTFOLIO_ID;
-  if (!id) notFound();
-
-  const { data: row } = await getSupabase().from("portfolios").select("data").eq("id", id).single();
-  if (!row) notFound();
-
-  return <WarmTemplate data={sanitizePortfolioData(row.data)} />;
+export default function Page() {
+  return <WarmTemplate data={sanitizePortfolioData(portfolio)} />;
 }

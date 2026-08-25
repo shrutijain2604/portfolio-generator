@@ -13,6 +13,13 @@ import { DATA_FILE, buildDataFile, readTemplateFiles, supportsHandoff } from "@/
 import { sanitizePortfolioData } from "@/lib/portfolioData";
 import { GITHUB_TOKEN_COOKIE } from "@/lib/githubSession";
 
+// Creating the repository is one request, but the commit is not: every binary
+// asset becomes a blob of its own first, and templates/retro-desktop ships
+// fifty-eight of them. That comfortably outruns the ten seconds a serverless
+// function gets by default, and a function killed mid-flight answers with an
+// HTML error page rather than anything this route wrote.
+export const maxDuration = 60;
+
 export async function POST(request) {
   // Checked before anything else, so a server missing its GitHub credentials
   // says so in place rather than sending the customer off on an OAuth round
@@ -63,7 +70,7 @@ export async function POST(request) {
     );
 
     const files = await readTemplateFiles(template);
-    files.push({ path: DATA_FILE, content: buildDataFile(clean) });
+    files.push({ path: DATA_FILE, content: buildDataFile(clean), encoding: "utf-8" });
 
     await commitFiles(
       token,
