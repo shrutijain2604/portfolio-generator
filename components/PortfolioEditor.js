@@ -85,8 +85,13 @@ function ExternalIcon(props) {
 // it register as a feature rather than something to miss entirely.
 function ThemeSwatchBar({ palettes, selectedId, onChange }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
-      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Theme</span>
+    <div
+      className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2.5"
+      style={{ borderColor: "var(--home-rule)", background: "var(--home-surface)" }}
+    >
+      <span className="text-xs font-medium" style={{ color: "var(--home-dim)" }}>
+        Theme
+      </span>
       <ThemeSwitcher palettes={palettes} selectedId={selectedId} onChange={onChange} />
     </div>
   );
@@ -379,16 +384,15 @@ export default function PortfolioEditor({ template }) {
   }
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
+    // home-root carries the landing page's palette, so every --home-* token
+    // below resolves without the editor keeping a second copy of it.
+    <div className="home-root flex h-dvh flex-col">
+      <header className="flex items-center justify-between border-b px-6 py-3" style={{ borderColor: "var(--home-rule)" }}>
         <div>
-          <Link
-            href="/"
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-          >
+          <Link href="/" className="home-quiet-link text-xs font-medium">
             ← Back to templates
           </Link>
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-sm font-semibold" style={{ color: "var(--home-strong)" }}>
             Editing: {template.name}
           </h1>
         </div>
@@ -399,45 +403,58 @@ export default function PortfolioEditor({ template }) {
               currently on. The label names what the pair is for, which the
               buttons alone never said. */}
           <div className="flex items-center gap-2.5">
-            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 sm:inline dark:text-zinc-500">
+            <span
+              className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] sm:inline"
+              style={{ color: "var(--home-dim)" }}
+            >
               Preview
             </span>
-            <div className="flex items-center rounded-full border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div
+              className="flex items-center rounded-full border"
+              style={{ borderColor: "var(--home-rule)", background: "var(--home-surface)" }}
+            >
               <button
                 type="button"
                 onClick={openDesktopPreview}
                 title="See the full desktop layout in a new tab"
-                className="group flex items-center gap-1.5 rounded-l-full py-2 pl-3.5 pr-3 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                className="ed-ghost ed-focus group flex items-center gap-1.5 rounded-l-full py-2 pl-3.5 pr-3 text-xs font-semibold"
               >
                 <DesktopIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 Desktop
                 <ExternalIcon
-                  className="h-2.5 w-2.5 shrink-0 text-zinc-400 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px dark:text-zinc-500"
+                  className="h-2.5 w-2.5 shrink-0 opacity-60 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px"
                   aria-hidden="true"
                 />
               </button>
 
-              <span className="h-4 w-px shrink-0 bg-zinc-200 dark:bg-zinc-800" aria-hidden="true" />
+              <span
+                className="h-4 w-px shrink-0"
+                style={{ background: "var(--home-rule)" }}
+                aria-hidden="true"
+              />
 
               <button
                 type="button"
                 onClick={() => setShowMobilePreview(true)}
                 title="See how this looks on a phone"
-                className="flex items-center gap-1.5 rounded-r-full py-2 pl-3 pr-3.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                className="ed-ghost ed-focus flex items-center gap-1.5 rounded-r-full py-2 pl-3 pr-3.5 text-xs font-semibold"
               >
                 <MobileIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 Mobile
               </button>
             </div>
           </div>
-          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          <span
+            className="rounded-full px-3 py-1 text-xs"
+            style={{ background: "rgba(20, 54, 93, 0.07)", color: "var(--home-dim)" }}
+          >
             Autosaved to this browser
           </span>
           <button
             type="button"
             onClick={handleDeploy}
             disabled={deployStatus === "saving"}
-            className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="ed-primary ed-focus rounded-full px-4 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deployStatus === "saving" ? "Starting deployment…" : "Deploy my portfolio"}
           </button>
@@ -449,16 +466,18 @@ export default function PortfolioEditor({ template }) {
         className="flex flex-1 flex-col overflow-hidden lg:flex-row"
         style={{ "--left-width": "50%" }}
       >
-        <div className="overflow-y-auto border-b border-zinc-200 bg-zinc-50 px-6 py-6 dark:border-zinc-800 dark:bg-zinc-950/40 lg:w-[var(--left-width)] lg:shrink-0 lg:border-b-0 lg:border-r">
+        <div
+          className="overflow-y-auto border-b px-6 py-6 lg:w-[var(--left-width)] lg:shrink-0 lg:border-b-0 lg:border-r"
+          style={{ borderColor: "var(--home-rule)", background: "var(--home-bg)" }}
+        >
           <EditForm data={data} onChange={setData} templateId={template.id} />
         </div>
 
         <div
           onMouseDown={handleDividerMouseDown}
           onDoubleClick={handleDividerDoubleClick}
-          className={`hidden w-1.5 shrink-0 cursor-col-resize select-none transition-colors lg:block ${
-            isDragging ? "bg-emerald-500" : "bg-zinc-200 hover:bg-emerald-400 dark:bg-zinc-800"
-          }`}
+          className="hidden w-1.5 shrink-0 cursor-col-resize select-none transition-colors lg:block"
+          style={{ background: isDragging ? "var(--home-strong)" : "var(--home-rule)" }}
           title="Drag to resize. Double-click to reset."
         />
 
@@ -480,7 +499,14 @@ export default function PortfolioEditor({ template }) {
               they were a normal full page, same as the actual deployed
               site and the standalone /preview route, both of which have no
               such wrapper and don't need one. */}
-          <div className="min-w-0 flex-1 overflow-y-auto" style={{ transform: "translateZ(0)" }}>
+          {/* An explicit white ground. The shell above carries the landing
+              page's peach, and a template that paints no background of its own
+              would otherwise sit on it and look nothing like the deployed
+              site, which lands on white. */}
+          <div
+            className="min-w-0 flex-1 overflow-y-auto"
+            style={{ transform: "translateZ(0)", background: "#ffffff" }}
+          >
             <Template data={sanitizePortfolioData(data)} />
           </div>
         </div>
@@ -506,7 +532,7 @@ export default function PortfolioEditor({ template }) {
           <button
             type="button"
             onClick={() => setShowMobilePreview(false)}
-            className="text-xs font-medium text-zinc-300 hover:text-white"
+            className="text-xs font-medium text-white/80 transition-colors hover:text-white"
           >
             Close preview
           </button>
@@ -527,16 +553,17 @@ export default function PortfolioEditor({ template }) {
           <div
             role="status"
             aria-live="polite"
-            className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-xl dark:bg-zinc-900"
+            className="ed-panel w-full max-w-sm p-7 text-center shadow-xl"
           >
             <span
               aria-hidden="true"
-              className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-500 dark:border-zinc-700 dark:border-t-emerald-400"
+              className="mx-auto block h-8 w-8 animate-spin rounded-full border-2"
+              style={{ borderColor: "var(--home-rule)", borderTopColor: "var(--home-strong)" }}
             />
-            <h2 className="mt-5 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 className="mt-5 text-base font-semibold" style={{ color: "var(--home-strong)" }}>
               Building your repository
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--home-dim)" }}>
               Creating it in your GitHub account and committing your content into it. This takes a
               few seconds, so please keep this tab open.
             </p>
@@ -553,7 +580,7 @@ export default function PortfolioEditor({ template }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="deploy-dialog-title"
-            className="relative w-full max-w-md rounded-2xl bg-white p-7 shadow-xl dark:bg-zinc-900"
+            className="ed-panel relative w-full max-w-md p-7 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* A real close control rather than a word buried under the
@@ -562,7 +589,7 @@ export default function PortfolioEditor({ template }) {
             <button
               type="button"
               onClick={() => setDeployStatus("idle")}
-              className="absolute right-3.5 top-3.5 rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              className="ed-ghost ed-focus absolute right-3.5 top-3.5 rounded-full p-1.5"
             >
               <CloseIcon className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">Close</span>
@@ -581,12 +608,13 @@ export default function PortfolioEditor({ template }) {
                   {vercelOpened && buildState === "pending" ? (
                     <span
                       aria-hidden="true"
-                      className="block h-10 w-10 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-500 dark:border-zinc-700 dark:border-t-emerald-400"
+                      className="block h-10 w-10 animate-spin rounded-full border-2"
+                      style={{ borderColor: "var(--home-rule)", borderTopColor: "var(--home-strong)" }}
                     />
                   ) : vercelOpened && buildState === "failed" ? (
                     <span
                       aria-hidden="true"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-700"
                     >
                       <CloseIcon className="h-5 w-5" />
                     </span>
@@ -614,7 +642,7 @@ export default function PortfolioEditor({ template }) {
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"
                     >
                       <CheckIcon className="h-5 w-5" />
                     </span>
@@ -622,16 +650,18 @@ export default function PortfolioEditor({ template }) {
 
                   {buildState === "success" && vercelOpened ? (
                     <>
-                      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+                      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                         Published
                       </p>
                       <h2
                         id="deploy-dialog-title"
-                        className="mt-2.5 text-[28px] font-bold leading-[1.1] tracking-[-0.025em] text-zinc-900 dark:text-zinc-50"
+                        className="mt-2.5 text-[28px] font-bold leading-[1.1] tracking-[-0.025em]"
+                        style={{ color: "var(--home-strong)" }}
                       >
                         {firstName ? `Congratulations, ${firstName}.` : "Congratulations."}
                       </h2>
-                      <p className="mx-auto mt-3 max-w-[32ch] text-[14.5px] leading-[1.6] text-zinc-500 dark:text-zinc-400">
+                      <p className="mx-auto mt-3 max-w-[32ch] text-[14.5px] leading-[1.6]"
+                        style={{ color: "var(--home-dim)" }}>
                         Your portfolio is on the internet, on accounts you own, with nothing
                         standing between you and it.
                       </p>
@@ -640,7 +670,8 @@ export default function PortfolioEditor({ template }) {
                     <>
                       <h2
                         id="deploy-dialog-title"
-                        className="mt-4 text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+                        className="mt-4 text-lg font-bold tracking-tight"
+                        style={{ color: "var(--home-strong)" }}
                       >
                         {!vercelOpened
                           ? "Your repository is ready"
@@ -650,7 +681,7 @@ export default function PortfolioEditor({ template }) {
                               ? "Building your site"
                               : "Finishing up on Vercel"}
                       </h2>
-                      <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--home-dim)" }}>
                         {!vercelOpened
                           ? "Everything you typed is committed into a repository in your own GitHub account. Nothing here can change it or take it away."
                           : buildState === "failed"
@@ -683,7 +714,7 @@ export default function PortfolioEditor({ template }) {
                     href={buildUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-6 flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                    className="ed-primary ed-focus mt-6 flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
                   >
                     See the build log
                     <ExternalIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -694,17 +725,18 @@ export default function PortfolioEditor({ template }) {
                   href={handoff.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 flex items-center gap-2.5 rounded-xl border border-zinc-200 px-3.5 py-3 text-left transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/60"
+                  className="ed-focus mt-3 flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-left transition-colors hover:bg-[rgba(20,54,93,0.05)]"
+                  style={{ borderColor: "var(--home-rule)" }}
                 >
                   <GitHubIcon
-                    className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400"
+                    className="h-4 w-4 shrink-0" style={{ color: "var(--home-dim)" }}
                     aria-hidden="true"
                   />
-                  <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-zinc-800 dark:text-zinc-100">
+                  <span className="min-w-0 flex-1 truncate font-mono text-[13px]" style={{ color: "var(--home-strong)" }}>
                     {handoff.owner}/{handoff.repo}
                   </span>
                   <ExternalIcon
-                    className="h-3 w-3 shrink-0 text-zinc-400 dark:text-zinc-500"
+                    className="h-3 w-3 shrink-0" style={{ color: "var(--home-faint)" }}
                     aria-hidden="true"
                   />
                 </a>
@@ -720,8 +752,8 @@ export default function PortfolioEditor({ template }) {
                     !vercelOpened
                       ? "mt-3 flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
                       : buildState === "success"
-                        ? "mt-3 flex items-center justify-center gap-1.5 text-[13px] font-medium text-zinc-500 underline-offset-4 transition-colors hover:text-zinc-800 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:text-zinc-400 dark:hover:text-zinc-200"
-                        : "mt-3 flex items-center justify-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-[13px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                        ? "home-quiet-link mt-3 flex items-center justify-center gap-1.5 text-[13px] font-medium"
+                        : "ed-ghost ed-focus mt-3 flex items-center justify-center gap-2 rounded-full border border-[var(--home-rule)] px-5 py-2.5 text-[13px] font-medium"
                   }
                 >
                   {!vercelOpened ? "Deploy it on Vercel" : "Reopen Vercel"}
@@ -734,21 +766,22 @@ export default function PortfolioEditor({ template }) {
                     named as an object, because "you can change this yourself,
                     forever" is the product's whole argument and it should not
                     look like fine print. */}
-                <div className="mt-6 rounded-xl bg-zinc-50 p-4 text-left dark:bg-zinc-800/50">
+                <div className="mt-6 rounded-xl p-4 text-left" style={{ background: "rgba(20, 54, 93, 0.05)" }}>
                   <div className="flex items-start gap-3">
                     <span
                       aria-hidden="true"
-                      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400"
+                      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                      style={{ color: "var(--home-dim)" }}
                     >
                       <FileIcon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
-                      <h3 className="text-[13.5px] font-semibold text-zinc-900 dark:text-zinc-100">
+                      <h3 className="text-[13.5px] font-semibold" style={{ color: "var(--home-strong)" }}>
                         Yours to change, forever
                       </h3>
-                      <p className="mt-1.5 text-[13px] leading-[1.6] text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-1.5 text-[13px] leading-[1.6]" style={{ color: "var(--home-dim)" }}>
                         Your whole portfolio is one file. Edit{" "}
-                        <span className="font-mono text-[12.5px] text-zinc-700 dark:text-zinc-300">
+                        <span className="font-mono text-[12.5px]" style={{ color: "var(--home-strong)" }}>
                           data/portfolio.js
                         </span>{" "}
                         on GitHub, commit, and the site rebuilds itself. No account here, no
@@ -758,7 +791,8 @@ export default function PortfolioEditor({ template }) {
                         href={handoff.editUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-950"
+                        className="ed-focus mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold shadow-sm transition-colors hover:bg-[rgba(255,255,255,0.6)]"
+                        style={{ color: "var(--home-strong)" }}
                       >
                         Open the file
                         <ExternalIcon className="h-3 w-3" aria-hidden="true" />
@@ -780,7 +814,7 @@ export default function PortfolioEditor({ template }) {
                       setDeployStatus("idle");
                       router.push("/");
                     }}
-                    className="mt-5 w-full rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                    className="ed-primary ed-focus mt-5 w-full rounded-full px-5 py-3 text-sm font-semibold"
                   >
                     Done
                   </button>
@@ -790,11 +824,11 @@ export default function PortfolioEditor({ template }) {
               <div className="text-center">
                 <h2
                   id="deploy-dialog-title"
-                  className="text-lg font-bold text-zinc-900 dark:text-zinc-50"
+                  className="text-lg font-bold" style={{ color: "var(--home-strong)" }}
                 >
                   Draft saved
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--home-dim)" }}>
                   Next, continue to Vercel to finish deploying: it creates a real repo and a live
                   site under your own GitHub and Vercel accounts.
                 </p>
@@ -811,17 +845,17 @@ export default function PortfolioEditor({ template }) {
               <div className="text-center">
                 <h2
                   id="deploy-dialog-title"
-                  className="text-lg font-bold text-zinc-900 dark:text-zinc-50"
+                  className="text-lg font-bold" style={{ color: "var(--home-strong)" }}
                 >
                   Couldn&rsquo;t start deployment
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--home-dim)" }}>
                   {deployError}
                 </p>
                 <button
                   type="button"
                   onClick={() => setDeployStatus("idle")}
-                  className="mt-5 w-full rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="ed-ghost ed-focus mt-5 w-full rounded-full border border-[var(--home-rule)] px-5 py-2.5 text-sm font-semibold"
                 >
                   Close
                 </button>

@@ -11,15 +11,14 @@ export default async function EditorPage({ params }) {
 
   if (template.locked) {
     return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-xl font-semibold">{template.name} is coming next</h1>
-        <p className="max-w-sm text-sm text-zinc-500">
+      <div className="home-root flex h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+        <h1 className="text-xl font-semibold" style={{ color: "var(--home-strong)" }}>
+          {template.name} is coming next
+        </h1>
+        <p className="max-w-sm text-sm" style={{ color: "var(--home-dim)" }}>
           This template isn&apos;t built yet. The Changelog template is ready to try.
         </p>
-        <Link
-          href="/"
-          className="mt-2 text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-        >
+        <Link href="/" className="home-quiet-link mt-2 text-sm font-medium">
           ← Back to templates
         </Link>
       </div>

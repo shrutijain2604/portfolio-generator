@@ -2123,6 +2123,111 @@ html:has(.home-root) {
   }
 }
 
+/* ---- The editor ------------------------------------------------------- */
+
+/* The editor wears the landing page's palette instead of Tailwind's zinc ramp
+   with dark: variants. In a dark browser that ramp resolved to near-black
+   panels on a near-black ground separated by hairlines, so the form fields
+   were not distinguishable from the page behind them.
+
+   The tokens come from .home-root, which the editor shell carries, so nothing
+   is redefined here and the two surfaces cannot drift apart. That palette is
+   unconditional by design: the landing page has no dark variant, and an editor
+   that disagreed with the page someone just came from would read as a
+   different product. */
+
+.ed-panel {
+  border: 1px solid var(--home-rule);
+  border-radius: var(--home-radius);
+  background: var(--home-surface);
+  box-shadow: 0 1px 2px rgba(20, 54, 93, 0.06);
+}
+
+/* Inputs sit a step lighter than the panel they are on rather than a step
+   darker: on a cream card, a white well reads as cut into the paper.
+
+   The border is measured, not eyeballed. It is the only thing identifying
+   where a field begins, so it is a UI component boundary and owes 3:1 against
+   both the white it encloses and the cream behind it. --home-rule, which the
+   panels use, manages 1.7:1 and was why the fields did not read as fields at
+   all; at 55% navy it clears 3.27:1 on white and 3.16:1 on cream. The
+   placeholder is a flat tone rather than a transparent one because 50% navy
+   composited on white lands at 2.8:1; #677383 reaches 4.82:1 and still sits
+   clearly lighter than an entered value at 12.2:1. */
+.ed-field {
+  width: 100%;
+  border: 1px solid rgba(20, 54, 93, 0.55);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--home-strong);
+  transition:
+    border-color 160ms var(--home-ease),
+    box-shadow 160ms var(--home-ease);
+}
+.ed-field::placeholder {
+  color: #677383;
+}
+.ed-field:hover {
+  border-color: rgba(20, 54, 93, 0.72);
+}
+.ed-field:focus,
+.ed-field:focus-visible {
+  outline: none;
+  border-color: var(--home-strong);
+  box-shadow: 0 0 0 3px rgba(20, 54, 93, 0.16);
+}
+
+/* One focus treatment across every control in the editor, matching
+   .home-quiet-link on the landing page. */
+.ed-focus:focus-visible {
+  outline: 2px solid var(--home-strong);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ed-primary {
+  background: var(--home-strong);
+  color: var(--home-bg);
+  transition:
+    background-color 160ms var(--home-ease),
+    transform 160ms var(--home-ease);
+}
+.ed-primary:hover:not(:disabled) {
+  background: #1d4a7a;
+}
+.ed-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ed-ghost {
+  color: var(--home-dim);
+  transition:
+    color 160ms var(--home-ease),
+    background-color 160ms var(--home-ease);
+}
+.ed-ghost:hover {
+  background: rgba(20, 54, 93, 0.07);
+  color: var(--home-strong);
+}
+
+/* The dashed "add another" control. Dashed rather than solid so it reads as a
+   slot waiting to be filled rather than as an existing row. */
+.ed-add {
+  border: 1px dashed rgba(20, 54, 93, 0.55);
+  border-radius: 12px;
+  color: var(--home-dim);
+  transition:
+    border-color 160ms var(--home-ease),
+    background-color 160ms var(--home-ease),
+    color 160ms var(--home-ease);
+}
+.ed-add:hover {
+  border-color: var(--home-strong);
+  border-style: solid;
+  background: rgba(20, 54, 93, 0.05);
+  color: var(--home-strong);
+}
+
 /* Retro Desktop: three real operating-system shells.
    ---------------------------------------------------------------------------
    The template draws its own window manager, so the pieces a browser normally

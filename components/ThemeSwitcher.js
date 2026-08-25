@@ -35,17 +35,17 @@ export default function ThemeSwitcher({ palettes, selectedId, onChange, vertical
             aria-pressed={active}
             onClick={() => onChange(p.id)}
             style={active ? { "--tw-ring-color": p.colors.POP } : undefined}
-            className={`group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-offset-2 transition-all duration-150 hover:scale-110 dark:ring-offset-zinc-900 ${
-              active ? "scale-110 ring-2" : "ring-0 hover:ring-2 hover:ring-zinc-200 dark:hover:ring-zinc-700"
+            className={`group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-offset-2 ring-offset-[var(--home-surface)] transition-all duration-150 hover:scale-110 ${
+              active ? "scale-110 ring-2" : "ring-0 hover:ring-2 hover:ring-[var(--home-rule)]"
             }`}
           >
             <span
-              className="absolute inset-0 rounded-full shadow-sm ring-1 ring-black/10 dark:ring-white/10"
+              className="absolute inset-0 rounded-full shadow-sm ring-1 ring-black/10"
               style={{ background: sweep }}
             />
             {active && (
               <span
-                className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/90 shadow-sm dark:bg-zinc-900/90"
+                className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/90 shadow-sm"
                 style={{ color: p.colors.POP }}
               >
                 <IconCheck className="h-2.5 w-2.5" />

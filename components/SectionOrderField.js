@@ -44,23 +44,24 @@ function SortableRow({ id }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    background: "#ffffff",
+    borderColor: isDragging ? "var(--home-strong)" : "rgba(20, 54, 93, 0.55)",
+    color: "var(--home-strong)",
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors dark:bg-zinc-950 dark:text-zinc-200 ${
-        isDragging
-          ? "z-10 border-emerald-400 shadow-md"
-          : "border-zinc-200 dark:border-zinc-800"
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+        isDragging ? "z-10 shadow-md" : "shadow-sm"
       }`}
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-zinc-400 outline-none transition-colors hover:text-zinc-600 focus-visible:ring-2 focus-visible:ring-emerald-500/40 active:cursor-grabbing dark:hover:text-zinc-300"
+        className="ed-focus flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded opacity-55 transition-opacity hover:opacity-100 active:cursor-grabbing"
         aria-label={`Drag to reorder ${LABELS[id]}`}
       >
         <GripIcon className="h-4 w-4" />

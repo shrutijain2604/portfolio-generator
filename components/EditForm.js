@@ -6,14 +6,6 @@ import { normalizeSectionOrder } from "@/lib/portfolioData";
 
 const RESUME_ACCEPT = ".pdf,.docx";
 
-function IconSparkle(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M12 2 13.8 8.2 20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z" />
-    </svg>
-  );
-}
-
 function IconUpload(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -77,21 +69,24 @@ function ResumeImport({ onImport }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-red-200/80 bg-gradient-to-br from-red-50 via-white to-white p-5 shadow-sm dark:border-red-900/40 dark:from-red-950/20 dark:via-zinc-900 dark:to-zinc-900">
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
-        style={{ background: "radial-gradient(circle, #ef4444, transparent 70%)" }}
-      />
-
-      <p className="relative mt-3 text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
-        Import from a resume
-      </p>
-      <p className="relative mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-        Upload a PDF or DOCX and we&rsquo;ll auto-fill everything below. Parsing isn&rsquo;t perfect — review after.
+    <div className="ed-panel p-5">
+      <div className="flex items-center gap-2">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+          style={{ background: "var(--home-accent)", color: "#ffffff" }}
+        >
+          <IconUpload className="h-4 w-4" />
+        </span>
+        <p className="text-[15px] font-semibold" style={{ color: "var(--home-strong)" }}>
+          Import from a resume
+        </p>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--home-dim)" }}>
+        Upload a PDF or DOCX and we&rsquo;ll auto-fill everything below. Parsing isn&rsquo;t perfect, so review after.
       </p>
 
       <label
-        className={`relative mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 ${
+        className={`ed-primary mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
           status === "loading" ? "cursor-not-allowed opacity-60" : "cursor-pointer"
         }`}
       >
@@ -102,14 +97,20 @@ function ResumeImport({ onImport }) {
           accept={RESUME_ACCEPT}
           onChange={handleFileChange}
           disabled={status === "loading"}
-          className="hidden"
+          className="sr-only"
         />
       </label>
 
       {status === "loading" && fileName && (
-        <p className="relative mt-2 text-xs text-zinc-500 dark:text-zinc-400">Parsing {fileName}…</p>
+        <p className="mt-2 text-xs" style={{ color: "var(--home-dim)" }}>
+          Parsing {fileName}…
+        </p>
       )}
-      {status === "error" && <p className="relative mt-2 text-xs text-red-600 dark:text-red-400">{errorMessage}</p>}
+      {status === "error" && (
+        <p className="mt-2 text-xs font-medium" role="alert" style={{ color: "#a3341a" }}>
+          {errorMessage}
+        </p>
+      )}
     </div>
   );
 }
@@ -130,25 +131,29 @@ function IconLayers(props) {
 // actual feature worth trying rather than something to overlook.
 function SectionOrderCard({ order, onChange }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50 via-white to-white p-5 shadow-sm dark:border-indigo-900/40 dark:from-indigo-950/20 dark:via-zinc-900 dark:to-zinc-900">
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
-        style={{ background: "radial-gradient(circle, #6366f1, transparent 70%)" }}
-      />
-      <div className="relative flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
+    <div className="ed-panel p-5">
+      <div className="flex items-center gap-2">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+          style={{ background: "var(--home-strong)", color: "var(--home-bg)" }}
+        >
           <IconLayers className="h-4 w-4" />
         </span>
-        <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Reorder your sections</p>
-        <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+        <p className="text-[15px] font-semibold" style={{ color: "var(--home-strong)" }}>
+          Reorder your sections
+        </p>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          style={{ background: "var(--home-accent)", color: "#ffffff" }}
+        >
           New
         </span>
       </div>
-      <p className="relative mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-        Drag to change what flows first — lead with Projects if that&rsquo;s your strongest section, or Experience if
+      <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--home-dim)" }}>
+        Drag to change what flows first: lead with Projects if that&rsquo;s your strongest section, or Experience if
         that is. Intro and Contact always stay first and last.
       </p>
-      <div className="relative mt-4">
+      <div className="mt-4">
         <SectionOrderField order={order} onChange={onChange} />
       </div>
     </div>
@@ -157,25 +162,38 @@ function SectionOrderCard({ order, onChange }) {
 
 function FormSection({ title, hint, children }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h3>
-      {hint && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
+    <section className="ed-panel p-5">
+      <h3 className="text-sm font-semibold" style={{ color: "var(--home-strong)" }}>
+        {title}
+      </h3>
+      {hint && (
+        <p className="mt-0.5 text-xs" style={{ color: "var(--home-dim)" }}>
+          {hint}
+        </p>
+      )}
       <div className="mt-4 space-y-4">{children}</div>
     </section>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <span className="mb-1.5 block text-xs font-medium" style={{ color: "var(--home-dim)" }}>
+      {children}
+    </span>
   );
 }
 
 function Field({ label, hint, ...props }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {label}
-      </span>
-      <input
-        {...props}
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-      />
-      {hint && <span className="mt-1 block text-xs text-zinc-400 dark:text-zinc-500">{hint}</span>}
+      <FieldLabel>{label}</FieldLabel>
+      <input {...props} className="ed-field px-3 py-2 text-sm" />
+      {hint && (
+        <span className="mt-1 block text-xs" style={{ color: "var(--home-faint)" }}>
+          {hint}
+        </span>
+      )}
     </label>
   );
 }
@@ -183,14 +201,8 @@ function Field({ label, hint, ...props }) {
 function TextArea({ label, ...props }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {label}
-      </span>
-      <textarea
-        {...props}
-        rows={3}
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-      />
+      <FieldLabel>{label}</FieldLabel>
+      <textarea {...props} rows={3} className="ed-field px-3 py-2 text-sm" />
     </label>
   );
 }
@@ -239,11 +251,15 @@ function CommaListField({ label, hint, value, onChange }) {
 
 function RemovableRow({ onRemove, children }) {
   return (
-    <div className="relative rounded-xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+    <div
+      className="relative rounded-xl border p-4"
+      style={{ borderColor: "var(--home-rule)", background: "rgba(20, 54, 93, 0.035)" }}
+    >
       <button
         type="button"
         onClick={onRemove}
-        className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/40"
+        className="ed-focus absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-[rgba(216,92,39,0.12)] hover:text-[var(--home-accent)]"
+        style={{ color: "var(--home-faint)" }}
         aria-label="Remove"
       >
         ✕
@@ -255,11 +271,7 @@ function RemovableRow({ onRemove, children }) {
 
 function AddButton({ onClick, children }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-xl border border-dashed border-zinc-300 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:border-emerald-400 hover:bg-emerald-50/50 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-emerald-500 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400"
-    >
+    <button type="button" onClick={onClick} className="ed-add ed-focus w-full py-2.5 text-sm font-medium">
       {children}
     </button>
   );
