@@ -41,8 +41,33 @@ function ResumeImport({ onImport }) {
       const body = new FormData();
       body.append("resume", file);
       const res = await fetch("/api/parse-resume", { method: "POST", body });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Something went wrong while reading that resume.");
+
+      // Not every failure comes back as JSON. A request that never reaches the
+      // route at all, because the platform rejected the upload as too large or
+      // the function timed out, answers with an HTML error page instead, and
+      // parsing that as JSON used to throw a SyntaxError whose message ("
+      // Unexpected token '<'") was then shown to the customer as though it
+      // were the explanation. Read the body once as text and decide from
+      // there, so the message they see always describes what happened.
+      const raw = await res.text();
+      let result = null;
+      try {
+        result = raw ? JSON.parse(raw) : null;
+      } catch {
+        result = null;
+      }
+
+      if (!res.ok || !result) {
+        throw new Error(
+          result?.error ||
+            (res.status === 413
+              ? "That file is too large to upload. Please try one under 4MB."
+              : res.status === 504
+                ? "Reading that resume took too long and the server gave up. A shorter file usually works."
+                : `The server couldn't process that upload (error ${res.status}). Please try again.`)
+        );
+      }
+
       onImport(result.data);
       setStatus("idle");
     } catch (err) {

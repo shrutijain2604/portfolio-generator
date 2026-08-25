@@ -12,7 +12,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 export const runtime = "nodejs";
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+// Extracting a PDF and then waiting on a model comfortably outruns the ten
+// seconds a serverless function is given by default, and a function killed
+// mid-flight answers with an HTML error page rather than with anything this
+// route wrote, which is what a caller then fails to parse as JSON.
+export const maxDuration = 60;
+
+// Four megabytes, not five. The limit that actually bites is the platform's
+// cap on a serverless request body, which is smaller than the old five and
+// applies before the request ever reaches this code: a file between the two
+// was rejected upstream with an HTML page, so the friendly message below was
+// never the one anybody saw.
+const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 function extractContactInfo(text) {
   const email = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0] || "";
@@ -101,18 +112,30 @@ export async function POST(request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { error: "Resume import isn't set up yet — the server is missing a GEMINI_API_KEY." },
+      { error: "Resume import isn't set up yet: the server is missing a GEMINI_API_KEY." },
       { status: 500 }
     );
   }
 
-  const formData = await request.formData();
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return Response.json(
+      { error: "That upload didn't arrive intact. Please try again." },
+      { status: 400 }
+    );
+  }
+
   const file = formData.get("resume");
   if (!file || typeof file === "string") {
     return Response.json({ error: "No resume file was uploaded." }, { status: 400 });
   }
   if (file.size > MAX_FILE_BYTES) {
-    return Response.json({ error: "That file is too large — please upload a resume under 5MB." }, { status: 400 });
+    return Response.json(
+      { error: "That file is too large. Please upload a resume under 4MB." },
+      { status: 400 }
+    );
   }
 
   const fileName = file.name.toLowerCase();
