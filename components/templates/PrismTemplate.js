@@ -4,20 +4,31 @@
 // beyond which band is currently in view: the same contract every template
 // here follows (see EditorialTemplate.js's header comment for why).
 //
-// The look: an optical bench. One beam of light enters a glass prism in the
-// hero and disperses, and every section below is one band of the resulting
-// spectrum, tapped off a spectral rail that runs down the page. The hue and
-// wavelength a band sits at come from its position in the customer's own
-// `sectionOrder`, so reordering sections re-tunes the whole page. Skills
-// render as a real emission spectrum: each line sits at the true spectral
-// position of the color shared.js already derives from that skill's name, so
-// the plate is a readout of the entered stack rather than decoration.
+// The look: refraction as a behaviour, never as a picture. Nothing here draws
+// a prism. Instead every heading is printed in three colour channels that sit
+// apart and slide back into register as it comes up the page, so the reader
+// watches white light resolve out of its own spectrum rather than looking at a
+// diagram of a triangle doing it. Section hues are tapped from one continuous
+// dispersion ramp across the customer's `sectionOrder`, so reordering sections
+// re-tunes the whole page. Skills render as a real emission spectrum: each line
+// sits at the true spectral position of the color shared.js already derives
+// from that skill's name, so the plate is a readout of the entered stack rather
+// than decoration.
 //
-// Deliberately not the previous "drifting aurora blobs behind frosted glass"
-// build: that was a generic premium-landing-page wash any template could
-// have worn, carrying no idea of its own. Here the optics are the structure,
-// and the only two light sources are static and directional, because a bench
-// has a lamp, not weather.
+// Deliberately not the previous build, which drew a glass triangle with a
+// rainbow fanning out of it above a readout labelled "Optical profile". That
+// took the name literally and landed as a physics textbook figure: the optics
+// were illustrated instead of felt, and no amount of precision in the drawing
+// fixed the fact that a portfolio is not a diagram. What survived is
+// everything that was doing real work rather than cosplaying an instrument:
+// the dispersion ramp, the spectrum rail, the emission plate, the section
+// tracking.
+//
+// The convergence is scroll-linked through `animation-timeline: view()`, so it
+// costs no scroll listener and no JavaScript at all. Where that is
+// unsupported, and under a reduced-motion preference, the channels simply rest
+// at their converged offset: the finished state is the default, so nothing is
+// ever left waiting on a feature that may not arrive.
 //
 // No photo: the builder only offers photoUrl for warm/scrapbook/spotify (see
 // EditForm.js's TEMPLATES_WITH_PHOTOS), so the previous build's <img> could
@@ -26,11 +37,11 @@
 // aperture monogram is built from the name instead, so it is always present
 // and always right.
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { PRISM_PALETTES, getPalette } from "@/lib/palettes";
 import { SECTION_DEFINITIONS } from "@/lib/portfolioData";
-import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, shade, tint, initials, stripProtocol } from "./shared";
+import { IconGithub, IconLinkedin, IconLink, IconMail, dotColor, shade, tint, stripProtocol } from "./shared";
 
 // Space Grotesk for anything structural: a geometric grotesque with wide
 // apertures and a faintly technical skeleton, which is the voice of
@@ -161,31 +172,103 @@ function bandDomId(id) {
 const TEMPLATE_CSS = `
 .pr-display { font-family: var(--pr-display), ui-sans-serif, system-ui, sans-serif; }
 .pr-mono { font-family: var(--pr-mono), ui-monospace, SFMono-Regular, Menlo, monospace; }
-.pr-chroma-a { transform: translate3d(-1.4px, 0, 0); }
-.pr-chroma-b { transform: translate3d(1.4px, 0, 0); }
-@keyframes pr-focus-a {
-  0%, 100% { transform: translate3d(-1.5px, 0, 0); }
-  50% { transform: translate3d(-0.3px, 0, 0); }
+
+/* The three channel copies are stacked with grid rather than by absolutely
+   positioning two of them over a static third. Absolute copies have to be
+   given a box to fill, and any property that changes an inline box's baseline
+   (overflow on a truncated label is the one that bit) slides that copy out of
+   register, which reads as doubled text rather than as fringing. Sharing one
+   grid cell means all three are laid out by the same rules and wrap
+   identically, at any width and any length. */
+.pr-split-stack { display: grid; }
+.pr-split-stack > * { grid-area: 1 / 1; }
+
+/* The resting state, and the only state anywhere the enhancements below do not
+   apply: channels just in register, a hair apart. Declared outside every
+   @supports and @media guard on purpose, so this is what an unsupported
+   browser and a reduced-motion reader both get, already finished. */
+.pr-chroma-a { transform: translate3d(-1.5px, 0, 0); }
+.pr-chroma-b { transform: translate3d(1.5px, 0, 0); }
+
+/* Pointer-driven split, for the index. Pure CSS, so running a cursor down a
+   list costs no listener and no re-render. */
+.pr-split-hover .pr-chroma-a,
+.pr-split-hover .pr-chroma-b { transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pr-index-stop:hover .pr-chroma-a,
+.pr-index-stop:focus-visible .pr-chroma-a { transform: translate3d(-6px, 0, 0); }
+.pr-index-stop:hover .pr-chroma-b,
+.pr-index-stop:focus-visible .pr-chroma-b { transform: translate3d(6px, 0, 0); }
+@media (prefers-reduced-motion: reduce) {
+  .pr-split-hover .pr-chroma-a,
+  .pr-split-hover .pr-chroma-b { transition-duration: 1ms; }
 }
-@keyframes pr-focus-b {
-  0%, 100% { transform: translate3d(1.5px, 0, 0); }
-  50% { transform: translate3d(0.3px, 0, 0); }
+
+/* The signature: channels enter far apart and close as the element rises
+   through the viewport. Two ranges, because the hero is the one element that
+   is already on screen at load and so has no entry to animate over: it
+   disperses as the page is scrolled away from, while every heading below
+   converges as it arrives. */
+@keyframes pr-converge-a {
+  from { transform: translate3d(-7px, 0, 0); }
+  to { transform: translate3d(-1.5px, 0, 0); }
 }
-@keyframes pr-beam-travel {
-  0% { transform: translateX(-70px); opacity: 0; }
-  14% { opacity: 1; }
-  86% { opacity: 1; }
-  100% { transform: translateX(200px); opacity: 0; }
+@keyframes pr-converge-b {
+  from { transform: translate3d(7px, 0, 0); }
+  to { transform: translate3d(1.5px, 0, 0); }
+}
+@keyframes pr-disperse-a {
+  from { transform: translate3d(-1.5px, 0, 0); }
+  to { transform: translate3d(-13px, 0, 0); }
+}
+@keyframes pr-disperse-b {
+  from { transform: translate3d(1.5px, 0, 0); }
+  to { transform: translate3d(13px, 0, 0); }
 }
 @keyframes pr-emission-in {
   from { opacity: 0; transform: scaleY(0.15); }
   to { opacity: 1; transform: scaleY(1); }
 }
+
+/* Cards lift toward the reader and pick up a thin halo in their own band hue.
+   Transform and box-shadow only, and the lift is kept to a few pixels: the
+   depth here is meant to be felt rather than performed. */
+.pr-card {
+  transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pr-card:hover, .pr-card:focus-within {
+  transform: translate3d(0, -4px, 0);
+  box-shadow: 0 2px 8px rgba(15, 15, 35, 0.06), 0 26px 60px -18px color-mix(in srgb, var(--pr-card-hue) 42%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-card { transition-duration: 1ms; }
+  .pr-card:hover, .pr-card:focus-within { transform: none; }
+}
 @media (prefers-reduced-motion: no-preference) {
-  .pr-chroma-a { animation: pr-focus-a 8s ease-in-out infinite; }
-  .pr-chroma-b { animation: pr-focus-b 8s ease-in-out infinite; }
-  .pr-beam-pulse { animation: pr-beam-travel 5s linear infinite; }
   .pr-emission { animation: pr-emission-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .pr-split .pr-chroma-a {
+      animation: pr-converge-a linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 92%;
+    }
+    .pr-split .pr-chroma-b {
+      animation: pr-converge-b linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 92%;
+    }
+    .pr-split-hero .pr-chroma-a {
+      animation: pr-disperse-a linear both;
+      animation-timeline: view();
+      animation-range: exit -20% exit 100%;
+    }
+    .pr-split-hero .pr-chroma-b {
+      animation: pr-disperse-b linear both;
+      animation-timeline: view();
+      animation-range: exit -20% exit 100%;
+    }
+  }
 }
 `;
 
@@ -198,241 +281,191 @@ function IconArrowOut(props) {
   );
 }
 
-// The lamp and the bench: one static light source and one receding plane. A
-// flat canvas still needs filling on a wide viewport, but drifting blobs
-// would contradict the fixed geometry the rest of the page implies, so this
-// is a lamp at a fixed angle instead of weather. Only a radial pool, since
-// any gradient bounded on an axis terminates in a seam somewhere on screen.
+// One soft, static wash rather than a rendered light rig. The page needs a
+// ground that is not flat paper on a wide viewport, but the old version drew a
+// perspective floor grid receding to a horizon, which was the literalism this
+// redesign is removing: it said "optical bench" out loud instead of letting the
+// colour behave like light.
 //
-// Fixed, and clipped by its own wrapper rather than by an ancestor, so it
-// stays under the viewport as the page scrolls and can never widen the
-// document. It sits outside the `@container` element on purpose: a container
-// context becomes the containing block for fixed descendants, which would
-// silently turn this back into a page-height absolute layer.
-function Bench({ colors, isDark }) {
-  const line = isDark ? "rgba(255,255,255,0.055)" : "rgba(15,15,35,0.05)";
+// Fixed, and clipped by its own wrapper rather than by an ancestor, so it stays
+// under the viewport as the page scrolls and can never widen the document. It
+// sits outside the `@container` element on purpose: a container context becomes
+// the containing block for fixed descendants, which would silently turn this
+// back into a page-height absolute layer.
+function Wash({ colors, isDark }) {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
       <div
-        className="absolute -left-[12%] -top-[18%] h-[72vh] w-[78vw]"
+        className="absolute -left-[18%] -top-[26%] h-[86vh] w-[86vw]"
         style={{
-          background: `radial-gradient(closest-side, ${tint(colors.PALETTE[0], isDark ? 26 : 15)}, transparent)`,
+          background: `radial-gradient(closest-side, ${tint(colors.PALETTE[0], isDark ? 24 : 13)}, transparent)`,
         }}
       />
-      <div className="absolute inset-x-0 bottom-0 h-[46vh] overflow-hidden">
-        <div
-          className="absolute -inset-x-1/2 bottom-0 top-0"
-          style={{
-            transform: "perspective(520px) rotateX(74deg)",
-            transformOrigin: "bottom center",
-            backgroundImage: `repeating-linear-gradient(to right, ${line} 0 1px, transparent 1px 92px), repeating-linear-gradient(to bottom, ${line} 0 1px, transparent 1px 92px)`,
-            maskImage: "linear-gradient(to top, rgba(0,0,0,0.9), transparent 72%)",
-            WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.9), transparent 72%)",
-          }}
-        />
-      </div>
+      <div
+        className="absolute -bottom-[30%] -right-[16%] h-[70vh] w-[70vw]"
+        style={{
+          background: `radial-gradient(closest-side, ${tint(colors.PALETTE[3], isDark ? 20 : 11)}, transparent)`,
+        }}
+      />
     </div>
   );
 }
 
 // A chromatic split held just short of illegible: two offset colored copies
-// under a fully opaque copy in INK, so the text's contrast is exactly INK's
-// and the fringing reads as a lens not quite in focus. `screen` on a dark
-// theme and `multiply` on a light one, because either blend mode in the wrong
-// direction just disappears into the background.
-function ChromaticText({ children, colors, isDark }) {
+// under a fully opaque copy in INK, so the text's contrast is exactly INK's and
+// only the fringes are colored. `screen` on a dark theme and `multiply` on a
+// light one, because either blend mode in the wrong direction just disappears
+// into the background.
+//
+// `variant` picks what drives the offset. Headings converge as they arrive; the
+// hero, already on screen before any scrolling has happened, has no arrival to
+// animate and instead disperses as the reader leaves it; index labels split
+// under the pointer. All three fall back to the same converged resting offset.
+function ChromaticText({ children, colors, isDark, variant = "heading", className = "" }) {
   const blendMode = isDark ? "screen" : "multiply";
+  const driver =
+    variant === "hero" ? "pr-split-hero" : variant === "hover" ? "pr-split-hover" : "pr-split";
   return (
-    <span className="relative inline-block">
+    <span className={`pr-split-stack ${driver} ${className}`}>
       <span
         aria-hidden
-        className="pr-chroma-a absolute inset-0"
-        style={{
-          color: colors.PALETTE[0],
-          mixBlendMode: blendMode,
-          opacity: 0.75,
-        }}
+        className="pr-chroma-a"
+        style={{ color: colors.PALETTE[0], mixBlendMode: blendMode, opacity: 0.75 }}
       >
         {children}
       </span>
       <span
         aria-hidden
-        className="pr-chroma-b absolute inset-0"
-        style={{
-          color: colors.PALETTE[3],
-          mixBlendMode: blendMode,
-          opacity: 0.75,
-        }}
+        className="pr-chroma-b"
+        style={{ color: colors.PALETTE[3], mixBlendMode: blendMode, opacity: 0.75 }}
       >
         {children}
       </span>
-      <span className="relative">{children}</span>
+      <span>{children}</span>
     </span>
   );
 }
 
-// Prism geometry, in the instrument SVG's own 420x300 user space: the beam
-// enters the left face at BEAM_IN, leaves the right face at EXIT, and the
-// fan spreads to FAN_X.
-const BEAM_IN_X = 163;
-const BEAM_Y = 150;
-const EXIT = { x: 239, y: 178 };
-const FAN_X = 436;
-
-// Where ray `i` of `count` lands on the SVG's right edge. The fan follows the
-// customer's own section order top to bottom, so it reads as the legend for
-// the readout list beneath it.
-function rayEndY(index, count) {
-  const t = count > 1 ? index / (count - 1) : 0.5;
-  return 116 + t * 154;
+// The page's one recurring graphic, and the only place the spectrum is drawn
+// rather than behaved: a hairline carrying the customer's own band hues in
+// order. It is the legend for the whole page, it costs a single gradient, and
+// it stays a rule rather than becoming a picture of one.
+function SpectralRule({ bands, colors, fade = "none" }) {
+  const count = bands.length;
+  const hues = count > 0 ? bands.map((band) => band.hue) : [colors.POP];
+  const stops = hues.map((hue, i) => `${hue} ${hues.length > 1 ? (i / (hues.length - 1)) * 100 : 50}%`).join(", ");
+  const mask =
+    fade === "right"
+      ? "linear-gradient(to right, black 55%, transparent)"
+      : fade === "both"
+        ? "linear-gradient(to right, transparent, black 12%, black 88%, transparent)"
+        : undefined;
+  return (
+    <span
+      aria-hidden
+      className="block h-px w-full"
+      style={{
+        background: hues.length > 1 ? `linear-gradient(to right, ${stops})` : hues[0],
+        maskImage: mask,
+        WebkitMaskImage: mask,
+      }}
+    />
+  );
 }
 
-// The hero instrument: a beam entering a glass prism, one exit ray per
-// populated section, and the readout that names them. Both halves live in
-// this one component so hovering a readout row can brighten its own ray by
-// mutating that node's style directly, the same direct-DOM approach
-// CursorGlow.js established here, rather than putting pointer state into
-// React and re-rendering the template on every hover.
-function PrismInstrument({ bands, colors, isDark }) {
-  const uid = useId().replace(/:/g, "");
-  const rayRefs = useRef([]);
-  const glowRefs = useRef([]);
+// The section index, drawn as the spectrum itself with its stops labelled.
+//
+// The first attempt at this was a full-width table: number on the far left,
+// a small label, a count on the far right, and half a screen of nothing in
+// between. Laying the sections out ALONG the spectrum instead means the width
+// is what carries the information rather than being dead space, and it puts
+// the page's one idea to work as navigation: the reader is picking a
+// wavelength, not reading a contents page.
+//
+// Equal grid columns rather than positions computed from each band's hue: a
+// column guarantees its own label somewhere to sit, so no two names can ever
+// collide however long they are or however many sections a customer has. The
+// rule above carries the true continuous dispersion, so nothing is lost.
+function SectionIndex({ bands, colors, isDark }) {
   const count = bands.length;
 
-  function focusRay(index, on) {
-    const ray = rayRefs.current[index];
-    const glow = glowRefs.current[index];
-    if (ray) {
-      ray.style.strokeWidth = on ? "3.2" : "1.5";
-      ray.style.opacity = on ? "1" : "0.85";
-    }
-    if (glow) glow.style.opacity = on ? "0.38" : "0.12";
-  }
-
   return (
-    <div className="min-w-0">
-      <svg aria-hidden viewBox="0 42 420 240" className="h-auto w-full">
-        <defs>
-          <linearGradient id={`${uid}-glass`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={colors.INK} stopOpacity="0.16" />
-            <stop offset="55%" stopColor={colors.INK} stopOpacity="0.05" />
-            <stop offset="100%" stopColor={colors.INK} stopOpacity="0.12" />
-          </linearGradient>
-          <linearGradient id={`${uid}-incident`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={colors.INK} stopOpacity="0.15" />
-            <stop offset="100%" stopColor={colors.INK} stopOpacity="0.95" />
-          </linearGradient>
-          <linearGradient id={`${uid}-pulse`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={colors.INK} stopOpacity="0" />
-            <stop offset="50%" stopColor={colors.INK} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={colors.INK} stopOpacity="0" />
-          </linearGradient>
-          {count > 1 && (
-            <linearGradient id={`${uid}-fan`} gradientUnits="userSpaceOnUse" x1="0" y1={rayEndY(0, count)} x2="0" y2={rayEndY(count - 1, count)}>
-              {bands.map((band, i) => (
-                <stop key={band.id} offset={`${(i / (count - 1)) * 100}%`} stopColor={band.hue} />
-              ))}
-            </linearGradient>
-          )}
-        </defs>
-
-        {/* Incident beam: a wide faint pass for the glow, a hairline for the
-            beam itself, and one travelling segment so the bench reads as
-            switched on. */}
-        <line x1="0" y1={BEAM_Y} x2={BEAM_IN_X} y2={BEAM_Y} stroke={colors.INK} strokeOpacity="0.13" strokeWidth="7" />
-        <line x1="0" y1={BEAM_Y} x2={BEAM_IN_X} y2={BEAM_Y} stroke={`url(#${uid}-incident)`} strokeWidth="1.6" />
-        <g className="pr-beam-pulse">
-          <rect x="-18" y={BEAM_Y - 1.3} width="36" height="2.6" rx="1.3" fill={`url(#${uid}-pulse)`} />
-        </g>
-
-        {count > 1 && (
-          <polygon
-            points={`${EXIT.x},${EXIT.y} ${FAN_X},${rayEndY(0, count)} ${FAN_X},${rayEndY(count - 1, count)}`}
-            fill={`url(#${uid}-fan)`}
-            opacity="0.17"
-          />
-        )}
-
-        {bands.map((band, i) => (
-          <g key={band.id}>
-            <line
-              ref={(node) => {
-                glowRefs.current[i] = node;
-              }}
-              x1={EXIT.x}
-              y1={EXIT.y}
-              x2={FAN_X}
-              y2={rayEndY(i, count)}
-              stroke={band.hue}
-              strokeWidth="6"
-              opacity="0.12"
-              className="transition-opacity duration-200"
-            />
-            <line
-              ref={(node) => {
-                rayRefs.current[i] = node;
-              }}
-              x1={EXIT.x}
-              y1={EXIT.y}
-              x2={FAN_X}
-              y2={rayEndY(i, count)}
-              stroke={band.hue}
-              strokeWidth="1.5"
-              opacity="0.85"
-              className="transition-all duration-200"
-            />
-          </g>
-        ))}
-
-        {/* The prism last, so the glass sits over the beams it bends. */}
-        <polygon points="196,58 132,236 260,236" fill={`url(#${uid}-glass)`} stroke={colors.INK} strokeOpacity="0.28" strokeWidth="1.2" />
-        <polyline points="196,58 132,236" fill="none" stroke={colors.INK} strokeOpacity="0.6" strokeWidth="1.4" />
-        <line x1={BEAM_IN_X} y1={BEAM_Y} x2={EXIT.x} y2={EXIT.y} stroke={colors.INK} strokeOpacity="0.5" strokeWidth="1.2" />
-        <circle cx={BEAM_IN_X} cy={BEAM_Y} r="2.6" fill={colors.INK} fillOpacity="0.85" />
-        <circle cx={EXIT.x} cy={EXIT.y} r="2.6" fill={colors.INK} fillOpacity="0.85" />
-      </svg>
-
-      {count > 0 && (
-        <ol className="mt-5" style={{ borderBottom: `1px solid ${tint(colors.INK, 10)}` }}>
+    <nav aria-label="Sections">
+      {/* Along the spectrum, once there is width to spread across. */}
+      <div className="hidden @2xl:block">
+        <SpectralRule bands={bands} colors={colors} />
+        <ol className="grid" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
           {bands.map((band, i) => (
-            <li key={band.id}>
+            <li key={band.id} className="min-w-0">
               <a
                 href={`#${bandDomId(band.id)}`}
-                onMouseEnter={() => focusRay(i, true)}
-                onMouseLeave={() => focusRay(i, false)}
-                onFocus={() => focusRay(i, true)}
-                onBlur={() => focusRay(i, false)}
-                className="group grid grid-cols-[1.8rem_minmax(0,1fr)_auto] items-center gap-3 py-2 outline-none focus-visible:ring-2"
-                style={{
-                  borderTop: `1px solid ${tint(colors.INK, 10)}`,
-                  "--tw-ring-color": band.hue,
-                }}
+                className="pr-index-stop group block min-w-0 pb-1 pr-4 outline-none focus-visible:ring-2"
+                style={{ "--tw-ring-color": band.hue }}
               >
-                <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+                {/* The tick hangs off the rule above. Scaled rather than
+                    grown, so lengthening it on hover never touches layout. */}
+                <span
+                  aria-hidden
+                  className="block h-7 w-px origin-top scale-y-[0.42] transition-transform duration-300 ease-out group-hover:scale-y-100 group-focus-visible:scale-y-100"
+                  style={{ backgroundColor: band.hue }}
+                />
+                <span className="pr-mono mt-3 block text-[10.5px] tabular-nums" style={{ color: colors.MUTED }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    aria-hidden
-                    className="h-2.5 w-2.5 shrink-0 rotate-45 transition-transform duration-200 group-hover:scale-125"
-                    style={{
-                      backgroundColor: band.hue,
-                      boxShadow: `0 0 10px ${band.hue}`,
-                    }}
-                  />
-                  <span className="pr-display truncate text-[13px] font-medium uppercase tracking-[0.14em]" style={{ color: colors.INK_SOFT }}>
+                <span
+                  className="pr-display mt-2 block break-words text-[13px] font-medium uppercase leading-tight tracking-[0.12em]"
+                  style={{ color: colors.INK_SOFT }}
+                >
+                  <ChromaticText colors={colors} isDark={isDark} variant="hover">
                     {band.label}
-                  </span>
+                  </ChromaticText>
                 </span>
-                <span className="pr-mono shrink-0 text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
+                <span className="pr-mono mt-2 block text-[10.5px] tabular-nums" style={{ color: colors.MUTED }}>
                   {plural(band.count, band.unit)}
                 </span>
               </a>
             </li>
           ))}
         </ol>
-      )}
-    </div>
+      </div>
+
+      {/* Stacked in a narrow column, where a row has no dead gutter to leave
+          and spreading six labels across the width would only crush them. */}
+      <ol className="@2xl:hidden" style={{ borderBottom: `1px solid ${tint(colors.INK, 10)}` }}>
+        {bands.map((band, i) => (
+          <li key={band.id}>
+            <a
+              href={`#${bandDomId(band.id)}`}
+              className="pr-index-stop group flex items-center gap-3.5 py-3.5 outline-none focus-visible:ring-2"
+              style={{
+                borderTop: `1px solid ${tint(colors.INK, 10)}`,
+                "--tw-ring-color": band.hue,
+              }}
+            >
+              <span className="pr-mono shrink-0 text-[10.5px] tabular-nums" style={{ color: colors.MUTED }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span
+                aria-hidden
+                className="h-px w-5 shrink-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-[1.8] group-focus-visible:scale-x-[1.8]"
+                style={{ backgroundColor: band.hue }}
+              />
+              <span
+                className="pr-display min-w-0 flex-1 break-words text-[12.5px] font-medium uppercase tracking-[0.12em]"
+                style={{ color: colors.INK_SOFT }}
+              >
+                <ChromaticText colors={colors} isDark={isDark} variant="hover">
+                  {band.label}
+                </ChromaticText>
+              </span>
+              <span className="pr-mono shrink-0 text-[10.5px] tabular-nums" style={{ color: colors.MUTED }}>
+                {plural(band.count, band.unit)}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 
@@ -555,10 +588,10 @@ function SpectrumStrip({ bands, activeId, colors, isDark }) {
   );
 }
 
-function Band({ band, index, colors, innerRef, children }) {
+function Band({ band, index, colors, isDark, innerRef, children }) {
   return (
     <section id={bandDomId(band.id)} ref={innerRef} data-band-id={band.id} className="scroll-mt-16 pt-10 @4xl:scroll-mt-8">
-      <header className="mb-7">
+      <header className="mb-8">
         <div
           aria-hidden
           className="h-px w-full"
@@ -566,12 +599,16 @@ function Band({ band, index, colors, innerRef, children }) {
             background: `linear-gradient(to right, ${band.hue}, ${tint(band.hue, 22)} 34%, transparent 78%)`,
           }}
         />
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
             {String(index + 1).padStart(2, "0")}
           </span>
+          {/* Every section heading is where the page repeats its one idea: the
+              channels arrive apart and close as the heading rises. */}
           <h2 className="pr-display text-[clamp(1.35rem,3cqw,2.1rem)] font-semibold tracking-tight" style={{ color: colors.INK }}>
-            {band.label}
+            <ChromaticText colors={colors} isDark={isDark}>
+              {band.label}
+            </ChromaticText>
           </h2>
           <span className="pr-mono text-[11px] tabular-nums" style={{ color: colors.MUTED }}>
             {plural(band.count, band.unit)}
@@ -583,98 +620,29 @@ function Band({ band, index, colors, innerRef, children }) {
   );
 }
 
-// Registration marks, the way a real optic is mounted: two corner brackets
-// instead of a border radius. Cheap, and it keeps the silhouette square and
-// instrument-like rather than another rounded panel.
-function CornerMarks({ color }) {
-  return (
-    <>
-      <span aria-hidden className="pointer-events-none absolute left-0 top-0 h-3.5 w-px" style={{ backgroundColor: color }} />
-      <span aria-hidden className="pointer-events-none absolute left-0 top-0 h-px w-3.5" style={{ backgroundColor: color }} />
-      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-3.5 w-px" style={{ backgroundColor: color }} />
-      <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-px w-3.5" style={{ backgroundColor: color }} />
-    </>
-  );
-}
-
-// A card that behaves like a piece of glass: it tilts under the cursor and
-// its edges split into two complementary fringes that lean with the pointer.
-// Pointer state is written straight onto the nodes through refs, never into
-// React, so moving the mouse across a grid of these never re-renders the
-// template. A reduced-motion preference skips the listener entirely and
-// keeps the static card, whose hover state still lights its top edge, so the
-// affordance survives.
+// A card that lifts toward the reader and lights its own top edge with the
+// page's spectrum. The previous version tilted in 3D under the cursor and drew
+// two colored border fringes that leaned with the pointer, plus corner
+// brackets to look like a mounted optic: that was the literalism this redesign
+// removes, and it also meant a mousemove handler measuring geometry on every
+// card in a grid. What is left is one transform, no listener, and the same
+// affordance.
 function RefractionCard({ children, hue, colors, isDark }) {
-  const cardRef = useRef(null);
-  const fringeARef = useRef(null);
-  const fringeBRef = useRef(null);
-
-  useEffect(() => {
-    const card = cardRef.current;
-    const fringeA = fringeARef.current;
-    const fringeB = fringeBRef.current;
-    if (!card || !fringeA || !fringeB) return undefined;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-
-    function handleMove(event) {
-      const rect = card.getBoundingClientRect();
-      const px = (event.clientX - rect.left) / rect.width;
-      const py = (event.clientY - rect.top) / rect.height;
-      card.style.transform = `perspective(1100px) rotateX(${(0.5 - py) * 7}deg) rotateY(${(px - 0.5) * 8}deg) translateZ(6px)`;
-      const shift = (px - 0.5) * 5;
-      fringeA.style.transform = `translate3d(${-shift - 1.2}px, 0, 0)`;
-      fringeB.style.transform = `translate3d(${shift + 1.2}px, 0, 0)`;
-      fringeA.style.opacity = "0.85";
-      fringeB.style.opacity = "0.85";
-    }
-    function handleLeave() {
-      card.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg) translateZ(0px)";
-      fringeA.style.opacity = "0";
-      fringeB.style.opacity = "0";
-    }
-
-    card.addEventListener("mousemove", handleMove);
-    card.addEventListener("mouseleave", handleLeave);
-    return () => {
-      card.removeEventListener("mousemove", handleMove);
-      card.removeEventListener("mouseleave", handleLeave);
-    };
-  }, []);
-
   return (
     <article
-      ref={cardRef}
-      className="group relative min-w-0 p-5 transition-transform duration-200 ease-out hover:will-change-transform @2xl:p-6"
+      className="pr-card group relative min-w-0 p-5 @2xl:p-6"
       style={{
         backgroundColor: isDark ? "rgba(255,255,255,0.035)" : "rgba(255,255,255,0.62)",
         border: `1px solid ${tint(colors.INK, isDark ? 12 : 14)}`,
         boxShadow: isDark ? "0 18px 50px rgba(0,0,0,0.4)" : "0 18px 50px rgba(15,15,35,0.07)",
+        "--pr-card-hue": hue,
       }}
     >
-      <CornerMarks color={tint(hue, 65)} />
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-500 ease-out group-hover:scale-x-100"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-500 ease-out group-hover:scale-x-100 group-focus-within:scale-x-100"
         style={{
           background: `linear-gradient(to right, ${colors.PALETTE[0]}, ${colors.PALETTE[1]}, ${colors.POP}, ${colors.PALETTE[3]})`,
-        }}
-      />
-      <span
-        ref={fringeARef}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
-        style={{
-          border: `1px solid ${colors.PALETTE[0]}`,
-          mixBlendMode: isDark ? "screen" : "multiply",
-        }}
-      />
-      <span
-        ref={fringeBRef}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
-        style={{
-          border: `1px solid ${colors.PALETTE[3]}`,
-          mixBlendMode: isDark ? "screen" : "multiply",
         }}
       />
       <div className="relative">{children}</div>
@@ -1014,34 +982,20 @@ function ProfilesBand({ codingProfiles, colors, isDark }) {
   );
 }
 
-// The closing move is the prism run backwards: every band's ray converges
-// into one beam again, and the contact links sit at its output.
-function Recombination({ bands, colors, uid }) {
-  const hues = bands.length > 0 ? bands.map((band) => band.hue) : [colors.POP];
-  const count = hues.length;
-  const convergeX = 520;
-  const convergeY = 50;
+// The closing move, expressed the way the rest of the page expresses light:
+// the spectrum runs the full width and resolves into a single line of INK, so
+// the dispersion the page opened with comes back to white. Previously this was
+// an SVG of every band's ray converging on a point, which is the diagram this
+// redesign is removing. A gradient says the same thing and stays a rule.
+function Recombination({ bands, colors }) {
   return (
-    <svg aria-hidden viewBox="0 0 760 100" className="h-auto w-full">
-      <defs>
-        <linearGradient id={`${uid}-out`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={colors.INK} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={colors.INK} stopOpacity="0.12" />
-        </linearGradient>
-      </defs>
-      {hues.map((hue, i) => {
-        const y = count > 1 ? 8 + (i / (count - 1)) * 84 : convergeY;
-        return (
-          <g key={`${hue}-${i}`}>
-            <line x1="0" y1={y} x2={convergeX} y2={convergeY} stroke={hue} strokeWidth="5" opacity="0.1" />
-            <line x1="0" y1={y} x2={convergeX} y2={convergeY} stroke={hue} strokeWidth="1.3" opacity="0.8" />
-          </g>
-        );
-      })}
-      <line x1={convergeX} y1={convergeY} x2="760" y2={convergeY} stroke={colors.INK} strokeOpacity="0.16" strokeWidth="7" />
-      <line x1={convergeX} y1={convergeY} x2="760" y2={convergeY} stroke={`url(#${uid}-out)`} strokeWidth="1.8" />
-      <circle cx={convergeX} cy={convergeY} r="3.2" fill={colors.INK} fillOpacity="0.9" />
-    </svg>
+    <div aria-hidden className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-center">
+      <SpectralRule bands={bands} colors={colors} />
+      <span
+        className="block h-px w-full"
+        style={{ background: `linear-gradient(to right, ${colors.INK}, ${tint(colors.INK, 12)})` }}
+      />
+    </div>
   );
 }
 
@@ -1052,7 +1006,6 @@ export default function PrismTemplate({ data }) {
   const colors = palette.colors;
   const { PAPER, INK, INK_SOFT, MUTED, POP, PALETTE } = colors;
   const isDark = isDarkColor(PAPER);
-  const uid = useId().replace(/:/g, "");
 
   const entries = {
     experience: experience || [],
@@ -1132,12 +1085,6 @@ export default function PrismTemplate({ data }) {
     },
   ].filter(Boolean);
 
-  // The aperture ring is the page's own spectrum, bent into a circle: the
-  // band hues when there are enough of them, the raw palette otherwise, so
-  // an almost-empty portfolio still gets a full ring rather than one flat arc.
-  const ringStops = bands.length > 1 ? bands.map((band) => band.hue) : PALETTE;
-  const apertureRing = `conic-gradient(from 180deg, ${ringStops.join(", ")}, ${ringStops[0]})`;
-
   function renderBandBody(band) {
     if (band.id === "experience") return <ExperienceBand experience={experience} hue={band.hue} colors={colors} />;
     if (band.id === "projects") return <ProjectsBand projects={projects} hue={band.hue} colors={colors} isDark={isDark} />;
@@ -1154,10 +1101,10 @@ export default function PrismTemplate({ data }) {
     // container, which would break the rail's `position: sticky`.
     <div className="relative min-h-dvh overflow-x-clip" style={{ backgroundColor: PAPER, color: INK }}>
       <style>{TEMPLATE_CSS}</style>
-      <Bench colors={colors} isDark={isDark} />
+      <Wash colors={colors} isDark={isDark} />
 
       {/* The container context lives here rather than on the root so the
-          fixed bench above still resolves against the viewport, and so every
+          fixed wash above still resolves against the viewport, and so every
           `cqw` type size and `@` breakpoint below measures the actual content
           column, which is what lets this fit the builder's half-width
           preview pane as well as a full page. The padding sits on the inner
@@ -1165,53 +1112,65 @@ export default function PrismTemplate({ data }) {
           against itself. */}
       <div className={`${display.variable} ${mono.variable} @container relative mx-auto w-full max-w-[1440px]`}>
         <div className="px-5 py-10 @2xl:px-10 @2xl:py-14 @5xl:px-16">
+          {/* The name is the light source, so it gets the whole column and
+              the page's loudest split. The old hero gave half its width to a
+              drawing of a prism and squeezed the person into the other half;
+              here the person is the hero and the index sits beneath, where an
+              index belongs. */}
           <header>
-            <div className="flex items-center gap-3 pb-10">
-              <span className="pr-mono text-[10.5px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
-                Optical profile
-              </span>
-              <span
-                aria-hidden
-                className="h-px flex-1"
-                style={{
-                  background: `linear-gradient(to right, ${tint(INK, 22)}, transparent)`,
-                }}
-              />
-              <span className="pr-mono text-[10.5px] uppercase tracking-[0.2em]" style={{ color: MUTED }}>
+            <div className="flex items-center gap-4 pb-12 @2xl:pb-16">
+              <span className="pr-mono shrink-0 text-[10.5px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
                 {palette.label}
               </span>
+              <span className="min-w-0 flex-1">
+                <SpectralRule bands={bands} colors={colors} fade="right" />
+              </span>
             </div>
 
-            <div className="grid items-center gap-12 @3xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] @3xl:gap-14">
-              <div className="min-w-0">
-                <div aria-hidden className="mb-7 flex h-14 w-14 items-center justify-center rounded-full p-[2px]" style={{ background: apertureRing }}>
-                  <span
-                    className="pr-display flex h-full w-full items-center justify-center rounded-full text-[15px] font-semibold tracking-wide"
-                    style={{ backgroundColor: PAPER, color: INK }}
-                  >
-                    {initials(name)}
-                  </span>
-                </div>
-                <h1
-                  className="pr-display break-words text-[clamp(2.3rem,7.6cqw,6.4rem)] font-bold leading-[0.94] tracking-[-0.03em]"
-                  style={{ color: INK, textWrap: "balance" }}
+            <h1
+              className="pr-display break-words text-[clamp(2.6rem,10.5cqw,8rem)] font-bold leading-[0.9] tracking-[-0.035em]"
+              style={{ color: INK, textWrap: "balance" }}
+            >
+              <ChromaticText colors={colors} isDark={isDark} variant="hero">
+                {name || "Your Name"}
+              </ChromaticText>
+            </h1>
+
+            {/* Role and summary share a bottom edge rather than a top one. Top
+                aligned, a one-line role beside a four-line paragraph left the
+                paragraph hanging in the corner with nothing to relate to and
+                an empty quarter of the page under it; sitting them on the same
+                baseline makes the pair read as one block. The summary also
+                gets a spectral edge to hang off, so it is anchored to
+                something instead of floating in white space. */}
+            <div className="mt-7 grid gap-x-12 gap-y-7 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] @3xl:items-end">
+              <p
+                className="pr-mono break-words text-[clamp(0.78rem,1.4cqw,0.95rem)] uppercase leading-relaxed tracking-[0.2em]"
+                style={{ color: INK_SOFT }}
+              >
+                {role || "Your Role"}
+              </p>
+              {bio && (
+                <p
+                  className="max-w-[54ch] whitespace-pre-line break-words pl-5 text-[15.5px] leading-relaxed"
+                  style={{
+                    color: INK_SOFT,
+                    borderLeft: `2px solid transparent`,
+                    borderImage: `linear-gradient(to bottom, ${bands[0]?.hue || POP}, ${
+                      bands[bands.length - 1]?.hue || POP
+                    }) 1`,
+                  }}
                 >
-                  {name || "Your Name"}
-                </h1>
-                <p className="pr-display mt-5 break-words text-[clamp(1.1rem,2.3cqw,1.6rem)] font-medium tracking-tight">
-                  <ChromaticText colors={colors} isDark={isDark}>
-                    {role || "Your Role"}
-                  </ChromaticText>
+                  {bio}
                 </p>
-                {bio && (
-                  <p className="mt-6 max-w-[46ch] whitespace-pre-line break-words text-[15.5px] leading-relaxed" style={{ color: INK_SOFT }}>
-                    {bio}
-                  </p>
-                )}
-              </div>
-
-              <PrismInstrument bands={bands} colors={colors} isDark={isDark} />
+              )}
             </div>
+
+            {bands.length > 0 && (
+              <div className="mt-12 @2xl:mt-16">
+                <SectionIndex bands={bands} colors={colors} isDark={isDark} />
+              </div>
+            )}
           </header>
 
           {bands.length > 0 && (
@@ -1225,6 +1184,7 @@ export default function PrismTemplate({ data }) {
                     band={band}
                     index={i}
                     colors={colors}
+                    isDark={isDark}
                     innerRef={(node) => {
                       bandRefs.current[i] = node;
                     }}
@@ -1238,11 +1198,11 @@ export default function PrismTemplate({ data }) {
 
           {contactItems.length > 0 && (
             <section className="mt-24">
-              <Recombination bands={bands} colors={colors} uid={uid} />
+              <Recombination bands={bands} colors={colors} />
               <div className="mt-6 flex flex-col gap-5 @2xl:flex-row @2xl:items-end @2xl:justify-between">
                 <div>
                   <p className="pr-mono text-[10.5px] uppercase tracking-[0.3em]" style={{ color: MUTED }}>
-                    Output
+                    Contact
                   </p>
                   <h2 className="pr-display mt-2 text-[clamp(1.6rem,4cqw,2.6rem)] font-semibold tracking-tight" style={{ color: INK }}>
                     Get in touch
